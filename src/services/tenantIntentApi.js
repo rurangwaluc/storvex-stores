@@ -1,4 +1,4 @@
-const API = "http://localhost:5000/api/auth/intents";
+const API = "http://localhost:5000/api/auth/owner-intent";
 
 export async function createTenantIntent(data) {
   const res = await fetch(API, {

@@ -1,57 +1,73 @@
-import { apiFetch } from "./apiClient"; // adjust path if needed
+// src/services/interStoreApi.js
+import { apiFetch } from "./apiClient";
 
-// LIST DEALS
-export function getDeals() {
-  return apiFetch("/inter-store");
+function normalizeDealsResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.deals)) return data.deals;
+  return [];
 }
 
-// CREATE DEAL
-export function createDeal(data) {
-  return apiFetch("/inter-store", {
+export async function getDeals() {
+  const data = await apiFetch("/interstore");
+  return normalizeDealsResponse(data);
+}
+
+export async function getDeal(id) {
+  const data = await apiFetch(`/interstore/${id}`);
+  return data?.deal || data;
+}
+
+export async function createDeal(payload) {
+  const data = await apiFetch("/interstore", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: payload,
   });
+
+  return data?.deal || data;
 }
 
-// UPDATE
-export function updateDeal(id, data) {
-  return apiFetch(`/inter-store/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(data),
+export async function markReceived(id) {
+  const data = await apiFetch(`/interstore/${id}/receive`, {
+    method: "POST",
   });
+
+  return data?.deal || data;
 }
 
-// MARK RECEIVED
-export function markReceived(id) {
-  return apiFetch(`/inter-store/${id}/received`, {
-    method: "PATCH",
+export async function markSold(id) {
+  const data = await apiFetch(`/interstore/${id}/sell`, {
+    method: "POST",
   });
+
+  return data?.deal || data;
 }
 
-// MARK SOLD
-export function markSold(id) {
-  return apiFetch(`/inter-store/${id}/sold`, {
-    method: "PATCH",
+export async function markReturned(id) {
+  const data = await apiFetch(`/interstore/${id}/return`, {
+    method: "POST",
   });
+
+  return data?.deal || data;
 }
 
-// MARK RETURNED
-export function markReturned(id) {
-  return apiFetch(`/inter-store/${id}/returned`, {
-    method: "PATCH",
+export async function markPaid(id) {
+  const data = await apiFetch(`/interstore/${id}/paid`, {
+    method: "POST",
   });
+
+  return data?.deal || data;
 }
 
-// MARK PAID
-export function markPaid(id) {
-  return apiFetch(`/inter-store/${id}/paid`, {
-    method: "PATCH",
-  });
+export async function getDealPayments(id) {
+  const data = await apiFetch(`/interstore/${id}/payments`);
+  return Array.isArray(data?.payments) ? data.payments : [];
 }
 
-// DELETE DEAL (optional)
-export function deleteDeal(id) {
-  return apiFetch(`/inter-store/${id}`, {
-    method: "DELETE",
+export async function addDealPayment(id, payload) {
+  const data = await apiFetch(`/interstore/${id}/payments`, {
+    method: "POST",
+    body: payload,
   });
+
+  return data;
 }

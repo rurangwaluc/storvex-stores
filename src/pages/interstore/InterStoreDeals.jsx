@@ -1,57 +1,58 @@
+// src/pages/interstore/InterStoreDeals.jsx
+import { useEffect, useMemo, useState } from "react";
+import { jwtDecode } from "jwt-decode";
+
+import CreateDealModal from "./InterStoreCreateModal";
 import {
-  deleteDeal,
   getDeals,
   markPaid,
   markReceived,
   markReturned,
   markSold,
 } from "../../services/interStoreApi";
-import { useEffect, useState } from "react";
 
-import CreateDealModal from "./InterStoreCreateModal";
-import { useNavigate } from "react-router-dom";
+function getCurrentRole() {
+  const token = localStorage.getItem("tenantToken") || localStorage.getItem("token");
+  if (!token) return null;
+
+  try {
+    const decoded = jwtDecode(token);
+    return decoded?.role ? String(decoded.role).toUpperCase() : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function InterStoreDeals() {
-  const navigate = useNavigate();
-
-  const token = localStorage.getItem("tenantToken");
+  const role = useMemo(() => getCurrentRole(), []);
+  const canMarkPaid = role === "OWNER" || role === "MANAGER";
 
   const [deals, setDeals] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editDeal, setEditDeal] = useState(null);
 
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [supplierFilter, setSupplierFilter] = useState("ALL");
+  const [loading, setLoading] = useState(true);
 
-  // ✅ Force all buttons visible (OWNER, CASHIER, TECHNICIAN)
-  const canManage = true;
-
-  /** ================================
-   * LOAD DEALS + TOKEN GUARD
-   * ================================ */
   async function loadDeals() {
     try {
+      setLoading(true);
       const data = await getDeals();
-      setDeals(data);
-      setFiltered(data);
+      setDeals(Array.isArray(data) ? data : []);
+      setFiltered(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error(err);
-      if (err.message?.includes("token")) {
-        localStorage.clear();
-        navigate("/login", { replace: true });
-      }
+      console.error("Failed to load inter-store deals:", err);
+      alert(err.message || "Failed to load deals");
+    } finally {
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    if (!token) navigate("/login", { replace: true });
     loadDeals();
   }, []);
 
-  /** ================================
-   * FILTER LOGIC
-   * ================================ */
   useEffect(() => {
     let data = [...deals];
 
@@ -70,34 +71,37 @@ export default function InterStoreDeals() {
     setFiltered(data);
   }, [statusFilter, supplierFilter, deals]);
 
-  /** ================================
-   * EXPORT CSV
-   * ================================ */
   function exportCSV() {
     const rows = [
-      ["Product", "Supplier", "Price", "Status", "Created"],
+      ["Product", "Supplier", "Reseller", "Phone", "Price", "Status", "Created"],
       ...filtered.map((d) => [
-        d.productName,
-        d.supplierTenantId ? "Internal Store" : d.externalSupplierName,
-        d.agreedPrice,
-        d.status,
-        new Date(d.createdAt).toLocaleDateString(),
+        d.productName || "",
+        d.supplierTenantId ? "Internal Store" : d.externalSupplierName || "",
+        d.resellerName || "",
+        d.resellerPhone || "",
+        d.agreedPrice ?? "",
+        d.status || "",
+        d.createdAt ? new Date(d.createdAt).toLocaleDateString() : "",
       ]),
     ];
 
-    const csv = rows.map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    const csv = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
     a.href = url;
     a.download = "interstore-deals.csv";
     a.click();
+
+    URL.revokeObjectURL(url);
   }
 
-  /** ================================
-   * BADGE UI
-   * ================================ */
   function badge(status) {
     const map = {
       BORROWED: "bg-yellow-100 text-yellow-700",
@@ -107,27 +111,36 @@ export default function InterStoreDeals() {
       RETURNED: "bg-gray-200 text-gray-700",
     };
 
-    return <span className={`px-2 py-1 rounded text-xs ${map[status]}`}>{status}</span>;
+    return (
+      <span className={`rounded px-2 py-1 text-xs font-medium ${map[status] || "bg-gray-100 text-gray-700"}`}>
+        {status}
+      </span>
+    );
   }
 
-  /** ================================
-   * ACTION HANDLERS
-   * ================================ */
-  async function handleDelete(id) {
-    if (!window.confirm("Delete this deal?")) return;
-    await deleteDeal(id);
-    loadDeals();
+  async function runAction(action) {
+    try {
+      await action();
+      await loadDeals();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Action failed");
+    }
   }
 
   return (
     <>
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Inter-Store Deals</h1>
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Inter-Store Deals</h1>
+          <p className="text-sm text-gray-500">
+            Contract-aligned view. Unsupported edit/delete actions removed until backend supports them.
+          </p>
+        </div>
 
         <div className="space-x-2">
           <button
-            onClick={() => { setEditDeal(null); setModalOpen(true); }}
+            onClick={() => setModalOpen(true)}
             className="btn-primary"
           >
             New Deal
@@ -138,8 +151,7 @@ export default function InterStoreDeals() {
         </div>
       </div>
 
-      {/* FILTERS */}
-      <div className="flex gap-4 mb-4">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row">
         <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="ALL">All Status</option>
           <option value="BORROWED">Borrowed</option>
@@ -156,56 +168,76 @@ export default function InterStoreDeals() {
         </select>
       </div>
 
-      {/* TABLE */}
-      <table className="w-full bg-white shadow rounded">
-        <thead>
-          <tr className="border-b">
-            <th>Product</th>
-            <th>Supplier</th>
-            <th>Price</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
+      {loading ? (
+        <div className="rounded border bg-white p-6 text-sm text-gray-500">Loading deals...</div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded border bg-white p-6 text-sm text-gray-500">No deals found.</div>
+      ) : (
+        <div className="overflow-x-auto rounded bg-white shadow">
+          <table className="w-full min-w-[980px]">
+            <thead>
+              <tr className="border-b text-left">
+                <th className="p-3">Product</th>
+                <th className="p-3">Supplier</th>
+                <th className="p-3">Reseller</th>
+                <th className="p-3">Phone</th>
+                <th className="p-3">Price</th>
+                <th className="p-3">Status</th>
+                <th className="p-3">Actions</th>
+              </tr>
+            </thead>
 
-        <tbody>
-          {filtered.map((d) => (
-            <tr key={d.id} className="border-b text-center">
-              <td>{d.productName}</td>
-              <td>{d.supplierTenantId ? "Internal Store" : d.externalSupplierName}</td>
-              <td>{d.agreedPrice}</td>
-              <td>{badge(d.status)}</td>
+            <tbody>
+              {filtered.map((d) => (
+                <tr key={d.id} className="border-b align-top">
+                  <td className="p-3">{d.productName}</td>
+                  <td className="p-3">{d.supplierTenantId ? "Internal Store" : d.externalSupplierName}</td>
+                  <td className="p-3">{d.resellerName || "—"}</td>
+                  <td className="p-3">{d.resellerPhone || "—"}</td>
+                  <td className="p-3">{d.agreedPrice}</td>
+                  <td className="p-3">{badge(d.status)}</td>
 
-              <td className="space-x-2">
-                {/* STATUS ACTIONS */}
-                {d.status === "BORROWED" && (
-                  <>
-                    <button onClick={() => markReceived(d.id).then(loadDeals)} className="btn-sm">Receive</button>
-                    <button onClick={() => markReturned(d.id).then(loadDeals)} className="btn-sm">Return</button>
-                  </>
-                )}
-                {d.status === "RECEIVED" && (
-                  <button onClick={() => markSold(d.id).then(loadDeals)} className="btn-sm">Mark Sold</button>
-                )}
-                {d.status === "SOLD" && (
-                  <button onClick={() => markPaid(d.id).then(loadDeals)} className="btn-sm">Mark Paid</button>
-                )}
+                  <td className="p-3">
+                    <div className="flex flex-wrap gap-2">
+                      {d.status === "BORROWED" && (
+                        <>
+                          <button onClick={() => runAction(() => markReceived(d.id))} className="btn-sm">
+                            Receive
+                          </button>
+                          <button onClick={() => runAction(() => markReturned(d.id))} className="btn-sm">
+                            Return
+                          </button>
+                        </>
+                      )}
 
-                {/* ALWAYS SHOW EDIT/DELETE */}
-                <button onClick={() => { setEditDeal(d); setModalOpen(true); }} className="btn-sm">Edit</button>
-                <button onClick={() => handleDelete(d.id)} className="btn-sm bg-red-500 text-white">Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                      {d.status === "RECEIVED" && (
+                        <button onClick={() => runAction(() => markSold(d.id))} className="btn-sm">
+                          Mark Sold
+                        </button>
+                      )}
 
-      {/* MODAL */}
+                      {d.status === "SOLD" && canMarkPaid && (
+                        <button onClick={() => runAction(() => markPaid(d.id))} className="btn-sm">
+                          Mark Paid
+                        </button>
+                      )}
+
+                      {d.status === "SOLD" && !canMarkPaid ? (
+                        <span className="text-xs text-gray-500">Paid action requires owner or manager</span>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {modalOpen && (
         <CreateDealModal
           onClose={() => setModalOpen(false)}
           onSaved={loadDeals}
-          deal={editDeal}
         />
       )}
     </>

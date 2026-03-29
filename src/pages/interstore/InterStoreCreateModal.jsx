@@ -1,30 +1,23 @@
-import { createDeal, updateDeal } from "../../services/interStoreApi";
-import { useEffect, useState } from "react";
+// src/pages/interstore/InterStoreCreateModal.jsx
+import { useState } from "react";
+import { createDeal } from "../../services/interStoreApi";
 
-export default function InterStoreCreateModal({ onClose, onSaved, deal }) {
-  const [form, setForm] = useState({
-    supplierType: "EXTERNAL",
-    externalSupplierName: "",
-    productName: "",
-    serial: "",
-    agreedPrice: "",
-  });
+const EMPTY_FORM = {
+  supplierType: "EXTERNAL",
+  externalSupplierName: "",
+  resellerName: "",
+  resellerPhone: "",
+  resellerStore: "",
+  productName: "",
+  serial: "",
+  agreedPrice: "",
+  notes: "",
+};
 
+export default function InterStoreCreateModal({ onClose, onSaved }) {
+  const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // Pre-fill form for editing
-  useEffect(() => {
-    if (deal) {
-      setForm({
-        supplierType: deal.supplierTenantId ? "INTERNAL" : "EXTERNAL",
-        externalSupplierName: deal.externalSupplierName || "",
-        productName: deal.productName || "",
-        serial: deal.serial || "",
-        agreedPrice: deal.agreedPrice || "",
-      });
-    }
-  }, [deal]);
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -37,23 +30,23 @@ export default function InterStoreCreateModal({ onClose, onSaved, deal }) {
 
     try {
       const payload = {
-        productName: form.productName,
-        serial: form.serial,
-        agreedPrice: Number(form.agreedPrice),
         externalSupplierName:
-          form.supplierType === "EXTERNAL" ? form.externalSupplierName : null,
+          form.supplierType === "EXTERNAL" ? form.externalSupplierName.trim() : null,
+        resellerName: form.resellerName.trim(),
+        resellerPhone: form.resellerPhone.trim(),
+        resellerStore: form.resellerStore.trim() || null,
+        productName: form.productName.trim(),
+        serial: form.serial.trim(),
+        agreedPrice: Number(form.agreedPrice),
+        notes: form.notes.trim() || null,
       };
 
-      if (deal?.id) {
-        await updateDeal(deal.id, payload);
-      } else {
-        await createDeal(payload);
-      }
+      await createDeal(payload);
 
       onSaved?.();
       onClose?.();
     } catch (err) {
-      setError(err?.message || "Failed to save deal");
+      setError(err?.message || "Failed to create deal");
     } finally {
       setLoading(false);
     }
@@ -61,62 +54,124 @@ export default function InterStoreCreateModal({ onClose, onSaved, deal }) {
 
   return (
     <div className="modal">
-      <form onSubmit={submit} className="card w-96">
-        <h2 className="text-lg font-bold mb-4">
-          {deal ? "Edit Deal" : "New Inter-Store Deal"}
-        </h2>
+      <form onSubmit={submit} className="card w-full max-w-xl">
+        <h2 className="mb-4 text-lg font-bold">New Inter-Store Deal</h2>
 
-        <select
-          className="input mb-3"
-          value={form.supplierType}
-          onChange={(e) => updateField("supplierType", e.target.value)}
-        >
-          <option value="EXTERNAL">External Supplier</option>
-          <option value="INTERNAL">Internal Store</option>
-        </select>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">Supplier type</label>
+            <select
+              className="input"
+              value={form.supplierType}
+              onChange={(e) => updateField("supplierType", e.target.value)}
+            >
+              <option value="EXTERNAL">External Supplier</option>
+              <option value="INTERNAL" disabled>
+                Internal Store (backend-ready, UI wiring later)
+              </option>
+            </select>
+          </div>
 
-        {form.supplierType === "EXTERNAL" && (
-          <input
-            className="input mb-3"
-            placeholder="External Supplier Name"
-            value={form.externalSupplierName}
-            onChange={(e) => updateField("externalSupplierName", e.target.value)}
-            required
-          />
-        )}
+          {form.supplierType === "EXTERNAL" && (
+            <div className="md:col-span-2">
+              <label className="mb-1 block text-sm font-medium">External supplier name</label>
+              <input
+                className="input"
+                placeholder="e.g. Kigali Tech Supply"
+                value={form.externalSupplierName}
+                onChange={(e) => updateField("externalSupplierName", e.target.value)}
+                required
+              />
+            </div>
+          )}
 
-        <input
-          className="input mb-3"
-          placeholder="Product Name"
-          value={form.productName}
-          onChange={(e) => updateField("productName", e.target.value)}
-          required
-        />
+          <div>
+            <label className="mb-1 block text-sm font-medium">Reseller name</label>
+            <input
+              className="input"
+              placeholder="e.g. Jean Claude"
+              value={form.resellerName}
+              onChange={(e) => updateField("resellerName", e.target.value)}
+              required
+            />
+          </div>
 
-        <input
-          className="input mb-3"
-          placeholder="Serial Number"
-          value={form.serial}
-          onChange={(e) => updateField("serial", e.target.value)}
-        />
+          <div>
+            <label className="mb-1 block text-sm font-medium">Reseller phone</label>
+            <input
+              className="input"
+              placeholder="e.g. 078..."
+              value={form.resellerPhone}
+              onChange={(e) => updateField("resellerPhone", e.target.value)}
+              required
+            />
+          </div>
 
-        <input
-          type="number"
-          className="input mb-3"
-          placeholder="Agreed Price"
-          value={form.agreedPrice}
-          onChange={(e) => updateField("agreedPrice", e.target.value)}
-          required
-        />
+          <div>
+            <label className="mb-1 block text-sm font-medium">Reseller store</label>
+            <input
+              className="input"
+              placeholder="Optional"
+              value={form.resellerStore}
+              onChange={(e) => updateField("resellerStore", e.target.value)}
+            />
+          </div>
 
-        {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
+          <div>
+            <label className="mb-1 block text-sm font-medium">Product name</label>
+            <input
+              className="input"
+              placeholder="e.g. iPhone 13 Pro"
+              value={form.productName}
+              onChange={(e) => updateField("productName", e.target.value)}
+              required
+            />
+          </div>
 
-        <div className="flex justify-end gap-2 mt-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium">Serial</label>
+            <input
+              className="input"
+              placeholder="Serialized product required"
+              value={form.serial}
+              onChange={(e) => updateField("serial", e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Agreed price</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              className="input"
+              placeholder="0"
+              value={form.agreedPrice}
+              onChange={(e) => updateField("agreedPrice", e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">Notes</label>
+            <textarea
+              className="input min-h-[96px]"
+              placeholder="Optional"
+              value={form.notes}
+              onChange={(e) => updateField("notes", e.target.value)}
+            />
+          </div>
+        </div>
+
+        {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+
+        <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="btn-secondary">
             Cancel
           </button>
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? "Saving..." : "Save"}
+            {loading ? "Saving..." : "Create deal"}
           </button>
         </div>
       </form>

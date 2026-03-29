@@ -1,7 +1,7 @@
 // src/services/dashboardApi.js
-
-import { apiFetch } from "./apiClient"; // adjust path if needed
+import { apiFetch } from "./apiClient";
 
 export function getTenantDashboard() {
-  return apiFetch("/dashboard/tenant");
+  // ✅ backend route is GET /api/dashboard
+  return apiFetch("/dashboard");
 }

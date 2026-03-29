@@ -1,69 +1,149 @@
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import toast from "react-hot-toast";
+import { jwtDecode } from "jwt-decode";
+import apiClient from "../../services/apiClient";
+import AuthShell from "../../components/auth/AuthShell";
+import PasswordField from "../../components/auth/PasswordField";
+import AsyncButton from "../../components/ui/AsyncButton";
 
-export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const navigate = useNavigate();
-
- async function handleLogin(e) {
-  e.preventDefault();
-
-  const res = await fetch("http://localhost:5000/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    alert(data.message || "Login failed");
-    return;
-  }
-
-  // 🔐 LOCKED TOKEN KEY
-    localStorage.setItem("tenantToken", data.token);
-    localStorage.setItem("tenantUser", JSON.stringify(data.user));
-    navigate("/");
-
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
+function clearOnboardingState() {
+  localStorage.removeItem("storvex_onboarding");
+  localStorage.removeItem("storvex_intentId");
+  localStorage.removeItem("storvex_ownerPhone");
+  localStorage.removeItem("storvex_ownerEmail");
+  localStorage.removeItem("storvex_storeName");
+  localStorage.removeItem("storvex_ownerName");
+  localStorage.removeItem("storvex_emailVerified");
+  localStorage.removeItem("storvex_phoneVerified");
+  localStorage.removeItem("storvex_signupMode");
+  localStorage.removeItem("storvex_planKey");
+}
+
+function persistAuthSession(token) {
+  localStorage.setItem("tenantToken", token);
+  localStorage.setItem("token", token);
+
+  const decoded = jwtDecode(token);
+
+  localStorage.setItem("userRole", decoded?.role || "");
+  localStorage.setItem("tenantId", decoded?.tenantId || "");
+  localStorage.setItem("userId", decoded?.userId || decoded?.id || "");
+
+  return decoded;
+}
+
+export default function Login() {
+  const nav = useNavigate();
+
+  const [email, setEmail] = useState("demo@shop.rw");
+  const [password, setPassword] = useState("Test@12345");
+  const [loading, setLoading] = useState(false);
+
+  const trimmedEmail = useMemo(() => normalizeEmail(email), [email]);
+
+  async function submit(e) {
+    e.preventDefault();
+
+    if (!trimmedEmail) {
+      toast.error("Enter your email");
+      return;
+    }
+
+    if (!password) {
+      toast.error("Enter your password");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await apiClient.post("/auth/login", {
+        email: trimmedEmail,
+        password,
+      });
+
+      const token = res?.data?.token;
+      if (!token) throw new Error("Missing token");
+
+      persistAuthSession(token);
+      clearOnboardingState();
+
+      toast.success("Welcome back");
+      nav("/app", { replace: true });
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white p-6 rounded shadow w-80"
-      >
-        <h1 className="text-xl font-bold mb-4 text-center">Store Login</h1>
+    <AuthShell
+      eyebrow="Store access"
+      title="Log in to your store"
+      subtitle="Use your owner or staff credentials to continue into the workspace."
+      sideTitle="Fast, calm, trustworthy access"
+      sideBody="The login step should feel clean and predictable. No noise, no friction, just confident entry into the system."
+      sideItems={[
+        {
+          title: "Owner access",
+          body: "Open billing, reports, settings, users, and full operational control.",
+        },
+        {
+          title: "Staff access",
+          body: "Cashiers, managers, sellers, storekeepers, and technicians only see what their role allows.",
+        },
+        {
+          title: "After login",
+          body: "Your session is stored and you are routed directly into the app workspace.",
+        },
+      ]}
+      footer={
+        <div className="text-sm text-[rgb(var(--text-muted))]">
+          New store?{" "}
+          <Link
+            to="/signup"
+            className="font-medium text-[rgb(var(--text))] underline-offset-4 hover:underline"
+          >
+            Create account
+          </Link>
+        </div>
+      }
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
+            Email
+          </label>
+          <input
+            type="email"
+            className="app-input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            placeholder="you@store.com"
+            required
+          />
+        </div>
 
-        {error && (
-          <p className="text-red-600 text-sm mb-3">{error}</p>
-        )}
-
-        <input
-          className="border p-2 w-full mb-3"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-
-        <input
-          className="border p-2 w-full mb-4"
-          type="password"
-          placeholder="Password"
+        <PasswordField
+          id="login-password"
+          label="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          required
+          autoComplete="current-password"
+          placeholder="Enter your password"
         />
 
-        <button className="bg-black text-white w-full py-2 rounded">
-          Login
-        </button>
+        <AsyncButton type="submit" loading={loading} className="w-full">
+          Log in
+        </AsyncButton>
       </form>
-    </div>
+    </AuthShell>
   );
 }
