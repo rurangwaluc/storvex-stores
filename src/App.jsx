@@ -8,6 +8,7 @@ import LandingPage from "./pages/public/LandingPage";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Employees from "./pages/employees/EmployeesList";
 import InterStoreDeals from "./pages/interstore/InterStoreDeals";
+import InterStoreDetail from "./pages/interstore/InterStoreDetail";
 
 import InventoryCreate from "./pages/inventory/InventoryCreate";
 import InventoryEdit from "./pages/inventory/InventoryEdit";
@@ -256,6 +257,7 @@ export default function App() {
               <Route path="whatsapp/drafts" element={<WhatsAppDrafts />} />
               <Route path="pos/drawer" element={<CashDrawer />} />
               <Route path="interstore" element={<InterStoreDeals />} />
+              <Route path="/app/interstore/:id" element={<InterStoreDetail />} />
             </Route>
 
             <Route element={<RequireRole roles={["OWNER", "MANAGER"]} />}>

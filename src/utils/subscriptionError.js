@@ -44,7 +44,7 @@ export function getSubscriptionBlockedMessage(error) {
   return "Subscription is in read-only mode. Renew to continue this action.";
 }
 
-export function handleSubscriptionBlockedError(error, options = {}) {
+export function toastSubscriptionBlockedError(error, options = {}) {
   if (!isSubscriptionBlockedError(error)) return false;
 
   const {
@@ -57,4 +57,8 @@ export function handleSubscriptionBlockedError(error, options = {}) {
   });
 
   return true;
+}
+
+export function handleSubscriptionBlockedError(error, options = {}) {
+  return toastSubscriptionBlockedError(error, options);
 }

@@ -1,131 +1,124 @@
-// src/services/inventoryApi.js
+import apiClient, { apiFetch } from "./apiClient";
 
-import { apiFetch } from "./apiClient";
-import apiClient from "./apiClient";
+function buildQueryString(params = {}) {
+  const search = new URLSearchParams();
 
-function buildQuery(params = {}) {
-  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    search.set(key, String(value));
+  });
 
-  for (const [k, v] of Object.entries(params)) {
-    if (v === undefined || v === null || v === "") continue;
-    sp.set(k, String(v));
-  }
-
-  const s = sp.toString();
-  return s ? `?${s}` : "";
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
 }
 
-export function listProducts({
-  q,
-  limit = 50,
-  cursor,
-  sort = "newest",
-  active = true,
-  lowStock,
-  outOfStock,
-  threshold,
-  category,
-  subcategory,
-  brand,
-} = {}) {
-  return apiFetch(
-    `/inventory/products${buildQuery({
-      q,
-      limit,
-      cursor,
-      sort,
-      active: active ? "true" : "false",
-      lowStock: lowStock ? "true" : undefined,
-      outOfStock: outOfStock ? "true" : undefined,
-      threshold,
-      category,
-      subcategory,
-      brand,
-    })}`
-  );
+async function downloadBlob(path, params = {}, fallbackName = "download.bin") {
+  const res = await apiClient.get(`${path}${buildQueryString(params)}`, {
+    responseType: "blob",
+  });
+
+  const blob = res?.data instanceof Blob ? res.data : new Blob([res.data]);
+  const contentDisposition = String(res?.headers?.["content-disposition"] || "");
+  const filenameMatch =
+    contentDisposition.match(/filename\*=UTF-8''([^;]+)/i) ||
+    contentDisposition.match(/filename="([^"]+)"/i) ||
+    contentDisposition.match(/filename=([^;]+)/i);
+
+  const filename = filenameMatch?.[1]
+    ? decodeURIComponent(String(filenameMatch[1]).replace(/["']/g, "").trim())
+    : fallbackName;
+
+  return { blob, filename };
+}
+
+export function listProducts(params = {}) {
+  return apiFetch(`/inventory/products${buildQueryString(params)}`);
 }
 
 export function searchProducts(q, limit = 20) {
-  const qq = String(q || "").trim();
-  const lim = Number(limit);
-  const safeLimit = Number.isFinite(lim) && lim > 0 && lim <= 50 ? lim : 20;
+  return apiFetch(`/inventory/products/search${buildQueryString({ q, limit })}`);
+}
 
-  if (!qq) return Promise.resolve({ products: [], count: 0 });
+export function getProductById(id) {
+  return apiFetch(`/inventory/products/${encodeURIComponent(id)}`);
+}
 
-  return apiFetch(
-    `/inventory/products/search${buildQuery({
-      q: qq,
-      limit: safeLimit,
-    })}`
-  );
+export function createProduct(payload) {
+  return apiFetch("/inventory/products", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function updateProduct(id, payload) {
+  return apiFetch(`/inventory/products/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+export function deleteProduct(id) {
+  return apiFetch(`/inventory/products/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export function activateProduct(id) {
+  return apiFetch(`/inventory/products/${encodeURIComponent(id)}/activate`, {
+    method: "PATCH",
+  });
+}
+
+export function adjustStock(id, payload) {
+  return apiFetch(`/inventory/products/${encodeURIComponent(id)}/stock-adjustments`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function getStockAdjustments(id) {
+  return apiFetch(`/inventory/products/${encodeURIComponent(id)}/stock-adjustments`);
+}
+
+export function listAllStockAdjustments(params = {}) {
+  return apiFetch(`/inventory/stock-adjustments${buildQueryString(params)}`);
 }
 
 export function getInventorySummary() {
   return apiFetch("/inventory/summary");
 }
 
-export function getProductById(id) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(String(id))}`);
+export async function downloadReorderPdf(params = {}) {
+  return downloadBlob("/inventory/reorder.pdf", params, "storvex-reorder-list.pdf");
 }
 
-export function createProduct(data) {
-  return apiFetch("/inventory/products", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
+export async function downloadInventoryExcel(params = {}) {
+  return downloadBlob("/inventory/export.xlsx", params, "storvex-inventory.xlsx");
 }
 
-export function updateProduct(id, data) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(String(id))}`, {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
-}
-
-export function deleteProduct(id) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(String(id))}`, {
-    method: "DELETE",
-  });
-}
-
-export function activateProduct(id) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(String(id))}/activate`, {
-    method: "PATCH",
-  });
-}
-
-export function adjustStock(productId, payload) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(String(productId))}/stock-adjustments`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export function getStockAdjustments(productId) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(String(productId))}/stock-adjustments`);
-}
-
-export function listAllStockAdjustments({ from, to, type, q, limit = 50 } = {}) {
-  return apiFetch(
-    `/inventory/stock-adjustments${buildQuery({
-      from,
-      to,
-      type,
-      q,
-      limit,
-    })}`
+export async function downloadStockAdjustmentsExcel(params = {}) {
+  return downloadBlob(
+    "/inventory/stock-adjustments/export.xlsx",
+    params,
+    "storvex-stock-history.xlsx"
   );
 }
 
-export async function downloadReorderPdf({ threshold = 5 } = {}) {
-  const safeThreshold = Number.isFinite(Number(threshold))
-    ? Math.max(0, Math.floor(Number(threshold)))
-    : 5;
+const inventoryApi = {
+  listProducts,
+  searchProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  activateProduct,
+  adjustStock,
+  getStockAdjustments,
+  listAllStockAdjustments,
+  getInventorySummary,
+  downloadReorderPdf,
+  downloadInventoryExcel,
+  downloadStockAdjustmentsExcel,
+};
 
-  const res = await apiClient.get(
-    `/inventory/reorder.pdf${buildQuery({ threshold: safeThreshold })}`,
-    { responseType: "blob" }
-  );
-
-  return res.data;
-}
+export default inventoryApi;

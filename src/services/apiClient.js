@@ -1,8 +1,7 @@
 import axios from "axios";
-import toast from "react-hot-toast";
 import {
   isSubscriptionBlockedError,
-  getSubscriptionBlockedMessage,
+  toastSubscriptionBlockedError,
 } from "../utils/subscriptionError";
 
 const API_BASE =
@@ -22,10 +21,12 @@ function getToken() {
 apiClient.interceptors.request.use(
   (config) => {
     const token = getToken();
+
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -35,8 +36,8 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (isSubscriptionBlockedError(error)) {
-      toast.error(getSubscriptionBlockedMessage(error), {
-        id: "subscription-blocked",
+      toastSubscriptionBlockedError(error, {
+        toastId: "subscription-blocked",
       });
     }
 
@@ -53,19 +54,42 @@ apiClient.interceptors.response.use(
   }
 );
 
+function buildRequestConfig(path, options = {}) {
+  const config = {
+    url: path,
+    method: String(options.method || "GET").toLowerCase(),
+    headers: {
+      ...(options.headers || {}),
+    },
+    params: options.query ? { ...options.query } : undefined,
+  };
+
+  if (options.body !== undefined && options.body !== null) {
+    if (typeof options.body === "string") {
+      try {
+        config.data = JSON.parse(options.body);
+      } catch {
+        config.data = options.body;
+      }
+    } else {
+      config.data = options.body;
+    }
+  }
+
+  if (options.responseType) {
+    config.responseType = options.responseType;
+  }
+
+  if (options.signal) {
+    config.signal = options.signal;
+  }
+
+  return config;
+}
+
 export async function apiFetch(path, options = {}) {
-  const method = String(options.method || "GET").toLowerCase();
-
   try {
-    const res = await apiClient.request({
-      url: path,
-      method,
-      data: options.body ? JSON.parse(options.body) : undefined,
-      headers: {
-        ...(options.headers || {}),
-      },
-    });
-
+    const res = await apiClient.request(buildRequestConfig(path, options));
     return res.data;
   } catch (error) {
     const message =
@@ -75,8 +99,13 @@ export async function apiFetch(path, options = {}) {
 
     const err = new Error(message);
     err.response = error?.response;
-    err.status = error?.response?.status || null;
-    err.code = error?.response?.data?.code || null;
+    err.status = error?.response?.status;
+    err.code =
+      error?.response?.data?.code ||
+      error?.code ||
+      null;
+    err.data = error?.response?.data || null;
+
     throw err;
   }
 }
