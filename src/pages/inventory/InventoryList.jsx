@@ -31,74 +31,165 @@ function cx(...xs) {
 }
 
 function formatMoney(n) {
-  return `RWF ${Number(n || 0).toLocaleString()}`;
+  return `Rwf ${Number(n || 0).toLocaleString("en-US")}`;
 }
 
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function shell() {
-  return "rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function softPanel() {
+  return "rounded-[20px] bg-[var(--color-surface-2)]";
 }
 
 function inputClass() {
-  return "h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
+  return "app-input";
 }
 
 function textareaClass() {
-  return "min-h-[110px] w-full rounded-2xl border border-stone-300 bg-white px-3.5 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "min-h-[110px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)]";
 }
 
 function primaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-stone-950 px-4 text-sm font-medium text-white transition hover:bg-stone-800 disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60";
 }
 
-function subtleBtn() {
-  return "inline-flex h-9 items-center justify-center rounded-2xl border border-stone-300 bg-white px-3 text-sm font-medium text-stone-800 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:opacity-60";
 }
 
 function dangerBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-red-300 bg-red-600 px-4 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-60 dark:border-red-900 dark:bg-red-700 dark:hover:bg-red-600";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-danger)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60";
 }
 
 function warningBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-amber-500 bg-amber-500 px-4 text-sm font-medium text-white transition hover:bg-amber-600 disabled:opacity-60";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-amber-500 px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60";
 }
 
-function SummaryCard({ label, value, note, tone = "neutral" }) {
-  const accent =
-    tone === "danger"
-      ? "bg-red-500"
-      : tone === "warning"
-      ? "bg-amber-500"
-      : tone === "success"
-      ? "bg-emerald-500"
-      : "bg-stone-900 dark:bg-[rgb(var(--text))]";
+function CubeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8 sm:h-9 sm:w-9" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M21 8l-9-5-9 5 9 5 9-5zm-18 3v8l9 5 9-5v-8" />
+    </svg>
+  );
+}
+
+function BoxesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8 sm:h-9 sm:w-9" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3 7.5 8 5l5 2.5L8 10 3 7.5Zm10 0L18 5l3 1.5V11l-5 2.5L11 11V6.5ZM8 10v6l5 3v-6l-5-3Z" />
+    </svg>
+  );
+}
+
+function WalletIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8 sm:h-9 sm:w-9" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v2H6a2 2 0 0 0-2 2V7Z" />
+      <path d="M4 11a2 2 0 0 1 2-2h14v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6Z" />
+      <circle cx="16" cy="13.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function TrendUpIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8 sm:h-9 sm:w-9" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 16l5-5 4 4 7-8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 7h4v4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+      <circle cx="12" cy="5" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="12" cy="19" r="1.8" />
+    </svg>
+  );
+}
+
+function SummaryCard({ label, value, note, tone = "neutral", icon = null }) {
+  const toneStyles = {
+    neutral: {
+      box: "bg-[#dff1ff] text-[#4aa8ff]",
+      ring: "shadow-[inset_0_0_0_1px_rgba(74,163,255,0.10)]",
+    },
+    warning: {
+      box: "bg-[#ffe3d4] text-[#ff8b4a]",
+      ring: "shadow-[inset_0_0_0_1px_rgba(255,139,74,0.10)]",
+    },
+    danger: {
+      box: "bg-[#fff1c9] text-[#d9a700]",
+      ring: "shadow-[inset_0_0_0_1px_rgba(217,167,0,0.10)]",
+    },
+    success: {
+      box: "bg-[#dcfce7] text-[#16a34a]",
+      ring: "shadow-[inset_0_0_0_1px_rgba(22,163,74,0.10)]",
+    },
+  };
+
+  const style = toneStyles[tone] || toneStyles.neutral;
 
   return (
-    <div className={cx(shell(), "relative overflow-hidden p-4")}>
-      <div className={cx("absolute left-0 top-0 h-full w-1.5", accent)} />
-      <div className="pl-2">
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-          {label}
+    <article
+      className={cx(
+        pageCard(),
+        "relative overflow-hidden p-5 sm:p-6"
+      )}
+    >
+      <div className="absolute inset-x-0 top-0 h-px bg-[var(--color-border)]" />
+
+      <div className="flex items-start gap-4 sm:gap-5">
+        <div
+          className={cx(
+            "flex h-18 w-18 shrink-0 items-center justify-center rounded-[22px] sm:h-20 sm:w-20",
+            style.box,
+            style.ring
+          )}
+        >
+          {icon}
         </div>
-        <div className={cx("mt-2 text-2xl font-semibold", strongText())}>{value}</div>
-        {note ? <div className={cx("mt-1 text-sm", mutedText())}>{note}</div> : null}
+
+        <div className="min-w-0 flex-1">
+          <div
+            className={cx(
+              "text-sm font-semibold leading-6 sm:text-[15px]",
+              strongText()
+            )}
+          >
+            {label}
+          </div>
+
+          <div
+            className={cx(
+              "mt-2 break-words text-[1.5rem] font-black leading-tight tracking-[-0.02em] sm:text-[1.9rem]",
+              strongText()
+            )}
+          >
+            {value}
+          </div>
+
+          {note ? (
+            <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div>
+          ) : null}
+        </div>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -118,24 +209,135 @@ function StatusBadge({ kind = "neutral", children }) {
 function FilterChip({ active, children, onClick, tone = "neutral" }) {
   const activeCls =
     tone === "danger"
-      ? "border-red-600 bg-red-600 text-white hover:bg-red-700"
+      ? "bg-[var(--color-danger)] text-white"
       : tone === "warning"
-      ? "border-amber-600 bg-amber-600 text-white hover:bg-amber-700"
-      : "border-stone-950 bg-stone-950 text-white hover:bg-stone-800 dark:border-[rgb(var(--text))] dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))]";
+      ? "bg-amber-500 text-white"
+      : "bg-[var(--color-primary)] text-white";
 
   return (
     <button
       type="button"
       onClick={onClick}
       className={cx(
-        "inline-flex h-10 items-center justify-center rounded-2xl border px-4 text-sm font-medium transition",
+        "inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-semibold transition",
         active
           ? activeCls
-          : "border-stone-300 bg-white text-stone-800 hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
       )}
     >
       {children}
     </button>
+  );
+}
+
+function SectionHeader({ title, subtitle, right }) {
+  return (
+    <div className="mb-5 flex items-start justify-between gap-3">
+      <div>
+        <div className={cx("text-[1.55rem] font-black leading-none sm:text-[1.8rem]", strongText())}>
+          {title}
+        </div>
+        {subtitle ? <div className={cx("mt-2 text-sm", mutedText())}>{subtitle}</div> : null}
+      </div>
+      {right ? <div className="shrink-0">{right}</div> : null}
+    </div>
+  );
+}
+
+function ActionMenu({
+  product,
+  busyId,
+  onEdit,
+  onAdjust,
+  onDeactivate,
+  onActivate,
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutside(e) {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(e.target)) setOpen(false);
+    }
+
+    function handleEsc(e) {
+      if (e.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleEsc);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, []);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-text)] transition hover:opacity-90"
+        aria-label="Open actions"
+      >
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+          <circle cx="12" cy="5" r="1.8" />
+          <circle cx="12" cy="12" r="1.8" />
+          <circle cx="12" cy="19" r="1.8" />
+        </svg>
+      </button>
+
+      {open ? (
+        <div className="absolute right-0 top-[calc(100%+10px)] z-[140] min-w-[220px] rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)] p-2 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl ring-1 ring-white/5">          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onAdjust(product);
+            }}
+            className="flex h-11 w-full items-center rounded-2xl px-4 text-left text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-2)]"
+          >
+            Adjust stock
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onEdit(product.id);
+            }}
+            className="flex h-11 w-full items-center rounded-2xl px-4 text-left text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-2)]"
+          >
+            Edit product
+          </button>
+
+          {product.isActive ? (
+              <AsyncButton
+                loading={busyId === product.id}
+                onClick={() => {
+                  setOpen(false);
+                  onDeactivate(product);
+                }}
+                className="mt-1 flex h-11 w-full items-center justify-start rounded-2xl bg-[rgba(138, 16, 12, 0.08)] px-4 text-sm font-medium text-[var(--color-danger)] transition hover:bg-[rgba(219,80,74,0.14)]"
+              >
+                Deactivate
+              </AsyncButton>
+            ) : (
+              <AsyncButton
+                loading={busyId === product.id}
+                onClick={() => {
+                  setOpen(false);
+                  onActivate(product);
+                }}
+                className="mt-1 flex h-11 w-full items-center justify-start rounded-2xl bg-[var(--color-primary-soft)] px-4 text-sm font-medium text-[var(--color-primary)] transition hover:opacity-90"
+              >
+                Activate
+              </AsyncButton>
+            )}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -153,27 +355,14 @@ function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-[90]">
       <div
-        className="absolute inset-0 bg-stone-950/45 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
         onClick={loading ? undefined : onCancel}
       />
-
       <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div
-          className={cx(
-            "w-full max-w-md rounded-3xl border border-stone-200 bg-white shadow-2xl",
-            "dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]"
-          )}
-        >
+        <div className={cx(pageCard(), "w-full max-w-md")}>
           <div className="p-6">
             <div className="flex items-start gap-4">
-              <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border px-0"
-                style={{
-                  background: "rgb(var(--danger-bg))",
-                  color: "rgb(var(--danger-text))",
-                  borderColor: "rgb(var(--danger-border))",
-                }}
-              >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-danger)]">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path
                     d="M12 8v5m0 4h.01M10.29 3.86l-8 14A1 1 0 003.16 19h17.68a1 1 0 00.87-1.5l-8-14a1 1 0 00-1.74 0z"
@@ -184,7 +373,6 @@ function ConfirmDialog({
                   />
                 </svg>
               </div>
-
               <div className="min-w-0">
                 <h3 className={cx("text-lg font-semibold", strongText())}>{title}</h3>
                 <p className={cx("mt-2 text-sm leading-6", mutedText())}>{message}</p>
@@ -200,7 +388,6 @@ function ConfirmDialog({
               >
                 Cancel
               </button>
-
               <AsyncButton loading={loading} onClick={onConfirm} className={dangerBtn()}>
                 {confirmLabel}
               </AsyncButton>
@@ -216,13 +403,13 @@ function RefreshBar({ visible }) {
   return (
     <div
       className={cx(
-        "overflow-hidden border-b border-stone-200 bg-stone-50 transition-all dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))]",
+        "overflow-hidden border-b border-[var(--color-border)] bg-[var(--color-surface-2)] transition-all",
         visible ? "max-h-10 opacity-100" : "max-h-0 opacity-0"
       )}
     >
       <div className="flex items-center justify-between px-4 py-2 text-xs">
         <span className={mutedText()}>Refreshing inventory…</span>
-        <span className="inline-flex items-center gap-2 text-stone-500 dark:text-[rgb(var(--text-soft))]">
+        <span className="inline-flex items-center gap-2 text-[var(--color-text-muted)]">
           <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
             <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -251,9 +438,7 @@ function StockAdjustDialog({
 
   let preview = null;
   if (form.type === "CORRECTION") {
-    if (Number.isFinite(correctionQty) && correctionQty >= 0) {
-      preview = Math.floor(correctionQty);
-    }
+    if (Number.isFinite(correctionQty) && correctionQty >= 0) preview = Math.floor(correctionQty);
   } else if (Number.isFinite(quantity) && quantity > 0) {
     preview =
       form.type === "RESTOCK"
@@ -271,23 +456,29 @@ function StockAdjustDialog({
   return (
     <div className="fixed inset-0 z-[100]">
       <div
-        className="absolute inset-0 bg-stone-950/55 backdrop-blur-[4px]"
+        className="absolute inset-0 bg-black/55 backdrop-blur-[4px]"
         onClick={loading ? undefined : onClose}
       />
       <div className="absolute inset-0 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4 lg:p-6">
-          <div className={cx(shell(), "w-full max-w-6xl overflow-hidden")}>
-            <div className="border-b border-stone-200 px-6 py-5 dark:border-[rgb(var(--border))]">
+          <div className={cx(pageCard(), "w-full max-w-6xl overflow-hidden")}>
+            <div className="border-b border-[var(--color-border)] px-6 py-5">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="max-w-3xl">
-                  <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+                  <div
+                    className={cx(
+                      "text-[11px] font-semibold uppercase tracking-[0.16em]",
+                      softText()
+                    )}
+                  >
                     Controlled stock movement
                   </div>
                   <h3 className={cx("mt-2 text-2xl font-semibold tracking-tight", strongText())}>
                     Adjust stock
                   </h3>
                   <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                    Record replenishment, shrinkage, or counted corrections with a strict reason trail.
+                    Record replenishment, shrinkage, or counted corrections with a strict reason
+                    trail.
                   </p>
                 </div>
 
@@ -305,42 +496,57 @@ function StockAdjustDialog({
             <div className="grid grid-cols-1 gap-5 px-6 py-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
               <div className="space-y-5">
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                  <div className="rounded-[24px] border border-stone-200 bg-stone-50 p-5 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
+                  <div className={cx(softPanel(), "p-5")}>
                     <div className={cx("text-base font-semibold", strongText())}>{product.name}</div>
                     <div className={cx("mt-1 text-sm", mutedText())}>{product.brand || "—"}</div>
 
-                    <div className="mt-5 grid grid-cols-2 gap-3">
-                      <div className="rounded-2xl border border-stone-200 bg-white px-4 py-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]">
+                    <div className="mt-5 grid grid-cols-1 gap-3">
+                      <div className={cx(pageCard(), "px-4 py-4")}>
                         <div className={softText()}>Current stock</div>
-                        <div className={cx("mt-2 text-3xl font-semibold tracking-tight", strongText())}>
+                        <div
+                          className={cx(
+                            "mt-2 text-3xl font-semibold tracking-tight",
+                            strongText()
+                          )}
+                        >
                           {currentQty}
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-stone-200 bg-white px-4 py-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]">
+                      <div className={cx(pageCard(), "px-4 py-4")}>
                         <div className={softText()}>Sell price</div>
-                        <div className={cx("mt-2 text-2xl font-semibold tracking-tight", strongText())}>
+                        <div
+                          className={cx(
+                            "mt-2 text-2xl font-semibold tracking-tight break-words",
+                            strongText()
+                          )}
+                        >
                           {formatMoney(product.sellPrice)}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] border border-stone-200 bg-stone-50 p-5 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
+                  <div className={cx(softPanel(), "p-5")}>
                     <div className={cx("text-base font-semibold", strongText())}>Preview</div>
                     <p className={cx("mt-2 text-sm leading-6", mutedText())}>
                       Review the stock result before saving this movement.
                     </p>
 
-                    <div className="mt-5 grid grid-cols-2 gap-3">
-                      <div className="rounded-2xl border border-stone-200 bg-white px-4 py-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]">
+                    <div className="mt-5 grid grid-cols-1 gap-3">
+                      <div className={cx(pageCard(), "px-4 py-4")}>
                         <div className={softText()}>Before</div>
-                        <div className={cx("mt-2 text-3xl font-semibold tracking-tight", strongText())}>
+                        <div
+                          className={cx(
+                            "mt-2 text-3xl font-semibold tracking-tight",
+                            strongText()
+                          )}
+                        >
                           {currentQty}
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-stone-200 bg-white px-4 py-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]">
+                      <div className={cx(pageCard(), "px-4 py-4")}>
                         <div className={softText()}>After</div>
                         <div
                           className={cx(
@@ -369,7 +575,7 @@ function StockAdjustDialog({
                   </div>
                 </div>
 
-                <div className="rounded-[24px] border border-stone-200 bg-stone-50 p-5 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
+                <div className={cx(softPanel(), "p-5")}>
                   <div className={cx("text-base font-semibold", strongText())}>Movement type</div>
                   <p className={cx("mt-2 text-sm leading-6", mutedText())}>
                     Choose the exact type so the audit trail stays clean.
@@ -380,10 +586,10 @@ function StockAdjustDialog({
                       type="button"
                       onClick={() => onChange("type", "RESTOCK")}
                       className={cx(
-                        "rounded-[24px] border p-5 text-left transition",
+                        "rounded-[24px] p-5 text-left transition",
                         form.type === "RESTOCK"
-                          ? "border-emerald-500 bg-emerald-50 shadow-sm dark:border-emerald-700 dark:bg-emerald-950/20"
-                          : "border-stone-200 bg-white hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))] dark:hover:bg-[rgb(var(--bg-muted))]"
+                          ? "bg-emerald-50 shadow-sm dark:bg-emerald-950/20"
+                          : cx(pageCard(), "hover:opacity-90")
                       )}
                     >
                       <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
@@ -398,10 +604,10 @@ function StockAdjustDialog({
                       type="button"
                       onClick={() => onChange("type", "LOSS")}
                       className={cx(
-                        "rounded-[24px] border p-5 text-left transition",
+                        "rounded-[24px] p-5 text-left transition",
                         form.type === "LOSS"
-                          ? "border-red-500 bg-red-50 shadow-sm dark:border-red-700 dark:bg-red-950/20"
-                          : "border-stone-200 bg-white hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))] dark:hover:bg-[rgb(var(--bg-muted))]"
+                          ? "bg-red-50 shadow-sm dark:bg-red-950/20"
+                          : cx(pageCard(), "hover:opacity-90")
                       )}
                     >
                       <div className="text-sm font-semibold text-red-700 dark:text-red-300">
@@ -416,10 +622,10 @@ function StockAdjustDialog({
                       type="button"
                       onClick={() => onChange("type", "CORRECTION")}
                       className={cx(
-                        "rounded-[24px] border p-5 text-left transition",
+                        "rounded-[24px] p-5 text-left transition",
                         form.type === "CORRECTION"
-                          ? "border-amber-500 bg-amber-50 shadow-sm dark:border-amber-700 dark:bg-amber-950/20"
-                          : "border-stone-200 bg-white hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))] dark:hover:bg-[rgb(var(--bg-muted))]"
+                          ? "bg-amber-50 shadow-sm dark:bg-amber-950/20"
+                          : cx(pageCard(), "hover:opacity-90")
                       )}
                     >
                       <div className="text-sm font-semibold text-amber-700 dark:text-amber-300">
@@ -432,7 +638,7 @@ function StockAdjustDialog({
                   </div>
                 </div>
 
-                <div className="rounded-[24px] border border-stone-200 bg-stone-50 p-5 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
+                <div className={cx(softPanel(), "p-5")}>
                   <div className={cx("text-base font-semibold", strongText())}>Movement details</div>
 
                   <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -511,7 +717,13 @@ function StockAdjustDialog({
                           disabled={loading}
                         />
                       ) : (
-                        <div className="mt-2 flex h-11 items-center rounded-2xl border border-stone-200 bg-white px-3.5 text-sm text-stone-500 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))] dark:text-[rgb(var(--text-soft))]">
+                        <div
+                          className={cx(
+                            softPanel(),
+                            "mt-2 flex h-11 items-center px-3.5 text-sm",
+                            mutedText()
+                          )}
+                        >
                           {form.type === "RESTOCK"
                             ? "Supplier / replenishment context"
                             : form.type === "LOSS"
@@ -542,7 +754,7 @@ function StockAdjustDialog({
               </div>
 
               <aside className="space-y-5">
-                <div className="rounded-[24px] border border-stone-200 bg-stone-50 p-5 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
+                <div className={cx(softPanel(), "p-5")}>
                   <div className={cx("text-base font-semibold", strongText())}>Discipline</div>
                   <ul className={cx("mt-4 space-y-3 text-sm leading-6", mutedText())}>
                     <li>
@@ -563,7 +775,7 @@ function StockAdjustDialog({
                   </ul>
                 </div>
 
-                <div className="rounded-[24px] border border-stone-200 bg-stone-50 p-5 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
+                <div className={cx(softPanel(), "p-5")}>
                   <div className={cx("text-base font-semibold", strongText())}>Save</div>
                   <p className={cx("mt-2 text-sm leading-6", mutedText())}>
                     This movement updates stock immediately and should be fully explainable later.
@@ -621,92 +833,71 @@ function DesktopRow({
   const isOut = qty === 0;
   const isLow = qty > 0 && qty <= thresholdToUse;
 
-  const categoryLabel = [product.category || null, product.subcategory || null]
-    .filter(Boolean)
-    .join(" • ");
+  const categoryText =
+    [product.category, product.subcategory].filter(Boolean).join(" • ") || "Uncategorized";
 
   return (
-    <tr className="border-b border-stone-200 align-middle last:border-b-0 dark:border-[rgb(var(--border))]">
-      <td className="px-4 py-4 align-top">
+    <div className="rounded-[22px] bg-[var(--color-surface-2)] px-6 py-5 transition hover:translate-y-[-1px] hover:shadow-[var(--shadow-soft)]">
+      <div className="grid grid-cols-[minmax(0,2.5fr)_minmax(0,1.2fr)_170px_220px_72px] items-center gap-10">
         <div className="min-w-0">
-          <div className={cx("truncate text-sm font-semibold", strongText())}>
-            {product.name}
-          </div>
-          <div className={cx("mt-1 truncate text-sm", mutedText())}>{product.brand || "—"}</div>
-        </div>
-      </td>
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-surface)] text-[var(--color-primary)] shadow-[var(--shadow-soft)]">
+              <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M21 8l-9-5-9 5 9 5 9-5zm-18 3v8l9 5 9-5v-8" />
+              </svg>
+            </div>
 
-      <td className="px-4 py-4 align-top">
+            <div className="min-w-0">
+              <div className={cx("truncate text-[15px] font-bold", strongText())}>
+                {product.name}
+              </div>
+              <div className={cx("mt-1 truncate text-sm", mutedText())}>
+                {product.brand || "Unknown brand"}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="min-w-0">
-          <div className={cx("truncate text-sm", strongText())}>{categoryLabel || "—"}</div>
-          <div className={cx("mt-1 space-y-1 text-sm leading-5", mutedText())}>
-            <div className="truncate">SKU: {product.sku || "—"}</div>
-            <div className="truncate">Barcode: {product.barcode || "—"}</div>
-            <div className="truncate">Serial: {product.serial || "—"}</div>
+          <div className={cx("truncate text-sm font-semibold", strongText())}>{categoryText}</div>
+          <div className={cx("mt-1 text-xs", mutedText())}>
+            {product.isActive ? "Active product" : "Inactive product"}
           </div>
         </div>
-      </td>
 
-      <td className="px-4 py-4 align-top text-right">
-        <div className="space-y-1">
-          <div className={cx("text-sm font-medium", strongText())}>{formatMoney(product.costPrice)}</div>
-          <div className={cx("text-sm font-semibold", strongText())}>{formatMoney(product.sellPrice)}</div>
+        <div className="text-right">
+          <div className={cx("text-base font-black", strongText())}>
+            {formatMoney(product.sellPrice)}
+          </div>
         </div>
-      </td>
 
-      <td className="px-4 py-4 align-top text-center">
-        <div className={cx("text-xl font-semibold leading-none", strongText())}>{qty}</div>
-        <div className={cx("mt-2 text-xs", softText())}>Min {thresholdToUse}</div>
-      </td>
+        <div className="pl-2">
+          <div className="flex items-center gap-3">
+            <span className={cx("text-2xl font-black leading-none", strongText())}>{qty}</span>
 
-      <td className="px-4 py-4 align-top">
-        <div className="flex flex-col items-start gap-2">
-          {isOut ? <StatusBadge kind="danger">Stock Out</StatusBadge> : null}
-          {!isOut && isLow ? <StatusBadge kind="warning">Low</StatusBadge> : null}
-          {!isOut && !isLow ? <StatusBadge kind="success">Healthy</StatusBadge> : null}
-          {!product.isActive ? <StatusBadge>Inactive</StatusBadge> : null}
+            <div className="flex flex-wrap gap-2">
+              {isOut ? <StatusBadge kind="danger">Out</StatusBadge> : null}
+              {!isOut && isLow ? <StatusBadge kind="warning">Low</StatusBadge> : null}
+              {!isOut && !isLow ? <StatusBadge kind="success">Healthy</StatusBadge> : null}
+              {!product.isActive ? <StatusBadge>Inactive</StatusBadge> : null}
+            </div>
+          </div>
+
+          <div className={cx("mt-2 text-xs", mutedText())}>Min level {thresholdToUse}</div>
         </div>
-      </td>
 
-      <td className="px-4 py-4 align-top">
-        <div className="flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => onAdjust(product)}
-            className={subtleBtn()}
-          >
-            Adjust
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onEdit(product.id)}
-            className={subtleBtn()}
-          >
-            Edit
-          </button>
-
-          {product.isActive ? (
-            <AsyncButton
-              loading={busyId === product.id}
-              onClick={() => onDeactivate(product)}
-              variant="secondary"
-              className={subtleBtn()}
-            >
-              Deactivate
-            </AsyncButton>
-          ) : (
-            <AsyncButton
-              loading={busyId === product.id}
-              onClick={() => onActivate(product)}
-              className={primaryBtn()}
-            >
-              Activate
-            </AsyncButton>
-          )}
+        <div className="flex justify-end">
+          <ActionMenu
+            product={product}
+            busyId={busyId}
+            onEdit={onEdit}
+            onAdjust={onAdjust}
+            onDeactivate={onDeactivate}
+            onActivate={onActivate}
+          />
         </div>
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }
 
@@ -728,88 +919,69 @@ function MobileCard({
   const isLow = qty > 0 && qty <= thresholdToUse;
 
   return (
-    <div className={cx(shell(), "overflow-hidden")}>
-      <div className="border-b border-stone-200 px-4 py-4 dark:border-[rgb(var(--border))]">
-        <div className="flex items-start justify-between gap-3">
+    <div className={cx(pageCard(), "overflow-hidden p-4 sm:p-5")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-primary)]">
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M21 8l-9-5-9 5 9 5 9-5zm-18 3v8l9 5 9-5v-8" />
+            </svg>
+          </div>
+
           <div className="min-w-0">
-            <div className={cx("truncate text-base font-semibold", strongText())}>{product.name}</div>
-            <div className={cx("mt-1 text-sm", mutedText())}>{product.brand || "—"}</div>
-          </div>
-          <div className="text-right">
-            <div className={cx("text-xs", softText())}>Stock</div>
-            <div className={cx("mt-1 text-xl font-semibold", strongText())}>{qty}</div>
+            <div className={cx("truncate text-base font-bold", strongText())}>{product.name}</div>
+            <div className={cx("mt-1 truncate text-sm", mutedText())}>{product.brand || "Unknown brand"}</div>
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {isOut ? <StatusBadge kind="danger">Out of stock</StatusBadge> : null}
-          {!isOut && isLow ? <StatusBadge kind="warning">Low stock</StatusBadge> : null}
-          {!isOut && !isLow ? <StatusBadge kind="success">Healthy</StatusBadge> : null}
-          {!product.isActive ? <StatusBadge>Inactive</StatusBadge> : null}
-        </div>
+        <ActionMenu
+          product={product}
+          busyId={busyId}
+          onEdit={onEdit}
+          onAdjust={onAdjust}
+          onDeactivate={onDeactivate}
+          onActivate={onActivate}
+        />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 px-4 py-4 text-sm">
-        <div>
-          <div className={softText()}>Category</div>
-          <div className={cx("mt-1", strongText())}>
-            {product.category || "—"}
-            {product.subcategory ? ` • ${product.subcategory}` : ""}
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className={cx(softPanel(), "p-4")}>
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+            Category
+          </div>
+          <div className={cx("mt-2 text-sm font-semibold", strongText())}>
+            {[product.category, product.subcategory].filter(Boolean).join(" • ") || "Uncategorized"}
           </div>
         </div>
 
-        <div>
-          <div className={softText()}>Min stock</div>
-          <div className={cx("mt-1", strongText())}>{thresholdToUse}</div>
-        </div>
-
-        <div>
-          <div className={softText()}>Buy</div>
-          <div className={cx("mt-1", strongText())}>{formatMoney(product.costPrice)}</div>
-        </div>
-
-        <div>
-          <div className={softText()}>Sell</div>
-          <div className={cx("mt-1", strongText())}>{formatMoney(product.sellPrice)}</div>
-        </div>
-
-        <div className="col-span-2">
-          <div className={softText()}>Codes</div>
-          <div className={cx("mt-1 space-y-1", mutedText())}>
-            <div>SKU: {product.sku || "—"}</div>
-            <div>Barcode: {product.barcode || "—"}</div>
-            <div>Serial: {product.serial || "—"}</div>
+        <div className={cx(softPanel(), "p-4")}>
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+            Selling price
+          </div>
+          <div className={cx("mt-2 text-base font-black", strongText())}>
+            {formatMoney(product.sellPrice)}
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-2 border-t border-stone-200 px-4 py-4 dark:border-[rgb(var(--border))]">
-        <button type="button" onClick={() => onAdjust(product)} className={secondaryBtn()}>
-          Adjust stock
-        </button>
+        <div className={cx(softPanel(), "p-4")}>
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+            Units in stock
+          </div>
+          <div className={cx("mt-2 text-2xl font-black leading-none", strongText())}>{qty}</div>
+          <div className={cx("mt-2 text-xs", mutedText())}>Min level {thresholdToUse}</div>
+        </div>
 
-        <button type="button" onClick={() => onEdit(product.id)} className={secondaryBtn()}>
-          Edit product
-        </button>
-
-        {product.isActive ? (
-          <AsyncButton
-            loading={busyId === product.id}
-            onClick={() => onDeactivate(product)}
-            variant="secondary"
-            className={secondaryBtn()}
-          >
-            Deactivate
-          </AsyncButton>
-        ) : (
-          <AsyncButton
-            loading={busyId === product.id}
-            onClick={() => onActivate(product)}
-            className={primaryBtn()}
-          >
-            Activate
-          </AsyncButton>
-        )}
+        <div className={cx(softPanel(), "p-4")}>
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+            Status
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {isOut ? <StatusBadge kind="danger">Out of stock</StatusBadge> : null}
+            {!isOut && isLow ? <StatusBadge kind="warning">Low stock</StatusBadge> : null}
+            {!isOut && !isLow ? <StatusBadge kind="success">Healthy</StatusBadge> : null}
+            {!product.isActive ? <StatusBadge>Inactive</StatusBadge> : null}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1281,7 +1453,7 @@ export default function InventoryList() {
     : "Showing current catalog state across active inventory.";
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 sm:space-y-6">
       <ConfirmDialog
         open={confirmState.open}
         title="Deactivate product"
@@ -1306,22 +1478,94 @@ export default function InventoryList() {
         onSubmit={submitAdjustStock}
       />
 
-      <section className={cx(shell(), "overflow-hidden")}>
-        <div className="border-b border-stone-200 px-5 py-5 dark:border-[rgb(var(--border))]">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
-              <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                Inventory
+      <section className="space-y-5 sm:space-y-6">
+        <div>
+          <h1 className={cx("text-4xl font-black tracking-tight sm:text-5xl", strongText())}>
+            Inventory
+          </h1>
+        </div>
+
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {initialSummaryLoading ? (
+            <div className="col-span-full">
+              <PageSkeleton variant="dashboard" />
+            </div>
+          ) : (
+            <>
+              <SummaryCard
+                label="Active products"
+                value={summary.totalActiveProducts}
+                note="Products currently available in your catalog"
+                tone="neutral"
+                icon={<CubeIcon />}
+              />
+
+              <SummaryCard
+                label="Units in stock"
+                value={summary.totalStockUnits}
+                note="Total sellable units currently on hand"
+                tone="warning"
+                icon={<BoxesIcon />}
+              />
+
+              <SummaryCard
+                label="Inventory cost value"
+                value={formatMoney(summary.stockCostValue)}
+                note="Capital currently tied up in stock"
+                tone="neutral"
+                icon={<WalletIcon />}
+              />
+
+              <SummaryCard
+                label="Inventory retail value"
+                value={formatMoney(summary.stockSellValue)}
+                note={inventoryHealthText}
+                tone={inventoryHealthTone}
+                icon={<TrendUpIcon />}
+              />
+            </>
+          )}
+        </section>
+      </section>
+
+      {!initialSummaryLoading ? (
+        <section className={cx(pageCard(), "p-5 sm:p-6")}>
+          <SectionHeader title="Inventory focus" subtitle={currentScopeLabel} />
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className={cx(softPanel(), "px-4 py-4")}>
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                Out of stock
               </div>
-              <h1 className={cx("mt-2 text-3xl font-semibold tracking-tight", strongText())}>
-                Inventory control
-              </h1>
-              <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                Monitor stock position, value on hand, replenishment risk, and catalog quality
-                from one operational screen.
-              </p>
+              <div className={cx("mt-3 text-2xl font-black tracking-tight", strongText())}>
+                {summary.outOfStockCount}
+              </div>
             </div>
 
+            <div className={cx(softPanel(), "px-4 py-4")}>
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                Low stock
+              </div>
+              <div className={cx("mt-3 text-2xl font-black tracking-tight", strongText())}>
+                {summary.lowStockCount}
+              </div>
+            </div>
+
+            <div className={cx(softPanel(), "px-4 py-4")}>
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                Current focus
+              </div>
+              <div className={cx("mt-3 text-sm leading-6", strongText())}>{currentScopeLabel}</div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <SectionHeader
+          title="Inventory control"
+          subtitle="Monitor stock position, value on hand, replenishment risk, and catalog quality from one operational screen."
+          right={
             <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
@@ -1353,78 +1597,15 @@ export default function InventoryList() {
                 Add product
               </button>
             </div>
-          </div>
-        </div>
+          }
+        />
 
-        <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-2 xl:grid-cols-4">
-          {initialSummaryLoading ? (
-            <div className="col-span-full">
-              <PageSkeleton titleWidth="w-40" lines={1} showTable={false} />
-            </div>
-          ) : (
-            <>
-              <SummaryCard
-                label="Active products"
-                value={summary.totalActiveProducts}
-                note="Products currently available in your catalog"
-              />
-              <SummaryCard
-                label="Units in stock"
-                value={summary.totalStockUnits}
-                note="Total sellable units on hand"
-              />
-              <SummaryCard
-                label="Inventory cost value"
-                value={formatMoney(summary.stockCostValue)}
-                note="Capital tied in stock"
-              />
-              <SummaryCard
-                label="Inventory retail value"
-                value={formatMoney(summary.stockSellValue)}
-                note={inventoryHealthText}
-                tone={inventoryHealthTone}
-              />
-            </>
-          )}
-        </div>
-
-        {!initialSummaryLoading ? (
-          <div className="grid grid-cols-1 gap-3 border-t border-stone-200 px-5 py-4 sm:grid-cols-2 xl:grid-cols-3 dark:border-[rgb(var(--border))]">
-            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
-              <div className={cx("text-xs font-medium uppercase tracking-[0.14em]", softText())}>
-                Out of stock
-              </div>
-              <div className={cx("mt-2 text-xl font-semibold", strongText())}>
-                {summary.outOfStockCount}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
-              <div className={cx("text-xs font-medium uppercase tracking-[0.14em]", softText())}>
-                Low stock
-              </div>
-              <div className={cx("mt-2 text-xl font-semibold", strongText())}>
-                {summary.lowStockCount}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
-              <div className={cx("text-xs font-medium uppercase tracking-[0.14em]", softText())}>
-                Current focus
-              </div>
-              <div className={cx("mt-2 text-sm leading-6", strongText())}>{currentScopeLabel}</div>
-            </div>
-          </div>
-        ) : null}
-      </section>
-
-      <section className={cx(shell(), "p-4")}>
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
           <div className="lg:col-span-4">
             <label className={cx("text-sm font-medium", strongText())}>Search</label>
             <input
-              className={inputClass()}
-              placeholder="Name, item code, serial, barcode..."
+              className={cx(inputClass(), "mt-2")}
+              placeholder="Search product name..."
               value={filters.q}
               onChange={(e) => setFilter("q", e.target.value)}
             />
@@ -1433,7 +1614,7 @@ export default function InventoryList() {
           <div className="lg:col-span-2">
             <label className={cx("text-sm font-medium", strongText())}>Sort</label>
             <select
-              className={inputClass()}
+              className={cx(inputClass(), "mt-2")}
               value={filters.sort}
               onChange={(e) => setFilter("sort", e.target.value)}
             >
@@ -1447,7 +1628,7 @@ export default function InventoryList() {
           <div className="lg:col-span-2">
             <label className={cx("text-sm font-medium", strongText())}>Status</label>
             <select
-              className={inputClass()}
+              className={cx(inputClass(), "mt-2")}
               value={filters.active}
               onChange={(e) => setFilter("active", e.target.value)}
             >
@@ -1459,7 +1640,7 @@ export default function InventoryList() {
           <div className="lg:col-span-2">
             <label className={cx("text-sm font-medium", strongText())}>Category</label>
             <input
-              className={inputClass()}
+              className={cx(inputClass(), "mt-2")}
               placeholder="Phones, Laptops..."
               value={filters.category}
               onChange={(e) => setFilter("category", e.target.value)}
@@ -1469,7 +1650,7 @@ export default function InventoryList() {
           <div className="lg:col-span-2">
             <label className={cx("text-sm font-medium", strongText())}>Brand</label>
             <input
-              className={inputClass()}
+              className={cx(inputClass(), "mt-2")}
               placeholder="Apple, Samsung..."
               value={filters.brand}
               onChange={(e) => setFilter("brand", e.target.value)}
@@ -1477,7 +1658,7 @@ export default function InventoryList() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="mt-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap gap-2">
             <FilterChip
               active={!filters.lowStock && !filters.outOfStock}
@@ -1517,7 +1698,7 @@ export default function InventoryList() {
             <input
               type="number"
               min="0"
-              className="h-10 w-24 rounded-2xl border border-stone-300 bg-white px-3 text-sm text-stone-900 outline-none transition focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]"
+              className="h-11 w-24 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)]"
               value={filters.threshold}
               onChange={(e) => setFilter("threshold", e.target.value)}
             />
@@ -1526,79 +1707,68 @@ export default function InventoryList() {
       </section>
 
       <section className="space-y-4">
-        <div className="hidden lg:block">
-          <div className={shell()}>
+        <div className="hidden xl:block">
+          <div className={pageCard()}>
             <RefreshBar visible={refreshingList} />
 
+            <div className="border-b border-[var(--color-border)] px-6 py-4">
+              <div className="grid grid-cols-[minmax(0,2.5fr)_minmax(0,1.2fr)_170px_220px_72px] gap-10">
+                <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
+                  Product
+                </div>
+                <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
+                  Category
+                </div>
+                <div className={cx("text-right text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
+                  Selling price
+                </div>
+                <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
+                  Stock state
+                </div>
+                <div className={cx("text-right text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
+                  More
+                </div>
+              </div>
+            </div>
+
             {initialListLoading && showInitialSkeleton && products.length === 0 ? (
-              <div className="px-4 py-6">
+              <div className="px-5 py-6">
                 <PageSkeleton titleWidth="w-40" lines={1} showTable={true} />
               </div>
+            ) : !initialListLoading && products.length === 0 ? (
+              <div className={cx("px-5 py-14 text-center text-sm", mutedText())}>
+                No products found for the current filters.
+              </div>
             ) : (
-              <div className={cx(refreshingList ? "opacity-80" : "opacity-100")}>
-                <table className="w-full table-fixed">
-                  <thead className="border-b border-stone-200 bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))]">
-                    <tr>
-                      <th className={cx("w-[19%] px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                        Product
-                      </th>
-                      <th className={cx("w-[24%] px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                        Category & codes
-                      </th>
-                      <th className={cx("w-[14%] px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                        Pricing
-                      </th>
-                      <th className={cx("w-[10%] px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                        Stock
-                      </th>
-                      <th className={cx("w-[13%] px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                        Status
-                      </th>
-                      <th className={cx("w-[20%] px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {!initialListLoading && products.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className={cx("px-4 py-12 text-center text-sm", mutedText())}>
-                          No products found for the current filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      products.map((product) => (
-                        <DesktopRow
-                          key={product.id}
-                          product={product}
-                          threshold={safeThreshold}
-                          busyId={busyId}
-                          onEdit={(id) => navigate(`/app/inventory/${id}/edit`)}
-                          onAdjust={openAdjustDialog}
-                          onDeactivate={openDeactivateDialog}
-                          onActivate={handleActivate}
-                        />
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              <div className={cx("space-y-3 px-4 py-4", refreshingList ? "opacity-80" : "opacity-100")}>
+                {products.map((product) => (
+                  <DesktopRow
+                    key={product.id}
+                    product={product}
+                    threshold={safeThreshold}
+                    busyId={busyId}
+                    onEdit={(id) => navigate(`/app/inventory/${id}/edit`)}
+                    onAdjust={openAdjustDialog}
+                    onDeactivate={openDeactivateDialog}
+                    onActivate={handleActivate}
+                  />
+                ))}
               </div>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 lg:hidden">
+        <div className="grid grid-cols-1 gap-3 xl:hidden">
           {initialListLoading && showInitialSkeleton && products.length === 0 ? (
             <PageSkeleton titleWidth="w-40" lines={1} showTable={true} />
           ) : !initialListLoading && products.length === 0 ? (
-            <div className={cx(shell(), "px-4 py-10 text-center text-sm", mutedText())}>
+            <div className={cx(pageCard(), "px-4 py-10 text-center text-sm", mutedText())}>
               No products found for the current filters.
             </div>
           ) : (
             <>
               {refreshingList ? (
-                <div className={cx(shell(), "px-4 py-2 text-xs", mutedText())}>
+                <div className={cx(pageCard(), "px-4 py-2 text-xs", mutedText())}>
                   Refreshing inventory…
                 </div>
               ) : null}

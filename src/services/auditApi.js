@@ -1,26 +1,27 @@
-const API = "http://localhost:5000/api/audit";
+import { apiFetch } from "./apiClient";
 
-function authHeader() {
-  return {
-    Authorization: `Bearer ${localStorage.getItem("tenantToken")}`,
-    "Content-Type": "application/json",
-  };
-}
+function toQuery(params = {}) {
+  const q = new URLSearchParams();
 
-export async function getAuditLogs() {
-  const res = await fetch(API, {
-    headers: authHeader(),
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    if (String(value).trim() === "") return;
+    q.set(key, String(value));
   });
 
-  if (res.status === 401) {
-    localStorage.removeItem("tenantToken");
-    window.location.href = "/login";
-    return;
-  }
+  const qs = q.toString();
+  return qs ? `?${qs}` : "";
+}
 
-  if (!res.ok) {
-    throw new Error("Failed to load audit logs");
-  }
+export function getAuditLogs(params = {}) {
+  return apiFetch(`/audit${toQuery(params)}`);
+}
 
-  return res.json();
+export function getAuditStats() {
+  return apiFetch("/audit/stats");
+}
+
+export function getAuditLogById(id) {
+  if (!id) throw new Error("Missing audit log id");
+  return apiFetch(`/audit/${id}`);
 }

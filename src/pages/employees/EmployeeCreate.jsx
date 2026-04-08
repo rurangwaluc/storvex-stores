@@ -1,63 +1,78 @@
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
-import AsyncButton from "../../components/ui/AsyncButton";
 import { createEmployee } from "../../services/employeesApi";
 
 const ROLE_OPTIONS = [
-  {
-    value: "MANAGER",
-    label: "Manager",
-    short: "Supervises operations",
-  },
-  {
-    value: "CASHIER",
-    label: "Cashier",
-    short: "Handles checkout and payments",
-  },
-  {
-    value: "SELLER",
-    label: "Seller",
-    short: "Focuses on selling",
-  },
-  {
-    value: "STOREKEEPER",
-    label: "Storekeeper",
-    short: "Manages stock flow",
-  },
-  {
-    value: "TECHNICIAN",
-    label: "Technician",
-    short: "Handles repairs and service",
-  },
+  { value: "MANAGER", label: "Manager", short: "Supervises operations" },
+  { value: "CASHIER", label: "Cashier", short: "Handles checkout and payments" },
+  { value: "SELLER", label: "Seller", short: "Focuses on selling" },
+  { value: "STOREKEEPER", label: "Storekeeper", short: "Manages stock flow" },
+  { value: "TECHNICIAN", label: "Technician", short: "Handles repairs and service" },
 ];
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
-function shell() {
-  return "rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
-}
-
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function fieldLabel() {
-  return "text-sm font-medium text-stone-800 dark:text-[rgb(var(--text))]";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
-function sectionEyebrow() {
-  return "text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500 dark:text-[rgb(var(--text-soft))]";
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
+}
+
+function inputClass() {
+  return "app-input";
+}
+
+function primaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function sectionBadge(color = "blue") {
+  const map = {
+    blue: "bg-[#57b5ff] text-[#06263d]",
+    orange: "bg-[#ff9f43] text-[#402100]",
+    yellow: "bg-[#ffe45e] text-[#4a4300]",
+    green: "bg-[#7cfcc6] text-[#0b3b2e]",
+    neutral: "bg-[var(--color-surface)] text-[var(--color-text-muted)]",
+  };
+
+  return cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", map[color]);
+}
+
+function SectionHeading({ eyebrow, title, subtitle }) {
+  return (
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
+        </div>
+      ) : null}
+      <h2 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
+        {title}
+      </h2>
+      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
+    </div>
+  );
 }
 
 function initialsFromName(name) {
@@ -73,25 +88,23 @@ function initialsFromName(name) {
 
 function passwordStrengthLabel(password) {
   const p = String(password || "");
-  if (!p) return { label: "Not set", cls: "badge-neutral" };
-  if (p.length < 6) return { label: "Too short", cls: "badge-danger" };
-  if (p.length < 8) return { label: "Basic", cls: "badge-warning" };
+  if (!p) return { label: "Not set", color: "neutral" };
+  if (p.length < 6) return { label: "Too short", color: "orange" };
+  if (p.length < 8) return { label: "Basic", color: "yellow" };
   if (/[A-Z]/.test(p) && /\d/.test(p) && /[^A-Za-z0-9]/.test(p)) {
-    return { label: "Strong", cls: "badge-success" };
+    return { label: "Strong", color: "green" };
   }
-  return { label: "Good", cls: "badge-info" };
+  return { label: "Good", color: "blue" };
 }
 
-function roleTone(role) {
+function roleColor(role) {
   const r = String(role || "").toUpperCase();
-
-  if (r === "MANAGER") return "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200";
-  if (r === "CASHIER") return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200";
-  if (r === "SELLER") return "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-900/60 dark:bg-violet-950/30 dark:text-violet-200";
-  if (r === "STOREKEEPER") return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200";
-  if (r === "TECHNICIAN") return "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800 dark:border-fuchsia-900/60 dark:bg-fuchsia-950/30 dark:text-fuchsia-200";
-
-  return "border-stone-200 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-900/30 dark:text-stone-300";
+  if (r === "MANAGER") return "blue";
+  if (r === "CASHIER") return "green";
+  if (r === "SELLER") return "orange";
+  if (r === "STOREKEEPER") return "yellow";
+  if (r === "TECHNICIAN") return "green";
+  return "neutral";
 }
 
 function EyeIcon({ open }) {
@@ -143,10 +156,7 @@ export default function EmployeeCreate({ onSaved, onCancel, canCreate = true }) 
     [form.role]
   );
 
-  const passwordState = useMemo(
-    () => passwordStrengthLabel(form.password),
-    [form.password]
-  );
+  const passwordState = useMemo(() => passwordStrengthLabel(form.password), [form.password]);
 
   function setField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -198,7 +208,7 @@ export default function EmployeeCreate({ onSaved, onCancel, canCreate = true }) 
 
   if (!canCreate) {
     return (
-      <div className={cx(shell(), "p-6")}>
+      <div className={cx(pageCard(), "p-6")}>
         <div className={cx("text-lg font-semibold", strongText())}>Create access restricted</div>
         <p className={cx("mt-2 text-sm", mutedText())}>
           You do not have permission to create staff accounts.
@@ -208,158 +218,146 @@ export default function EmployeeCreate({ onSaved, onCancel, canCreate = true }) 
   }
 
   return (
-    <form onSubmit={submit} className={cx(shell(), "overflow-hidden")}>
-      <div className="border-b border-stone-200 px-4 py-4 dark:border-[rgb(var(--border))] sm:px-6 sm:py-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className={sectionEyebrow()}>New team member</div>
-            <h2 className={cx("mt-1 text-2xl font-semibold tracking-tight sm:text-3xl", strongText())}>
-              Create a staff account
-            </h2>
-            <p className={cx("mt-2 max-w-2xl text-sm leading-6", mutedText())}>
-              Add a secure employee profile with the right role and a temporary password.
-            </p>
+    <form onSubmit={submit} className={cx(pageCard(), "overflow-hidden")}>
+      <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-3xl">
+            <SectionHeading
+              eyebrow="New team member"
+              title="Create a staff account"
+              subtitle="Add a secure employee profile with the right role and a temporary password."
+            />
           </div>
 
-          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row">
             {onCancel ? (
-              <button type="button" onClick={onCancel} disabled={saving} className="btn-secondary">
+              <button type="button" onClick={onCancel} disabled={saving} className={secondaryBtn()}>
                 Close
               </button>
             ) : null}
 
-            <AsyncButton type="submit" loading={saving} className="btn-primary">
-              Create member
-            </AsyncButton>
+            <button type="submit" disabled={saving} className={primaryBtn()}>
+              {saving ? "Creating..." : "Create member"}
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="px-4 py-4 sm:px-6 sm:py-6">
-        <div className="grid grid-cols-1 gap-4">
-          <div className="rounded-2xl border border-stone-200 p-4 dark:border-[rgb(var(--border))]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-stone-950 text-sm font-semibold text-white dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))]">
-                {initialsFromName(form.name)}
-              </div>
+      <div className="space-y-5 px-5 py-5 sm:px-6">
+        <div className={cx(softPanel(), "p-4")}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-sm font-bold text-white">
+              {initialsFromName(form.name)}
+            </div>
 
-              <div className="min-w-0">
-                <div className={cx("truncate text-sm font-semibold", strongText())}>
-                  {form.name.trim() || "New team member"}
-                </div>
-                <div className={cx("truncate text-xs", mutedText())}>
-                  {form.email.trim() || "employee@example.com"}
-                </div>
+            <div className="min-w-0">
+              <div className={cx("truncate text-sm font-semibold", strongText())}>
+                {form.name.trim() || "New team member"}
               </div>
+              <div className={cx("truncate text-xs", mutedText())}>
+                {form.email.trim() || "employee@example.com"}
+              </div>
+            </div>
 
-              <span
-                className={cx(
-                  "ml-auto inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold",
-                  roleTone(form.role)
-                )}
+            <span className={cx("ml-auto", sectionBadge(roleColor(form.role)))}>{selectedRole.label}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className={cx("text-sm font-medium", strongText())}>Full name</label>
+            <input
+              className={cx(inputClass(), "mt-2")}
+              placeholder="Example: Jules Uwase"
+              value={form.name}
+              onChange={(e) => setField("name", e.target.value)}
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className={cx("text-sm font-medium", strongText())}>Email address</label>
+            <input
+              className={cx(inputClass(), "mt-2")}
+              placeholder="employee@example.com"
+              value={form.email}
+              onChange={(e) => setField("email", e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className={cx("text-sm font-medium", strongText())}>Temporary password</label>
+            <div className="relative mt-2">
+              <input
+                type={showPassword ? "text" : "password"}
+                className={cx(inputClass(), "pr-12")}
+                placeholder="At least 6 characters"
+                value={form.password}
+                onChange={(e) => setField("password", e.target.value)}
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-[var(--color-text-muted)] transition hover:text-[var(--color-text)]"
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {selectedRole.label}
-              </span>
+                <EyeIcon open={showPassword} />
+              </button>
+            </div>
+
+            <div className="mt-2">
+              <span className={sectionBadge(passwordState.color)}>{passwordState.label}</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className={fieldLabel()}>Full name</label>
-              <input
-                className="app-input mt-2"
-                placeholder="Example: Jules Uwase"
-                value={form.name}
-                onChange={(e) => setField("name", e.target.value)}
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className={fieldLabel()}>Email address</label>
-              <input
-                className="app-input mt-2"
-                placeholder="employee@example.com"
-                value={form.email}
-                onChange={(e) => setField("email", e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className={fieldLabel()}>Temporary password</label>
-
-              <div className="relative mt-2">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className="app-input pr-12"
-                  placeholder="At least 6 characters"
-                  value={form.password}
-                  onChange={(e) => setField("password", e.target.value)}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-stone-500 transition hover:text-stone-800 dark:text-[rgb(var(--text-soft))] dark:hover:text-[rgb(var(--text))]"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  title={showPassword ? "Hide password" : "Show password"}
-                >
-                  <EyeIcon open={showPassword} />
-                </button>
-              </div>
-
-              <div className="mt-2 flex items-center gap-2">
-                <span className={passwordState.cls}>{passwordState.label}</span>
-              </div>
-            </div>
-
-            <div>
-              <label className={fieldLabel()}>Phone number</label>
-              <input
-                className="app-input mt-2"
-                placeholder="Optional"
-                value={form.phone}
-                onChange={(e) => setField("phone", e.target.value)}
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className={fieldLabel()}>Role</label>
-              <select
-                className="app-input mt-2"
-                value={form.role}
-                onChange={(e) => setField("role", e.target.value)}
-              >
-                {ROLE_OPTIONS.map((role) => (
-                  <option key={role.value} value={role.value}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
-
-              <p className={cx("mt-2 text-xs", softText())}>{selectedRole.short}</p>
-            </div>
+          <div>
+            <label className={cx("text-sm font-medium", strongText())}>Phone number</label>
+            <input
+              className={cx(inputClass(), "mt-2")}
+              placeholder="Optional"
+              value={form.phone}
+              onChange={(e) => setField("phone", e.target.value)}
+            />
           </div>
 
-          <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
-            <div className={sectionEyebrow()}>Quick note</div>
-            <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-              Give only the access needed for the employee’s daily work. Use a temporary password they can change later.
-            </p>
+          <div className="sm:col-span-2">
+            <label className={cx("text-sm font-medium", strongText())}>Role</label>
+            <select
+              className={cx(inputClass(), "mt-2")}
+              value={form.role}
+              onChange={(e) => setField("role", e.target.value)}
+            >
+              {ROLE_OPTIONS.map((role) => (
+                <option key={role.value} value={role.value}>
+                  {role.label}
+                </option>
+              ))}
+            </select>
+            <p className={cx("mt-2 text-xs", mutedText())}>{selectedRole.short}</p>
           </div>
+        </div>
+
+        <div className={cx(softPanel(), "p-4")}>
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+            Quick note
+          </div>
+          <p className={cx("mt-2 text-sm leading-6", mutedText())}>
+            Give only the access needed for the employee’s daily work. Use a temporary password they can change later.
+          </p>
         </div>
       </div>
 
-      <div className="border-t border-stone-200 px-4 py-4 dark:border-[rgb(var(--border))] sm:px-6">
+      <div className="border-t border-[var(--color-border)] px-5 py-4 sm:px-6">
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           {onCancel ? (
-            <button type="button" onClick={onCancel} disabled={saving} className="btn-secondary">
+            <button type="button" onClick={onCancel} disabled={saving} className={secondaryBtn()}>
               Cancel
             </button>
           ) : null}
 
-          <AsyncButton type="submit" loading={saving} className="btn-primary">
-            Create member
-          </AsyncButton>
+          <button type="submit" disabled={saving} className={primaryBtn()}>
+            {saving ? "Creating..." : "Create member"}
+          </button>
         </div>
       </div>
     </form>

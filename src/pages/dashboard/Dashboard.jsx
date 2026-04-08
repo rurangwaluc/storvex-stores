@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getWorkspaceContext } from "../../services/storeApi";
-import apiClient from "../../services/apiClient";
+import { getTenantDashboard } from "../../services/dashboardApi";
 import PageSkeleton from "../../components/ui/PageSkeleton";
 
 function cx(...xs) {
@@ -9,31 +9,27 @@ function cx(...xs) {
 }
 
 function strongText() {
-  return "text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function shell() {
-  return "rounded-[32px] border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] shadow-sm";
-}
-
-function card() {
-  return "rounded-[24px] border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] shadow-sm";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
 function primaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-stone-950 px-4 text-sm font-medium text-white transition hover:bg-stone-800 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))]";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95";
 }
 
 function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg))] px-4 text-sm font-medium text-[rgb(var(--text))] transition hover:bg-[rgb(var(--bg-muted))]";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90";
 }
 
 function Pill({ children, tone = "neutral" }) {
@@ -58,6 +54,11 @@ function formatDate(value) {
   return d.toLocaleDateString();
 }
 
+function formatMoney(value) {
+  const n = Number(value || 0);
+  return `Rwf ${n.toLocaleString("en-US")}`;
+}
+
 function categoryLabel(value) {
   const map = {
     ELECTRONICS_RETAIL: "Electronics Retail",
@@ -70,97 +71,192 @@ function categoryLabel(value) {
   return map[value] || "Not set";
 }
 
-function StatCard({ label, value, note, tone = "neutral" }) {
-  const accent =
-    tone === "success"
-      ? "bg-emerald-500"
-      : tone === "warning"
-      ? "bg-amber-500"
-      : tone === "danger"
-      ? "bg-rose-500"
-      : tone === "info"
-      ? "bg-sky-500"
-      : "bg-[rgb(var(--text))]";
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8 sm:h-9 sm:w-9" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M7 3v4M17 3v4M4 9h16M5 6h14a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a1 1 0 0 1 1-1Z" />
+      <path d="m9 14 2 2 4-4" />
+    </svg>
+  );
+}
+
+function MoneyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8 sm:h-9 sm:w-9" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M14.5 9.5c0-1.1-1.1-2-2.5-2s-2.5.9-2.5 2 1.1 2 2.5 2 2.5.9 2.5 2-1.1 2-2.5 2-2.5-.9-2.5-2M12 6.5v11" />
+    </svg>
+  );
+}
+
+function BoxIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8 sm:h-9 sm:w-9" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M21 8l-9-5-9 5 9 5 9-5zm-18 3v8l9 5 9-5v-8" />
+    </svg>
+  );
+}
+
+function AuditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M7 3h8l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" strokeLinejoin="round" />
+      <path d="M15 3v5h5" strokeLinejoin="round" />
+      <path d="M9 12h6M9 16h6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LargeStatCard({ label, value, note, tone = "blue", icon }) {
+  const toneStyles = {
+    blue: { box: "bg-[#dff1ff] text-[#4aa8ff]" },
+    orange: { box: "bg-[#ffe3d4] text-[#ff8b4a]" },
+    yellow: { box: "bg-[#fff1c9] text-[#e7bb18]" },
+  };
+
+  const style = toneStyles[tone] || toneStyles.blue;
 
   return (
-    <div className="relative overflow-hidden rounded-[24px] border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] p-4">
-      <div className={cx("absolute left-0 top-0 h-full w-1.5", accent)} />
-      <div className="pl-2">
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-          {label}
+    <article className={cx(pageCard(), "p-5 sm:p-6")}>
+      <div className="flex items-center gap-4 sm:gap-5">
+        <div
+          className={cx(
+            "flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] sm:h-24 sm:w-24 sm:rounded-[22px]",
+            style.box
+          )}
+        >
+          {icon}
         </div>
-        <div className={cx("mt-2 text-2xl font-semibold tracking-tight", strongText())}>{value}</div>
-        {note ? <div className={cx("mt-1 text-sm", mutedText())}>{note}</div> : null}
+
+        <div className="min-w-0">
+          <div className={cx("text-[1.75rem] font-black leading-none tracking-tight sm:text-[2rem]", strongText())}>
+            {value}
+          </div>
+          <div className={cx("mt-2 text-[1.15rem] font-semibold leading-none sm:text-[1.3rem]", strongText())}>
+            {label}
+          </div>
+          {note ? <div className={cx("mt-2 text-sm", mutedText())}>{note}</div> : null}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function SectionHeader({ title, subtitle, right }) {
+  return (
+    <div className="mb-5 flex items-start justify-between gap-3">
+      <div>
+        <div className={cx("text-[1.55rem] font-black leading-none sm:text-[1.8rem]", strongText())}>
+          {title}
+        </div>
+        {subtitle ? <div className={cx("mt-2 text-sm", mutedText())}>{subtitle}</div> : null}
+      </div>
+      {right ? <div className="shrink-0">{right}</div> : null}
+    </div>
+  );
+}
+
+function TinyKpi({ label, value, tone = "neutral" }) {
+  const line =
+    tone === "success"
+      ? "bg-emerald-400"
+      : tone === "warning"
+      ? "bg-orange-400"
+      : tone === "danger"
+      ? "bg-yellow-300"
+      : tone === "info"
+      ? "bg-sky-400"
+      : "bg-[var(--color-primary)]";
+
+  return (
+    <div className="rounded-[20px] bg-[var(--color-surface-2)] p-4">
+      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+        {label}
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <div className={cx("h-10 w-1.5 rounded-full", line)} />
+        <div className={cx("text-2xl font-black tracking-tight", strongText())}>{value}</div>
       </div>
     </div>
   );
 }
 
-function SubscriptionPanel({ me }) {
-  if (!me?.subscription) return null;
+function TopSummary({ dashboard }) {
+  return (
+    <div className="space-y-5 sm:space-y-6">
+      <section>
+        <h1 className={cx("text-4xl font-black tracking-tight sm:text-5xl", strongText())}>
+          Dashboard
+        </h1>
+      </section>
 
-  const sub = me.subscription;
-  const status = String(sub.status || "").toUpperCase();
-  const mode = String(sub.accessMode || "").toUpperCase();
-  const canOperate = Boolean(sub.canOperate);
+      <section className="grid gap-5 xl:grid-cols-3">
+        <LargeStatCard
+          label="Subscription"
+          value={dashboard?.subscriptionSummary?.label || "—"}
+          note={dashboard?.subscriptionSummary?.detail || "Commercial access state"}
+          tone="blue"
+          icon={<CalendarIcon />}
+        />
+        <LargeStatCard
+          label="Today sales"
+          value={formatMoney(dashboard?.todaySales)}
+          note="Sales made today"
+          tone="orange"
+          icon={<MoneyIcon />}
+        />
+        <LargeStatCard
+          label="Monthly revenue"
+          value={formatMoney(dashboard?.monthlyRevenue)}
+          note={`${dashboard?.productCount ?? 0} active products`}
+          tone="yellow"
+          icon={<BoxIcon />}
+        />
+      </section>
+    </div>
+  );
+}
 
-  const tone =
-    status === "EXPIRED" || canOperate === false
-      ? "danger"
-      : mode === "READ_ONLY"
-      ? "warning"
-      : mode === "TRIAL"
-      ? "info"
-      : "success";
-
-  const label =
-    status === "EXPIRED" || canOperate === false
-      ? "Expired"
-      : mode === "READ_ONLY"
-      ? "Read-only"
-      : mode === "TRIAL"
-      ? "Trial"
-      : "Active";
-
-  const detail =
-    status === "EXPIRED" || canOperate === false
-      ? "Renew to continue operations."
-      : mode === "READ_ONLY"
-      ? `Grace ends ${formatDate(sub.graceEndDate || sub.endDate)}`
-      : mode === "TRIAL"
-      ? `${sub.daysLeft ?? 0} day${Number(sub.daysLeft || 0) === 1 ? "" : "s"} left`
-      : `Ends ${formatDate(sub.endDate)}`;
+function SubscriptionPanel({ subscriptionSummary }) {
+  if (!subscriptionSummary) return null;
 
   return (
-    <div className={cx(card(), "p-5")}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className={cx("text-base font-semibold", strongText())}>Subscription</div>
-          <div className={cx("mt-1 text-sm", mutedText())}>
-            Commercial access state and renewal pressure.
+    <section className={cx(pageCard(), "p-5 sm:p-6")}>
+      <SectionHeader
+        title="Subscription"
+        subtitle="Commercial access state and renewal pressure."
+        right={<Pill tone={subscriptionSummary.tone}>{subscriptionSummary.label}</Pill>}
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-[20px] bg-[var(--color-surface-2)] p-4 sm:p-5">
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+            Plan
+          </div>
+          <div className={cx("mt-3 text-lg font-black", strongText())}>
+            {subscriptionSummary.planKey || "—"}
+          </div>
+          <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+            {subscriptionSummary.detail}
           </div>
         </div>
 
-        <Pill tone={tone}>{label}</Pill>
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg))] p-4">
-          <div className={cx("text-xs uppercase tracking-[0.14em]", softText())}>Plan</div>
-          <div className={cx("mt-2 text-base font-semibold", strongText())}>{sub.planKey || "—"}</div>
-          <div className={cx("mt-1 text-sm", mutedText())}>{detail}</div>
-        </div>
-
-        <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg))] p-4">
-          <div className={cx("text-xs uppercase tracking-[0.14em]", softText())}>Access</div>
-          <div className={cx("mt-2 text-base font-semibold", strongText())}>
-            {canOperate ? "Operational" : "Read-only only"}
+        <div className="rounded-[20px] bg-[var(--color-surface-2)] p-4 sm:p-5">
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+            Access
           </div>
-          <div className={cx("mt-1 text-sm", mutedText())}>{sub.reason || "—"}</div>
+          <div className={cx("mt-3 text-lg font-black", strongText())}>
+            {subscriptionSummary.canOperate ? "Operational" : "Restricted"}
+          </div>
+          <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+            {subscriptionSummary.endDate
+              ? formatDate(subscriptionSummary.endDate)
+              : "Workspace access state"}
+          </div>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap gap-3">
         <Link to="/app/billing" className={primaryBtn()}>
           Open billing
         </Link>
@@ -168,46 +264,67 @@ function SubscriptionPanel({ me }) {
           Recovery page
         </Link>
       </div>
-    </div>
+    </section>
   );
 }
 
-function StoreIdentityPanel({ me }) {
-  const tenant = me?.tenant;
+function StoreIdentityPanel({ tenant, dashboard }) {
   if (!tenant) return null;
 
   const location = [tenant.district, tenant.sector].filter(Boolean).join(" • ") || "Location not set";
 
   return (
-    <div className={cx(card(), "p-5")}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className={cx("text-base font-semibold", strongText())}>Store identity</div>
-          <div className={cx("mt-1 text-sm", mutedText())}>
-            Brand, category, and location completeness.
+    <section className={cx(pageCard(), "p-5 sm:p-6")}>
+      <SectionHeader
+        title="Store identity"
+        subtitle="Brand, category, and location completeness."
+        right={
+          <Link to="/app/settings" className={secondaryBtn()}>
+            Open settings
+          </Link>
+        }
+      />
+
+      <div className="space-y-4">
+        <div className="rounded-[20px] bg-[var(--color-surface-2)] p-4 sm:p-5">
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+            Store
           </div>
+          <div className={cx("mt-3 text-2xl font-black tracking-tight", strongText())}>
+            {tenant.name || "—"}
+          </div>
+          <div className={cx("mt-2 text-sm", mutedText())}>{location}</div>
         </div>
 
-        <Link to="/app/settings" className={secondaryBtn()}>
-          Open settings
-        </Link>
-      </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-[20px] bg-[var(--color-surface-2)] p-4 sm:p-5">
+            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+              Category
+            </div>
+            <div className={cx("mt-3 text-lg font-black", strongText())}>
+              {categoryLabel(tenant.shopType)}
+            </div>
+            <div className={cx("mt-2 text-sm", mutedText())}>Business type</div>
+          </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <StatCard label="Store" value={tenant.name || "—"} note="Current workspace owner store" tone="neutral" />
-        <StatCard label="Category" value={categoryLabel(tenant.shopType)} note={location} tone="info" />
-        <StatCard
-          label="Branding"
-          value={tenant.logoUrl ? "Configured" : "Missing"}
-          note="Logo, header, footer"
-          tone={tenant.logoUrl ? "success" : "warning"}
-        />
+          <div className="rounded-[20px] bg-[var(--color-surface-2)] p-4 sm:p-5">
+            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+              Branding
+            </div>
+            <div className={cx("mt-3 text-lg font-black", strongText())}>
+              {tenant.logoUrl ? "Configured" : "Missing"}
+            </div>
+            <div className={cx("mt-2 text-sm", mutedText())}>
+              {dashboard?.productCount ?? 0} active products
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-function ReadinessPanel({ workspace }) {
+function ReadinessPanel({ workspace, dashboard }) {
   const summary = workspace?.setupChecklistSummary;
   if (!summary) return null;
 
@@ -216,44 +333,34 @@ function ReadinessPanel({ workspace }) {
     : [];
 
   return (
-    <div className={cx(card(), "p-5")}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className={cx("text-base font-semibold", strongText())}>Operational readiness</div>
-          <div className={cx("mt-1 text-sm", mutedText())}>
-            Setup completion before the store runs at full quality.
-          </div>
-        </div>
+    <section className={cx(pageCard(), "p-5 sm:p-6")}>
+      <SectionHeader
+        title="Operational readiness"
+        subtitle="Setup completion before the store runs at full quality."
+        right={
+          <Pill tone={summary.isOperationallyReady ? "success" : "warning"}>
+            {summary.readinessPercent}% ready
+          </Pill>
+        }
+      />
 
-        <Pill tone={summary.isOperationallyReady ? "success" : "warning"}>
-          {summary.readinessPercent}% ready
-        </Pill>
-      </div>
-
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
-        <StatCard
-          label="Active staff"
-          value={summary?.counts?.activeKnownStoreUsers ?? 0}
-          note="Known active store users"
-          tone="neutral"
+      <div className="grid gap-4 md:grid-cols-3">
+        <TinyKpi
+          label="Low stock"
+          value={dashboard?.lowStockCount ?? 0}
+          tone={(dashboard?.lowStockCount ?? 0) > 0 ? "warning" : "success"}
         />
-        <StatCard
-          label="Products"
-          value={summary?.counts?.activeProducts ?? 0}
-          note="Active inventory items"
-          tone={(summary?.counts?.activeProducts ?? 0) > 0 ? "success" : "warning"}
+        <TinyKpi
+          label="Out of stock"
+          value={dashboard?.outOfStockCount ?? 0}
+          tone={(dashboard?.outOfStockCount ?? 0) > 0 ? "danger" : "success"}
         />
-        <StatCard
-          label="Stock units"
-          value={summary?.counts?.totalStockUnits ?? 0}
-          note="Units currently available"
-          tone={(summary?.counts?.totalStockUnits ?? 0) > 0 ? "success" : "warning"}
-        />
+        <TinyKpi label="Repairs" value={dashboard?.activeRepairs ?? 0} tone="info" />
       </div>
 
       {!summary.isOperationallyReady && missing.length ? (
-        <div className="mt-5 rounded-[24px] border border-[rgb(var(--border))] bg-[rgb(var(--bg))] p-4">
-          <div className={cx("text-sm font-semibold", strongText())}>Still missing</div>
+        <div className="mt-5 rounded-[20px] bg-[var(--color-surface-2)] p-4">
+          <div className={cx("text-sm font-bold", strongText())}>Still missing</div>
           <div className="mt-3 flex flex-wrap gap-2">
             {missing.map((item) => (
               <span key={item} className="badge-warning">
@@ -263,11 +370,88 @@ function ReadinessPanel({ workspace }) {
           </div>
         </div>
       ) : null}
-    </div>
+    </section>
   );
 }
 
-function ActionPanel() {
+function LowStockPanel({ dashboard }) {
+  const items = Array.isArray(dashboard?.lowStockProducts) ? dashboard.lowStockProducts : [];
+
+  return (
+    <section className={cx(pageCard(), "p-5 sm:p-6")}>
+      <SectionHeader
+        title="Low stock products"
+        subtitle="Products that need immediate attention."
+      />
+
+      {!items.length ? (
+        <div className="rounded-[20px] bg-[var(--color-surface-2)] p-5 text-sm text-[var(--color-text-muted)]">
+          No low stock alerts right now.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between gap-3 rounded-[20px] bg-[var(--color-surface-2)] px-4 py-4"
+            >
+              <div className="min-w-0">
+                <div className={cx("truncate text-sm font-semibold", strongText())}>{item.name}</div>
+                <div className={cx("mt-1 text-xs", mutedText())}>
+                  {[item.category, item.subcategory, item.subcategoryOther]
+                    .filter(Boolean)
+                    .join(" • ") || "Uncategorized"}
+                </div>
+              </div>
+
+              <span className="badge-warning shrink-0">{item.stockQty} left</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AuditPanel({ dashboard }) {
+  const items = Array.isArray(dashboard?.recentAudit) ? dashboard.recentAudit : [];
+
+  return (
+    <section className={cx(pageCard(), "p-5 sm:p-6")}>
+      <SectionHeader title="Recent audit" subtitle="Latest operational activity." />
+
+      {!items.length ? (
+        <div className="rounded-[20px] bg-[var(--color-surface-2)] p-5 text-sm text-[var(--color-text-muted)]">
+          No recent audit activity.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.slice(0, 6).map((item) => (
+            <div
+              key={item.id}
+              className="flex items-start gap-3 rounded-[20px] bg-[var(--color-surface-2)] px-4 py-4"
+            >
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-card)] text-[var(--color-primary)]">
+                <AuditIcon />
+              </div>
+
+              <div className="min-w-0">
+                <div className={cx("text-sm font-semibold", strongText())}>
+                  {item.action || "Activity"}
+                </div>
+                <div className={cx("mt-1 text-xs", mutedText())}>
+                  {item.entity || "Record"} • {formatDate(item.createdAt)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ActionPanel({ dashboard }) {
   const actions = [
     { label: "New sale", to: "/app/pos", tone: "primary" },
     { label: "Inventory", to: "/app/inventory", tone: "secondary" },
@@ -276,13 +460,13 @@ function ActionPanel() {
   ];
 
   return (
-    <div className={cx(card(), "p-5")}>
-      <div className={cx("text-base font-semibold", strongText())}>Quick actions</div>
-      <div className={cx("mt-1 text-sm", mutedText())}>
-        Jump into the core store flows without hunting through the sidebar.
-      </div>
+    <section className={cx(pageCard(), "p-5 sm:p-6")}>
+      <SectionHeader
+        title="Quick actions"
+        subtitle={`Pending deals: ${dashboard?.pendingDeals ?? 0} • Recent audit items: ${dashboard?.recentAudit?.length ?? 0}`}
+      />
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {actions.map((action) => (
           <Link
             key={action.to}
@@ -293,13 +477,13 @@ function ActionPanel() {
           </Link>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
 export default function Dashboard() {
   const [workspace, setWorkspace] = useState(null);
-  const [me, setMe] = useState(null);
+  const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -308,19 +492,20 @@ export default function Dashboard() {
     async function load() {
       setLoading(true);
       try {
-        const [{ data: workspaceData }, { data: meData }] = await Promise.all([
+        const [workspacePayload, dashboardPayload] = await Promise.all([
           getWorkspaceContext(),
-          apiClient.get("/auth/me"),
+          getTenantDashboard(),
         ]);
 
         if (!alive) return;
-        setWorkspace(workspaceData || null);
-        setMe(meData || null);
+
+        setWorkspace(workspacePayload || null);
+        setDashboard(dashboardPayload || null);
       } catch (err) {
         console.error("dashboard load failed:", err);
         if (!alive) return;
         setWorkspace(null);
-        setMe(null);
+        setDashboard(null);
       } finally {
         if (alive) setLoading(false);
       }
@@ -337,46 +522,23 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-5">
-      <section className={cx(shell(), "relative overflow-hidden p-5 md:p-6")}>
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-stone-950 via-stone-800 to-stone-950 opacity-[0.03] dark:from-white dark:via-white dark:to-white dark:opacity-[0.04]" />
+    <div className="space-y-5 sm:space-y-6">
+      <TopSummary dashboard={dashboard} />
 
-        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div className="min-w-0">
-            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-              Operations cockpit
-            </div>
-
-            <h1 className={cx("mt-2 text-2xl font-semibold tracking-tight md:text-3xl", strongText())}>
-              Dashboard
-            </h1>
-
-            <p className={cx("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", mutedText())}>
-              Clear daily control for subscription pressure, store readiness, and the core operating system.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Link to="/app/billing" className={secondaryBtn()}>
-              Billing
-            </Link>
-            <Link to="/app/documents" className={secondaryBtn()}>
-              Documents
-            </Link>
-            <Link to="/app/pos" className={primaryBtn()}>
-              Open POS
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-        <SubscriptionPanel me={me} />
-        <StoreIdentityPanel me={me} />
+      <div className="grid gap-6 xl:grid-cols-[1.55fr_0.95fr]">
+        <SubscriptionPanel subscriptionSummary={dashboard?.subscriptionSummary} />
+        <StoreIdentityPanel tenant={dashboard?.tenant} dashboard={dashboard} />
       </div>
 
-      <ReadinessPanel workspace={workspace} />
-      <ActionPanel />
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <ReadinessPanel workspace={workspace} dashboard={dashboard} />
+        <LowStockPanel dashboard={dashboard} />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <ActionPanel dashboard={dashboard} />
+        <AuditPanel dashboard={dashboard} />
+      </div>
     </div>
   );
 }

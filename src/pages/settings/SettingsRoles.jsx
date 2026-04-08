@@ -9,45 +9,72 @@ function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
-function CheckIcon({ on }) {
-  return on ? (
-    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M20 6L9 17l-5-5"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
-  ) : (
-    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-stone-100 text-stone-400 border border-stone-200 dark:border-stone-700 dark:bg-stone-900/30 dark:text-stone-500">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M6 6l12 12M18 6L6 18"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
+function strongText() {
+  return "text-[var(--color-text)]";
+}
+
+function mutedText() {
+  return "text-[var(--color-text-muted)]";
+}
+
+function softText() {
+  return "text-[var(--color-text-muted)]";
+}
+
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
+}
+
+function primaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function sectionBadge(color = "blue") {
+  const map = {
+    blue: "bg-[#57b5ff] text-[#06263d]",
+    orange: "bg-[#ff9f43] text-[#402100]",
+    yellow: "bg-[#ffe45e] text-[#4a4300]",
+    green: "bg-[#7cfcc6] text-[#0b3b2e]",
+    neutral: "bg-[var(--color-surface)] text-[var(--color-text-muted)]",
+  };
+
+  return cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", map[color]);
+}
+
+function SectionHeading({ eyebrow, title, subtitle }) {
+  return (
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
+        </div>
+      ) : null}
+      <h2 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
+        {title}
+      </h2>
+      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
+    </div>
   );
 }
 
-function Pill({ children, tone = "neutral" }) {
-  const cls =
-    tone === "danger"
-      ? "badge-danger"
-      : tone === "success"
-      ? "badge-success"
-      : tone === "info"
-      ? "badge-info"
-      : "badge-neutral";
-
-  return <span className={cls}>{children}</span>;
+function CheckIcon({ on }) {
+  return on ? (
+    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#7cfcc6] text-[#0b3b2e]">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  ) : (
+    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-text-muted)]">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
 }
 
 function prettyPermission(p) {
@@ -72,21 +99,6 @@ export default function SettingsRoles() {
   useEffect(() => {
     document.title = "User roles • Storvex";
   }, []);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const [me, pol] = await Promise.all([getMyPermissions(), getPermissionPolicy()]);
-      setMyRole(me?.role || null);
-      setPolicy(pol?.roles || null);
-    } catch (e) {
-      console.error(e);
-      toast.error(e?.message || "Failed to load roles policy");
-      setPolicy(null);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   useEffect(() => {
     let alive = true;
@@ -152,68 +164,68 @@ export default function SettingsRoles() {
 
   if (!policy) {
     return (
-      <div className="app-card">
-        <div className="text-lg font-semibold text-[rgb(var(--text))]">Roles & permissions</div>
-        <p className="mt-1 text-sm text-[rgb(var(--text-muted))]">
-          Roles policy is not available. Check backend route{" "}
-          <span className="font-mono">/auth/permissions/policy</span>.
+      <div className={cx(pageCard(), "p-6")}>
+        <div className={cx("text-lg font-semibold", strongText())}>Roles & permissions</div>
+        <p className={cx("mt-2 text-sm leading-6", mutedText())}>
+          Roles policy is not available right now.
         </p>
-        <button type="button" onClick={load} className="btn-primary mt-4">
-          Retry
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
-      <section className="app-card">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="text-lg font-semibold text-[rgb(var(--text))]">Roles & permissions</div>
-            <p className="mt-1 text-sm text-[rgb(var(--text-muted))]">
-              This page is rendered from backend permission policy, which remains the single source of truth.
-            </p>
-
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-              <Pill tone="success">Policy based</Pill>
-              {myRole ? <Pill tone="info">My role: {myRole}</Pill> : <Pill tone="danger">Role unknown</Pill>}
-              <Pill>{roleNames.length} roles</Pill>
+    <div className="space-y-6">
+      <section className={cx(pageCard(), "overflow-hidden")}>
+        <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <SectionHeading
+                eyebrow="Roles"
+                title="Roles & permissions"
+                subtitle="This page is rendered from backend permission policy, which remains the single source of truth."
+              />
             </div>
-          </div>
 
-          <Link to="/app/settings/members" className="btn-primary">
-            Manage members
-          </Link>
+            <Link to="/app/settings/members" className={primaryBtn()}>
+              Manage members
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 px-5 py-5 sm:px-6">
+          <span className={sectionBadge("green")}>Policy based</span>
+          {myRole ? <span className={sectionBadge("blue")}>My role: {myRole}</span> : <span className={sectionBadge("orange")}>Role unknown</span>}
+          <span className={sectionBadge("neutral")}>{roleNames.length} roles</span>
         </div>
       </section>
 
-      <section className="app-card overflow-hidden p-0">
-        <div className="border-b border-[rgb(var(--border))] px-5 py-5">
-          <div className="text-base font-semibold text-[rgb(var(--text))]">Access matrix</div>
-          <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">
-            A live role-by-role permission matrix from the backend.
-          </div>
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <div className="max-w-3xl">
+          <SectionHeading
+            eyebrow="Access matrix"
+            title="Live permissions matrix"
+            subtitle="A role-by-role permissions matrix coming directly from the backend policy."
+          />
         </div>
 
-        <div className="space-y-6 p-5">
+        <div className="mt-6 space-y-6">
           {matrix.map((section) => (
             <div key={section.group} className="space-y-3">
-              <div className="text-xs uppercase tracking-[0.14em] text-[rgb(var(--text-soft))]">
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
                 {section.group}
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-[rgb(var(--border))]">
+              <div className={cx(softPanel(), "overflow-x-auto p-2")}>
                 <table className="min-w-[760px] w-full">
-                  <thead className="bg-[rgb(var(--bg-muted))]">
-                    <tr className="border-b border-[rgb(var(--border))]">
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-[rgb(var(--text-soft))]">
+                  <thead>
+                    <tr className="border-b border-[var(--color-border)]">
+                      <th className={cx("px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
                         Permission
                       </th>
                       {roleNames.map((role) => (
                         <th
                           key={role}
-                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-[rgb(var(--text-soft))]"
+                          className={cx("px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em]", softText())}
                         >
                           {role}
                         </th>
@@ -223,14 +235,14 @@ export default function SettingsRoles() {
 
                   <tbody>
                     {section.rows.map((r) => (
-                      <tr key={r.perm} className="border-b border-[rgb(var(--border))] last:border-b-0">
-                        <td className="px-4 py-3">
-                          <div className="text-sm font-medium text-[rgb(var(--text))]">{r.label}</div>
-                          <div className="mt-0.5 text-xs font-mono text-[rgb(var(--text-soft))]">{r.perm}</div>
+                      <tr key={r.perm} className="border-b border-[var(--color-border)] last:border-b-0">
+                        <td className="px-4 py-4">
+                          <div className={cx("text-sm font-semibold", strongText())}>{r.label}</div>
+                          <div className={cx("mt-1 text-xs font-mono", mutedText())}>{r.perm}</div>
                         </td>
 
                         {r.availability.map((entry) => (
-                          <td key={`${r.perm}-${entry.role}`} className="px-4 py-3">
+                          <td key={`${r.perm}-${entry.role}`} className="px-4 py-4">
                             <CheckIcon on={entry.on} />
                           </td>
                         ))}
@@ -242,9 +254,9 @@ export default function SettingsRoles() {
             </div>
           ))}
 
-          <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] p-4">
-            <div className="text-sm font-medium text-[rgb(var(--text))]">Implementation note</div>
-            <p className="mt-1 text-sm text-[rgb(var(--text-muted))]">
+          <div className={cx(softPanel(), "p-4")}>
+            <div className={cx("text-sm font-semibold", strongText())}>Implementation note</div>
+            <p className={cx("mt-2 text-sm leading-6", mutedText())}>
               Today, permissions are computed from code-based policy. The next upgrade can add tenant-specific overrides and audit history for permission changes.
             </p>
           </div>

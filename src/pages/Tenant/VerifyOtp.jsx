@@ -32,9 +32,9 @@ function StatusPill({ ok, label }) {
 
 function StepHint({ title, body }) {
   return (
-    <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] p-4">
-      <div className="text-sm font-medium text-[rgb(var(--text))]">{title}</div>
-      <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">{body}</div>
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+      <div className="text-sm font-medium text-[var(--color-text)]">{title}</div>
+      <div className="mt-1 text-sm text-[var(--color-text-muted)]">{body}</div>
     </div>
   );
 }
@@ -187,11 +187,11 @@ export default function VerifyOtp() {
         },
       ]}
       footer={
-        <div className="text-sm text-[rgb(var(--text-muted))]">
+        <div className="text-sm text-[var(--color-text-muted)]">
           Need to restart?{" "}
           <Link
             to="/signup"
-            className="font-medium text-[rgb(var(--text))] underline-offset-4 hover:underline"
+            className="font-medium text-[var(--color-text)] underline-offset-4 hover:underline"
           >
             Back to signup
           </Link>
@@ -200,9 +200,9 @@ export default function VerifyOtp() {
       compact
     >
       <div className="space-y-5">
-        <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] p-4">
-          <div className="text-sm font-medium text-[rgb(var(--text))]">Store</div>
-          <div className="mt-1 text-lg font-semibold text-[rgb(var(--text))]">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+          <div className="text-sm font-medium text-[var(--color-text)]">Store</div>
+          <div className="mt-1 text-lg font-semibold text-[var(--color-text)]">
             {storeName || "Your store"}
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -211,11 +211,11 @@ export default function VerifyOtp() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[rgb(var(--border))] p-4">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-soft)]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <div className="text-sm font-medium text-[rgb(var(--text))]">Email verification</div>
-              <div className="mt-1 break-all text-sm text-[rgb(var(--text-muted))]">
+              <div className="text-sm font-medium text-[var(--color-text)]">Email verification</div>
+              <div className="mt-1 break-all text-sm text-[var(--color-text-muted)]">
                 {ownerEmail || "—"}
               </div>
             </div>
@@ -223,9 +223,9 @@ export default function VerifyOtp() {
           </div>
 
           {!!devHint.email && !emailVerified ? (
-            <div className="mt-3 rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] px-3 py-2 text-xs text-[rgb(var(--text-muted))]">
+            <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
               DEV OTP:{" "}
-              <span className="font-mono text-[rgb(var(--text))]">{devHint.email}</span>
+              <span className="font-mono text-[var(--color-text)]">{devHint.email}</span>
             </div>
           ) : null}
 
@@ -241,6 +241,7 @@ export default function VerifyOtp() {
               type="button"
               variant="secondary"
               loading={sendingEmail}
+              loadingText="Sending..."
               disabled={emailVerified || verifyingEmail}
               onClick={() => send("EMAIL")}
             >
@@ -249,6 +250,7 @@ export default function VerifyOtp() {
             <AsyncButton
               type="button"
               loading={verifyingEmail}
+              loadingText="Verifying..."
               disabled={emailVerified || sendingEmail}
               onClick={() => verify("EMAIL")}
             >
@@ -257,11 +259,11 @@ export default function VerifyOtp() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[rgb(var(--border))] p-4">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-soft)]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <div className="text-sm font-medium text-[rgb(var(--text))]">Phone verification</div>
-              <div className="mt-1 break-all text-sm text-[rgb(var(--text-muted))]">
+              <div className="text-sm font-medium text-[var(--color-text)]">Phone verification</div>
+              <div className="mt-1 break-all text-sm text-[var(--color-text-muted)]">
                 {ownerPhone || "—"}
               </div>
             </div>
@@ -269,9 +271,9 @@ export default function VerifyOtp() {
           </div>
 
           {!!devHint.phone && !phoneVerified ? (
-            <div className="mt-3 rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] px-3 py-2 text-xs text-[rgb(var(--text-muted))]">
+            <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
               DEV OTP:{" "}
-              <span className="font-mono text-[rgb(var(--text))]">{devHint.phone}</span>
+              <span className="font-mono text-[var(--color-text)]">{devHint.phone}</span>
             </div>
           ) : null}
 
@@ -287,6 +289,7 @@ export default function VerifyOtp() {
               type="button"
               variant="secondary"
               loading={sendingPhone}
+              loadingText="Sending..."
               disabled={phoneVerified || verifyingPhone}
               onClick={() => send("PHONE")}
             >
@@ -295,6 +298,7 @@ export default function VerifyOtp() {
             <AsyncButton
               type="button"
               loading={verifyingPhone}
+              loadingText="Verifying..."
               disabled={phoneVerified || sendingPhone}
               onClick={() => verify("PHONE")}
             >
@@ -303,9 +307,9 @@ export default function VerifyOtp() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] p-4">
-          <div className="text-sm font-medium text-[rgb(var(--text))]">Activation options</div>
-          <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+          <div className="text-sm font-medium text-[var(--color-text)]">Activation options</div>
+          <div className="mt-1 text-sm text-[var(--color-text-muted)]">
             Both email and phone must be verified before continuing.
           </div>
 

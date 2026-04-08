@@ -5,6 +5,7 @@ import apiClient from "../../services/apiClient";
 import AuthShell from "../../components/auth/AuthShell";
 import PasswordField from "../../components/auth/PasswordField";
 import AsyncButton from "../../components/ui/AsyncButton";
+import AuthPageSkeleton from "../../components/ui/AuthPageSkeleton";
 
 function readOnboardingState() {
   try {
@@ -262,6 +263,10 @@ export default function ConfirmSignup() {
     },
   ];
 
+  if (loadingPlans) {
+    return <AuthPageSkeleton titleWidth="w-64" lines={3} showSide />;
+  }
+
   return (
     <AuthShell
       eyebrow={eyebrow}
@@ -271,36 +276,34 @@ export default function ConfirmSignup() {
       sideBody="After this, the owner can log in, complete setup, load products, and begin daily operations."
       sideItems={sideItems}
       footer={
-        <div className="text-sm text-[rgb(var(--text-muted))]">
+        <div className="text-sm text-[var(--color-text-muted)]">
           Need to go back?{" "}
           <Link
             to={getBackRoute(resolvedMode)}
-            className="font-medium text-[rgb(var(--text))] underline-offset-4 hover:underline"
+            className="font-medium text-[var(--color-text)] underline-offset-4 hover:underline"
           >
             Return to previous step
           </Link>
         </div>
       }
     >
-      <div className="mb-5 rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] p-4">
-        <div className="text-sm font-medium text-[rgb(var(--text))]">Store</div>
-        <div className="mt-1 text-lg font-semibold text-[rgb(var(--text))]">
+      <div className="mb-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+        <div className="text-sm font-medium text-[var(--color-text)]">Store</div>
+        <div className="mt-1 text-lg font-semibold text-[var(--color-text)]">
           {storeNameState || "Your store"}
         </div>
 
         {ownerName ? (
-          <div className="mt-2 text-sm text-[rgb(var(--text-muted))]">
-            Owner: <span className="font-medium text-[rgb(var(--text))]">{ownerName}</span>
+          <div className="mt-2 text-sm text-[var(--color-text-muted)]">
+            Owner: <span className="font-medium text-[var(--color-text)]">{ownerName}</span>
           </div>
         ) : null}
 
-        <div className="mt-2 text-sm text-[rgb(var(--text-muted))]">
+        <div className="mt-2 text-sm text-[var(--color-text-muted)]">
           {resolvedMode === "TRIAL"
             ? `Free trial: ${trialDays} days`
             : paidPlan
             ? `${paidPlan.label} — ${formatMoney(paidPlan.price, paidPlan.currency)}`
-            : loadingPlans
-            ? "Loading selected plan..."
             : "Paid activation"}
         </div>
       </div>
@@ -326,7 +329,13 @@ export default function ConfirmSignup() {
           error={hasConfirm && !passwordsMatch ? "Passwords do not match." : ""}
         />
 
-        <AsyncButton type="submit" loading={loading} className="w-full" disabled={loadingPlans}>
+        <AsyncButton
+          type="submit"
+          loading={loading}
+          loadingText={resolvedMode === "TRIAL" ? "Starting trial..." : "Finishing setup..."}
+          className="w-full"
+          disabled={loadingPlans}
+        >
           {resolvedMode === "TRIAL" ? "Start trial and open store" : "Finish setup"}
         </AsyncButton>
       </form>

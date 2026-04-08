@@ -3,8 +3,13 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { downloadStockAdjustmentsExcel, listAllStockAdjustments } from "../../services/inventoryApi";
-import TableSkeleton from "../../components/ui/TableSkeleton";
 import { handleSubscriptionBlockedError } from "../../utils/subscriptionError";
+
+const PAGE_SIZE = 10;
+
+function cx(...xs) {
+  return xs.filter(Boolean).join(" ");
+}
 
 function toISODate(d) {
   const x = new Date(d);
@@ -27,12 +32,246 @@ function formatDelta(n) {
   return String(x);
 }
 
-function inputClass() {
-  return "mt-1 h-11 w-full rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg))] px-3.5 text-sm text-[rgb(var(--text))] outline-none focus:border-[rgb(var(--text-soft))] focus:ring-2 focus:ring-[rgb(var(--border))]";
+function strongText() {
+  return "text-[var(--color-text)]";
 }
 
-function shell() {
-  return "rounded-[28px] border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] shadow-sm";
+function mutedText() {
+  return "text-[var(--color-text-muted)]";
+}
+
+function softText() {
+  return "text-[var(--color-text-muted)]";
+}
+
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
+}
+
+function inputClass() {
+  return "app-input";
+}
+
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:opacity-60";
+}
+
+function primaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60";
+}
+
+function StatusBadge({ kind = "neutral", children }) {
+  const cls =
+    kind === "danger"
+      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
+      : kind === "warning"
+      ? "bg-[#fff1c9] text-[#b88900]"
+      : kind === "success"
+      ? "bg-[#dcfce7] text-[#15803d]"
+      : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
+
+  return (
+    <span className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", cls)}>
+      {children}
+    </span>
+  );
+}
+
+function SectionHeading({ eyebrow, title, subtitle }) {
+  return (
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
+        </div>
+      ) : null}
+      <h1 className={cx("mt-3 text-[1.7rem] font-black tracking-tight sm:text-[2rem]", strongText())}>
+        {title}
+      </h1>
+      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
+    </div>
+  );
+}
+
+function StatCard({ label, value, note, tone = "neutral" }) {
+  const iconTone =
+    tone === "danger"
+      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
+      : tone === "warning"
+      ? "bg-[#fff1c9] text-[#b88900]"
+      : tone === "success"
+      ? "bg-[#dcfce7] text-[#15803d]"
+      : "bg-[#dff1ff] text-[#4aa8ff]";
+
+  return (
+    <article className={cx(pageCard(), "p-5 sm:p-6")}>
+      <div className="flex items-start gap-4 sm:gap-5">
+        <div
+          className={cx(
+            "flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] shadow-[var(--shadow-soft)]",
+            iconTone
+          )}
+        >
+          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.9">
+            <path d="M5 19V9M12 19V5M19 19v-8" strokeLinecap="round" />
+          </svg>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className={cx("text-sm font-semibold", strongText())}>{label}</div>
+          <div className={cx("mt-2 text-[1.7rem] font-black leading-tight tracking-[-0.02em]", strongText())}>
+            {value}
+          </div>
+          {note ? <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div> : null}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function SkeletonBlock({ className = "" }) {
+  return <div className={cx("animate-pulse rounded-[20px] bg-[var(--color-surface-2)]", className)} />;
+}
+
+function StockHistorySkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-3">
+      {Array.from({ length: 7 }).map((_, i) => (
+        <div key={i} className={cx(pageCard(), "p-4")}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-3">
+              <SkeletonBlock className="h-5 w-40" />
+              <SkeletonBlock className="h-4 w-36" />
+            </div>
+            <SkeletonBlock className="h-8 w-24 rounded-full" />
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <SkeletonBlock className="h-20 w-full" />
+            <SkeletonBlock className="h-20 w-full" />
+            <SkeletonBlock className="h-20 w-full" />
+            <SkeletonBlock className="h-20 w-full" />
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <SkeletonBlock className="h-4 w-full" />
+            <SkeletonBlock className="h-4 w-5/6" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HistoryCard({ row, index }) {
+  const delta = Number(row.delta || 0);
+  const striped = index % 2 === 1;
+
+  return (
+    <div
+      className={cx(
+        pageCard(),
+        "relative overflow-hidden border p-4 sm:p-5",
+        striped
+          ? "border-[rgba(74,163,255,0.12)] bg-[linear-gradient(180deg,rgba(74,163,255,0.035),rgba(74,163,255,0.01))]"
+          : "border-[var(--color-border)]"
+      )}
+    >
+      <div
+        className={cx(
+          "absolute left-0 top-0 h-full w-1.5",
+          row.type === "RESTOCK"
+            ? "bg-[#16a34a]"
+            : row.type === "LOSS"
+            ? "bg-[var(--color-danger)]"
+            : row.type === "CORRECTION"
+            ? "bg-[#d9a700]"
+            : "bg-[var(--color-primary)]"
+        )}
+      />
+
+      <div className="pl-3">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className={cx("truncate text-lg font-bold", strongText())}>
+              {row.product?.name || "—"}
+            </div>
+            <div className={cx("mt-1 text-sm", mutedText())}>
+              {new Date(row.createdAt).toLocaleString()}
+            </div>
+            <div className={cx("mt-1 text-sm", mutedText())}>
+              {row.product?.category || ""}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {row.type === "RESTOCK" ? <StatusBadge kind="success">Restock</StatusBadge> : null}
+            {row.type === "LOSS" ? <StatusBadge kind="danger">Loss / Damage</StatusBadge> : null}
+            {row.type === "CORRECTION" ? <StatusBadge kind="warning">Correction</StatusBadge> : null}
+            {!["RESTOCK", "LOSS", "CORRECTION"].includes(row.type) ? (
+              <StatusBadge>{labelType(row.type)}</StatusBadge>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className={cx(softPanel(), "p-4 shadow-[var(--shadow-soft)]")}>
+            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+              Delta
+            </div>
+            <div
+              className={cx(
+                "mt-2 text-2xl font-black",
+                delta > 0
+                  ? "text-[#15803d]"
+                  : delta < 0
+                  ? "text-[var(--color-danger)]"
+                  : strongText()
+              )}
+            >
+              {formatDelta(delta)}
+            </div>
+          </div>
+
+          <div className={cx(softPanel(), "p-4 shadow-[var(--shadow-soft)]")}>
+            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+              Before
+            </div>
+            <div className={cx("mt-2 text-xl font-black", strongText())}>{row.beforeQty}</div>
+          </div>
+
+          <div className={cx(softPanel(), "p-4 shadow-[var(--shadow-soft)]")}>
+            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+              After
+            </div>
+            <div className={cx("mt-2 text-xl font-black", strongText())}>{row.afterQty}</div>
+          </div>
+
+          <div className={cx(softPanel(), "p-4 shadow-[var(--shadow-soft)]")}>
+            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+              By
+            </div>
+            <div className={cx("mt-2 text-sm font-semibold", strongText())}>
+              {row.createdBy?.name || "System"}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[18px] border border-[var(--color-border)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+            Audit note
+          </div>
+          <div className={cx("mt-2 break-words text-sm leading-6", mutedText())}>
+            {row.note || "—"}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function StockAdjustments() {
@@ -47,6 +286,7 @@ export default function StockAdjustments() {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   async function load() {
     setLoading(true);
@@ -105,67 +345,76 @@ export default function StockAdjustments() {
     return () => clearTimeout(t);
   }, [from, to, type, q]);
 
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [from, to, type, q, rows.length]);
+
+  const restockCount = rows.filter((r) => r.type === "RESTOCK").length;
+  const lossCount = rows.filter((r) => r.type === "LOSS").length;
+  const correctionCount = rows.filter((r) => r.type === "CORRECTION").length;
+
+  const visibleRows = rows.slice(0, visibleCount);
+  const hasMore = visibleCount < rows.length;
+
   return (
-    <div className="space-y-5">
-      <section className={shell()}>
-        <div className="border-b border-[rgb(var(--border))] px-5 py-5">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[rgb(var(--text-soft))]">
-                Inventory
-              </div>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[rgb(var(--text))]">
-                Stock history
-              </h1>
-              <p className="mt-2 text-sm leading-6 text-[rgb(var(--text-muted))]">
-                Every stock movement should be explainable by product, person, type, and note.
-              </p>
-            </div>
+    <div className="space-y-6">
+      <section className="space-y-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <SectionHeading
+            eyebrow="Inventory"
+            title="Stock history"
+            subtitle="Every stock movement should be explainable by product, person, type, and note."
+          />
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => nav("/app/inventory")}
-                className="inline-flex h-10 items-center justify-center rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg))] px-4 text-sm font-medium text-[rgb(var(--text))] transition hover:bg-[rgb(var(--bg-muted))]"
-              >
-                Back to inventory
-              </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => nav("/app/inventory")} className={secondaryBtn()}>
+              Back to inventory
+            </button>
 
-              <button
-                type="button"
-                onClick={load}
-                className="inline-flex h-10 items-center justify-center rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg))] px-4 text-sm font-medium text-[rgb(var(--text))] transition hover:bg-[rgb(var(--bg-muted))]"
-              >
-                Refresh
-              </button>
+            <button type="button" onClick={load} className={secondaryBtn()}>
+              Refresh
+            </button>
 
-              <button
-                type="button"
-                onClick={handleDownloadExcel}
-                disabled={downloadingExcel}
-                className="inline-flex h-10 items-center justify-center rounded-2xl bg-[rgb(var(--text))] px-4 text-sm font-medium text-[rgb(var(--bg-elevated))] transition hover:opacity-90 disabled:opacity-60"
-              >
-                {downloadingExcel ? "Downloading..." : "Download Excel"}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleDownloadExcel}
+              disabled={downloadingExcel}
+              className={primaryBtn()}
+            >
+              {downloadingExcel ? "Downloading..." : "Download Excel"}
+            </button>
           </div>
         </div>
 
-        <div className="p-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="Total changes" value={rows.length} note="Current filtered results" />
+          <StatCard label="Restocks" value={restockCount} note="Inbound units recorded" tone="success" />
+          <StatCard label="Losses" value={lossCount} note="Damage, theft, missing, expiry" tone="danger" />
+          <StatCard label="Corrections" value={correctionCount} note="Count-based stock resets" tone="warning" />
+        </section>
+      </section>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className={cx(pageCard(), "p-5 sm:p-6")}>
+          <div className={cx("text-base font-bold", strongText())}>Filters</div>
+          <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+            Narrow changes by period, movement type, or product search.
+          </div>
+
+          <div className="mt-5 space-y-4">
             <div>
-              <label className="text-sm font-medium text-[rgb(var(--text))]">From</label>
-              <input type="date" className={inputClass()} value={from} onChange={(e) => setFrom(e.target.value)} />
+              <label className={cx("text-sm font-medium", strongText())}>From</label>
+              <input type="date" className={cx(inputClass(), "mt-2")} value={from} onChange={(e) => setFrom(e.target.value)} />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-[rgb(var(--text))]">To</label>
-              <input type="date" className={inputClass()} value={to} onChange={(e) => setTo(e.target.value)} />
+              <label className={cx("text-sm font-medium", strongText())}>To</label>
+              <input type="date" className={cx(inputClass(), "mt-2")} value={to} onChange={(e) => setTo(e.target.value)} />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-[rgb(var(--text))]">Type</label>
-              <select className={inputClass()} value={type} onChange={(e) => setType(e.target.value)}>
+              <label className={cx("text-sm font-medium", strongText())}>Type</label>
+              <select className={cx(inputClass(), "mt-2")} value={type} onChange={(e) => setType(e.target.value)}>
                 <option value="">All</option>
                 <option value="RESTOCK">Restock</option>
                 <option value="LOSS">Loss / Damage</option>
@@ -174,9 +423,9 @@ export default function StockAdjustments() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-[rgb(var(--text))]">Search</label>
+              <label className={cx("text-sm font-medium", strongText())}>Search</label>
               <input
-                className={inputClass()}
+                className={cx(inputClass(), "mt-2")}
                 placeholder="Product / code / serial / barcode"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
@@ -184,111 +433,66 @@ export default function StockAdjustments() {
             </div>
           </div>
 
-          <div className="mt-4 text-sm text-[rgb(var(--text-muted))]">
-            Showing <span className="font-semibold text-[rgb(var(--text))]">{rows.length}</span> change(s)
+          <div className="mt-5 space-y-3">
+            <div className={cx(softPanel(), "p-4")}>
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                Result count
+              </div>
+              <div className={cx("mt-3 text-lg font-bold", strongText())}>{rows.length} change(s)</div>
+            </div>
+
+            <div className={cx(softPanel(), "p-4")}>
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                Audit discipline
+              </div>
+              <div className={cx("mt-3 text-sm leading-6", mutedText())}>
+                Suspicious changes should be investigated using the user name, note, and timestamp.
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <section className={cx(pageCard(), "overflow-hidden")}>
+          <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+            <div className={cx("text-xl font-bold", strongText())}>Movement log</div>
+            <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+              Detailed stock movement history across the selected time window.
+            </div>
           </div>
 
-          <div className="mt-4">
+          <div className="p-5 sm:p-6">
             {loading ? (
-              <div className="overflow-x-auto">
-                <table className="w-full border-separate border-spacing-0">
-                  <thead>
-                    <tr>
-                      {["Date", "Product", "Type", "Delta", "Before", "After", "By", "Note"].map((h) => (
-                        <th
-                          key={h}
-                          className="border-b border-[rgb(var(--border))] px-3 py-3 text-left text-sm font-medium text-[rgb(var(--text-muted))]"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <TableSkeleton rows={10} cols={8} />
-                  </tbody>
-                </table>
-              </div>
+              <StockHistorySkeleton />
             ) : rows.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-[rgb(var(--border))] px-4 py-10 text-center text-sm text-[rgb(var(--text-muted))]">
+              <div className="rounded-[22px] border border-dashed border-[var(--color-border)] px-4 py-10 text-center text-sm text-[var(--color-text-muted)]">
                 No stock changes found for this period.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-separate border-spacing-0">
-                  <thead>
-                    <tr>
-                      {["Date", "Product", "Type", "Delta", "Before", "After", "By", "Note"].map((h) => (
-                        <th
-                          key={h}
-                          className="border-b border-[rgb(var(--border))] px-3 py-3 text-left text-sm font-medium text-[rgb(var(--text-muted))]"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
+              <>
+                <div className="grid grid-cols-1 gap-3">
+                  {visibleRows.map((r, index) => (
+                    <HistoryCard key={r.id} row={r} index={index} />
+                  ))}
+                </div>
 
-                  <tbody>
-                    {rows.map((r) => {
-                      const delta = Number(r.delta || 0);
-                      const deltaTone =
-                        delta > 0
-                          ? "text-emerald-700"
-                          : delta < 0
-                          ? "text-red-700"
-                          : "text-[rgb(var(--text))]";
-
-                      return (
-                        <tr key={r.id}>
-                          <td className="border-b border-[rgb(var(--border))] px-3 py-3 text-sm text-[rgb(var(--text-muted))]">
-                            {new Date(r.createdAt).toLocaleString()}
-                          </td>
-
-                          <td className="border-b border-[rgb(var(--border))] px-3 py-3 text-sm text-[rgb(var(--text))]">
-                            <div className="font-medium">{r.product?.name || "—"}</div>
-                            <div className="mt-1 text-xs text-[rgb(var(--text-muted))]">
-                              {r.product?.category || ""}
-                            </div>
-                          </td>
-
-                          <td className="border-b border-[rgb(var(--border))] px-3 py-3 text-sm text-[rgb(var(--text-muted))]">
-                            {labelType(r.type)}
-                          </td>
-
-                          <td className={`border-b border-[rgb(var(--border))] px-3 py-3 text-sm font-semibold ${deltaTone}`}>
-                            {formatDelta(delta)}
-                          </td>
-
-                          <td className="border-b border-[rgb(var(--border))] px-3 py-3 text-sm text-[rgb(var(--text))]">
-                            {r.beforeQty}
-                          </td>
-
-                          <td className="border-b border-[rgb(var(--border))] px-3 py-3 text-sm text-[rgb(var(--text))]">
-                            {r.afterQty}
-                          </td>
-
-                          <td className="border-b border-[rgb(var(--border))] px-3 py-3 text-sm text-[rgb(var(--text-muted))]">
-                            {r.createdBy?.name || "System"}
-                          </td>
-
-                          <td className="border-b border-[rgb(var(--border))] px-3 py-3 text-sm text-[rgb(var(--text-muted))]">
-                            {r.note || "—"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
-                <p className="mt-3 text-xs text-[rgb(var(--text-muted))]">
-                  Suspicious changes should be investigated using the user name, note, and timestamp.
-                </p>
-              </div>
+                <div className="mt-5 flex justify-center">
+                  {hasMore ? (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                      className={secondaryBtn()}
+                    >
+                      Load 10 more
+                    </button>
+                  ) : (
+                    <div className={cx("text-sm", mutedText())}>All matching changes loaded</div>
+                  )}
+                </div>
+              </>
             )}
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

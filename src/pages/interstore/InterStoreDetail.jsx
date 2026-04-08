@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
+import AsyncButton from "../../components/ui/AsyncButton";
 import {
   addDealPayment,
   getDeal,
@@ -17,47 +18,51 @@ function cx(...xs) {
 }
 
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function shell() {
-  return "rounded-[26px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
 }
 
 function inputClass() {
-  return "h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
+  return "app-input";
 }
 
 function textareaClass() {
-  return "min-h-[96px] w-full rounded-2xl border border-stone-300 bg-white px-3.5 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)]";
 }
 
 function primaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-stone-950 px-4 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function successBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-emerald-600 bg-emerald-600 px-4 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[#16a34a] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function warningBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-amber-500 bg-amber-500 px-4 text-sm font-medium text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[#d9a700] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function dangerBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-rose-600 bg-rose-600 px-4 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-danger)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function formatMoney(n) {
@@ -82,30 +87,36 @@ function statusMeta(status) {
   const map = {
     BORROWED: {
       label: "Borrowed",
-      chip: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300",
+      chip:
+        "border border-[#f7b267]/35 bg-[#f7a541] text-[#3b2206] dark:border-[#f7a541]/22 dark:bg-[#f7a541] dark:text-[#1b1206]",
     },
     RECEIVED: {
       label: "Received",
-      chip: "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-300",
+      chip:
+        "border border-[#59b8ff]/35 bg-[#4aa8ff] text-[#071b2b] dark:border-[#4aa8ff]/22 dark:bg-[#4aa8ff] dark:text-[#06131f]",
     },
     SOLD: {
       label: "Sold",
-      chip: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300",
+      chip:
+        "border border-[#d7ef4a]/35 bg-[#d7ef4a] text-[#283103] dark:border-[#d7ef4a]/22 dark:bg-[#d7ef4a] dark:text-[#182001]",
     },
     PAID: {
       label: "Paid",
-      chip: "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-900/40 dark:bg-violet-950/20 dark:text-violet-300",
+      chip:
+        "border border-[#8ef0ea]/35 bg-[#8ef0ea] text-[#083232] dark:border-[#8ef0ea]/22 dark:bg-[#8ef0ea] dark:text-[#041d1d]",
     },
     RETURNED: {
       label: "Returned",
-      chip: "border-stone-200 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200",
+      chip:
+        "border border-[#ffd36e]/35 bg-[#ffd36e] text-[#3a2804] dark:border-[#ffd36e]/22 dark:bg-[#ffd36e] dark:text-[#1f1603]",
     },
   };
 
   return (
     map[String(status || "").toUpperCase()] || {
       label: String(status || "Unknown"),
-      chip: "border-stone-200 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200",
+      chip:
+        "border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text)]",
     }
   );
 }
@@ -116,7 +127,7 @@ function StatusPill({ status }) {
   return (
     <span
       className={cx(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+        "inline-flex min-h-[2rem] items-center justify-center rounded-full px-4 py-1.5 text-xs font-black tracking-[0.01em] shadow-[var(--shadow-soft)]",
         meta.chip
       )}
     >
@@ -125,64 +136,122 @@ function StatusPill({ status }) {
   );
 }
 
-function InfoCard({ label, value, sub }) {
+function SummaryStat({ label, value, note, tone = "neutral" }) {
+  const toneClass =
+    tone === "success"
+      ? "text-emerald-600 dark:text-emerald-300"
+      : tone === "warning"
+      ? "text-amber-600 dark:text-amber-300"
+      : tone === "danger"
+      ? "text-[var(--color-danger)]"
+      : strongText();
+
   return (
-    <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))]">
-      <div className={softText()}>{label}</div>
-      <div className={cx("mt-1 text-sm font-semibold", strongText())}>{value || "—"}</div>
-      {sub ? <div className={cx("mt-1 text-xs", mutedText())}>{sub}</div> : null}
+    <div className="rounded-[22px] bg-[var(--color-surface-2)] p-4 shadow-[var(--shadow-soft)]">
+      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+        {label}
+      </div>
+      <div className={cx("mt-2 text-xl font-black tracking-tight", toneClass)}>{value}</div>
+      {note ? <div className={cx("mt-2 text-xs leading-5", mutedText())}>{note}</div> : null}
     </div>
   );
 }
 
-function SummaryCard({ label, value, note, tone = "neutral" }) {
-  const accent =
-    tone === "danger"
-      ? "bg-rose-500"
+function InfoCard({ label, value, sub, tone = "neutral" }) {
+  const toneCls =
+    tone === "success"
+      ? "bg-[#dcfce7]"
       : tone === "warning"
-      ? "bg-amber-500"
-      : tone === "success"
-      ? "bg-emerald-500"
-      : "bg-stone-900 dark:bg-[rgb(var(--text))]";
+      ? "bg-[#fff1c9]"
+      : tone === "danger"
+      ? "bg-[rgba(219,80,74,0.12)]"
+      : "bg-[var(--color-surface-2)]";
 
   return (
-    <div className={cx(shell(), "relative overflow-hidden p-4")}>
-      <div className={cx("absolute left-0 top-0 h-full w-1.5", accent)} />
-      <div className="pl-2">
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-          {label}
-        </div>
-        <div className={cx("mt-2 text-2xl font-semibold", strongText())}>{value}</div>
-        {note ? <div className={cx("mt-1 text-sm", mutedText())}>{note}</div> : null}
+    <div className={cx("rounded-[22px] p-4 shadow-[var(--shadow-soft)]", toneCls)}>
+      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+        {label}
       </div>
+      <div className={cx("mt-2 text-sm font-bold leading-6", strongText())}>{value || "—"}</div>
+      {sub ? <div className={cx("mt-2 text-xs leading-5", mutedText())}>{sub}</div> : null}
+    </div>
+  );
+}
+
+function SectionHeading({ eyebrow, title, text }) {
+  return (
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
+        </div>
+      ) : null}
+      <h2 className={cx("mt-3 text-[1.45rem] font-black tracking-tight", strongText())}>{title}</h2>
+      {text ? <p className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</p> : null}
+    </div>
+  );
+}
+
+function FormField({ label, hint, children }) {
+  return (
+    <div>
+      <label className={cx("text-sm font-medium", strongText())}>{label}</label>
+      <div className="mt-2">{children}</div>
+      {hint ? <div className={cx("mt-2 text-xs leading-5", mutedText())}>{hint}</div> : null}
     </div>
   );
 }
 
 function PageSkeleton() {
   return (
-    <div className="space-y-5 animate-pulse">
-      <div className={cx(shell(), "p-6")}>
-        <div className="h-5 w-28 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="mt-3 h-8 w-72 rounded bg-stone-200 dark:bg-stone-700" />
-        <div className="mt-3 h-4 w-96 max-w-full rounded bg-stone-100 dark:bg-stone-800" />
-      </div>
+    <div className="space-y-6 animate-pulse">
+      <section className={cx(pageCard(), "p-6")}>
+        <div className="h-4 w-24 rounded bg-[var(--color-surface-2)]" />
+        <div className="mt-3 h-9 w-64 rounded bg-[var(--color-surface-2)]" />
+        <div className="mt-3 h-4 w-96 max-w-full rounded bg-[var(--color-surface-2)]" />
+      </section>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className={cx(shell(), "h-28")} />
+          <div key={i} className="rounded-[22px] bg-[var(--color-surface-2)] p-4 shadow-[var(--shadow-soft)]">
+            <div className="h-3 w-24 rounded bg-[var(--color-surface-3)]" />
+            <div className="mt-3 h-7 w-32 rounded bg-[var(--color-surface-3)]" />
+            <div className="mt-2 h-3 w-40 rounded bg-[var(--color-surface-3)]" />
+          </div>
         ))}
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className={cx(shell(), "h-[520px]")} />
-        <div className={cx(shell(), "h-[520px]")} />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-5">
+          <div className={cx(pageCard(), "p-6")}>
+            <div className="h-6 w-40 rounded bg-[var(--color-surface-2)]" />
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-24 rounded-[22px] bg-[var(--color-surface-2)]" />
+              ))}
+            </div>
+          </div>
+
+          <div className={cx(pageCard(), "p-6")}>
+            <div className="h-6 w-32 rounded bg-[var(--color-surface-2)]" />
+            <div className="mt-4 space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-20 rounded-[22px] bg-[var(--color-surface-2)]" />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          <div className={cx(pageCard(), "h-[320px]")} />
+          <div className={cx(pageCard(), "h-[280px]")} />
+        </div>
       </div>
     </div>
   );
 }
 
-function MiniActionModal({
+function ActionModal({
   open,
   tone = "neutral",
   title,
@@ -196,63 +265,55 @@ function MiniActionModal({
 }) {
   if (!open) return null;
 
-  const toneBar =
+  const barTone =
     tone === "success"
-      ? "bg-emerald-500"
+      ? "bg-[#16a34a]"
       : tone === "warning"
-      ? "bg-amber-500"
+      ? "bg-[#d9a700]"
       : tone === "danger"
-      ? "bg-rose-500"
-      : "bg-stone-900";
+      ? "bg-[var(--color-danger)]"
+      : "bg-[var(--color-primary)]";
 
   return (
     <div className="fixed inset-0 z-[120]">
       <div
-        className="absolute inset-0 bg-stone-950/50 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/55 backdrop-blur-[3px]"
         onClick={loading ? undefined : onClose}
       />
-      <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="w-full max-w-lg overflow-hidden rounded-[30px] border border-stone-200 bg-white shadow-2xl dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]">
-          <div className={cx("h-1.5 w-full", toneBar)} />
-          <div className="p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <h3 className={cx("text-xl font-semibold", strongText())}>{title}</h3>
-                {subtitle ? (
-                  <p className={cx("mt-2 text-sm leading-6", mutedText())}>{subtitle}</p>
-                ) : null}
+      <div className="absolute inset-0 overflow-y-auto p-3 sm:p-5">
+        <div className="mx-auto flex min-h-full w-full max-w-3xl items-center justify-center">
+          <div className={cx(pageCard(), "w-full overflow-hidden")}>
+            <div className={cx("h-1.5", barTone)} />
+            <div className="p-6">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="max-w-2xl">
+                  <h3 className={cx("text-2xl font-black tracking-tight", strongText())}>{title}</h3>
+                  {subtitle ? (
+                    <p className={cx("mt-2 text-sm leading-6", mutedText())}>{subtitle}</p>
+                  ) : null}
+                </div>
+
+                <button type="button" onClick={onClose} disabled={loading} className={secondaryBtn()}>
+                  Close
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                className={secondaryBtn()}
-              >
-                Close
-              </button>
-            </div>
+              <div className="mt-6">{children}</div>
 
-            <div className="mt-5">{children}</div>
+              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" onClick={onClose} disabled={loading} className={secondaryBtn()}>
+                  Cancel
+                </button>
 
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                className={secondaryBtn()}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={onConfirm}
-                disabled={loading}
-                className={confirmClassName}
-              >
-                {loading ? "Saving..." : confirmLabel}
-              </button>
+                <button
+                  type="button"
+                  onClick={onConfirm}
+                  disabled={loading}
+                  className={confirmClassName}
+                >
+                  {loading ? "Saving..." : confirmLabel}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -273,9 +334,6 @@ export default function InterStoreDetail() {
     totalPaid: 0,
     balanceDue: 0,
     count: 0,
-    status: null,
-    soldQuantity: 0,
-    agreedPrice: 0,
   });
 
   const [busyAction, setBusyAction] = useState("");
@@ -320,9 +378,6 @@ export default function InterStoreDetail() {
           totalPaid: 0,
           balanceDue: 0,
           count: 0,
-          status: null,
-          soldQuantity: 0,
-          agreedPrice: 0,
         }
       );
 
@@ -331,9 +386,7 @@ export default function InterStoreDetail() {
         soldQuantity: "1",
       });
 
-      setReturnForm({
-        returnedQuantity: "1",
-      });
+      setReturnForm({ returnedQuantity: "1" });
 
       setMarkPaidForm({
         paidAmount:
@@ -343,6 +396,7 @@ export default function InterStoreDetail() {
         paymentMethod: "CASH",
       });
     } catch (err) {
+      console.error(err);
       toast.error(err?.message || "Failed to load deal");
       setDeal(null);
       setPayments([]);
@@ -352,7 +406,7 @@ export default function InterStoreDetail() {
   }
 
   useEffect(() => {
-    loadAll();
+    void loadAll();
   }, [id]);
 
   const supplierLabel = useMemo(() => {
@@ -368,6 +422,15 @@ export default function InterStoreDetail() {
   const canAddPayment = deal?.status === "SOLD";
   const canMarkPaid = deal?.status === "SOLD";
 
+  const remainingUnits = useMemo(() => {
+    if (!deal) return 0;
+    return (
+      Number(deal.quantity || 0) -
+      Number(deal.soldQuantity || 0) -
+      Number(deal.returnedQuantity || 0)
+    );
+  }, [deal]);
+
   async function runAction(key, fn, successMessage) {
     try {
       setBusyAction(key);
@@ -375,6 +438,7 @@ export default function InterStoreDetail() {
       toast.success(successMessage);
       await loadAll();
     } catch (err) {
+      console.error(err);
       toast.error(err?.message || "Action failed");
     } finally {
       setBusyAction("");
@@ -483,7 +547,7 @@ export default function InterStoreDetail() {
 
   if (!deal) {
     return (
-      <div className={cx(shell(), "px-5 py-12 text-center")}>
+      <div className={cx(pageCard(), "px-5 py-12 text-center")}>
         <div className={cx("text-lg font-semibold", strongText())}>Deal not found</div>
         <div className={cx("mt-2 text-sm", mutedText())}>
           This deal could not be loaded.
@@ -501,17 +565,9 @@ export default function InterStoreDetail() {
     );
   }
 
-  const remainingUnits =
-    Number(deal.quantity || 0) -
-    Number(deal.soldQuantity || 0) -
-    Number(deal.returnedQuantity || 0);
-
-  const sellPreviewQty = Number(sellForm.soldQuantity || 0);
-  const returnPreviewQty = Number(returnForm.returnedQuantity || 0);
-
   return (
-    <div className="space-y-5">
-      <MiniActionModal
+    <>
+      <ActionModal
         open={sellModalOpen}
         tone="warning"
         title="Record sale"
@@ -525,57 +581,55 @@ export default function InterStoreDetail() {
         confirmLabel="Confirm sale"
         confirmClassName={warningBtn()}
       >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="space-y-5">
+          <div className="grid gap-3 md:grid-cols-3">
             <InfoCard label="Product" value={deal.productName} />
             <InfoCard label="Reseller" value={deal.resellerName} />
             <InfoCard label="Units remaining" value={String(Math.max(remainingUnits, 0))} />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className={cx("text-sm font-medium", strongText())}>Sold quantity</label>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormField
+              label="Sold quantity"
+              hint="Use the exact number sold from this deal."
+            >
               <input
                 type="number"
                 min="1"
-                className={cx(inputClass(), "mt-2")}
+                className={inputClass()}
                 value={sellForm.soldQuantity}
                 onChange={(e) =>
                   setSellForm((prev) => ({ ...prev, soldQuantity: e.target.value }))
                 }
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className={cx("text-sm font-medium", strongText())}>Sold price</label>
+            <FormField
+              label="Sold price"
+              hint="Optional. Leave empty to keep current sale price."
+            >
               <input
                 type="number"
                 min="0"
                 step="0.01"
-                className={cx(inputClass(), "mt-2")}
+                className={inputClass()}
                 value={sellForm.soldPrice}
                 onChange={(e) =>
                   setSellForm((prev) => ({ ...prev, soldPrice: e.target.value }))
                 }
                 placeholder="Optional"
               />
-            </div>
+            </FormField>
           </div>
 
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
-            {Number.isFinite(sellPreviewQty) && sellPreviewQty > 0 ? (
-              <>
-                You are about to record a sale of{" "}
-                <span className="font-semibold">{sellPreviewQty}</span> unit(s).
-              </>
-            ) : (
-              <>Enter the sold quantity to preview this action.</>
-            )}
+          <div className="rounded-[22px] bg-[#fff1c9] px-4 py-3 text-sm text-[#8a6500]">
+            You are about to record{" "}
+            <span className="font-semibold">{sellForm.soldQuantity || 0}</span> sold unit(s).
           </div>
         </div>
-      </MiniActionModal>
+      </ActionModal>
 
-      <MiniActionModal
+      <ActionModal
         open={returnModalOpen}
         tone="danger"
         title="Record return"
@@ -589,54 +643,47 @@ export default function InterStoreDetail() {
         confirmLabel="Confirm return"
         confirmClassName={dangerBtn()}
       >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="space-y-5">
+          <div className="grid gap-3 md:grid-cols-3">
             <InfoCard label="Product" value={deal.productName} />
             <InfoCard label="Supplier" value={supplierLabel} />
             <InfoCard label="Units remaining" value={String(Math.max(remainingUnits, 0))} />
           </div>
 
-          <div>
-            <label className={cx("text-sm font-medium", strongText())}>Returned quantity</label>
+          <FormField
+            label="Returned quantity"
+            hint="Return only the quantity still unsold and physically available."
+          >
             <input
               type="number"
               min="1"
-              className={cx(inputClass(), "mt-2")}
+              className={inputClass()}
               value={returnForm.returnedQuantity}
               onChange={(e) => setReturnForm({ returnedQuantity: e.target.value })}
             />
-          </div>
+          </FormField>
 
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-200">
-            {Number.isFinite(returnPreviewQty) && returnPreviewQty > 0 ? (
-              <>
-                You are about to return{" "}
-                <span className="font-semibold">{returnPreviewQty}</span> unit(s) from this deal.
-              </>
-            ) : (
-              <>Enter the returned quantity to preview this action.</>
-            )}
+          <div className="rounded-[22px] bg-[rgba(219,80,74,0.12)] px-4 py-3 text-sm text-[var(--color-danger)]">
+            You are about to return{" "}
+            <span className="font-semibold">{returnForm.returnedQuantity || 0}</span> unit(s).
           </div>
         </div>
-      </MiniActionModal>
+      </ActionModal>
 
-      <section className={cx(shell(), "overflow-hidden")}>
-        <div className="border-b border-stone-200 px-5 py-5 dark:border-[rgb(var(--border))]">
+      <div className="space-y-6">
+        <section className={cx(pageCard(), "p-6")}>
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
-              <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                Inter-store detail
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <h1 className={cx("text-3xl font-semibold tracking-tight", strongText())}>
-                  {deal.productName || "Unnamed product"}
-                </h1>
+              <SectionHeading
+                eyebrow="Inter-store detail"
+                title={deal.productName || "Unnamed product"}
+                text="Full operational view for this deal: supplier, reseller, movement, payment progress, and next allowed action."
+              />
+
+              <div className="mt-4 flex flex-wrap gap-2">
                 <StatusPill status={deal.status} />
+                <StatusPill status={deal.supplierTenantId ? "RECEIVED" : "BORROWED"} />
               </div>
-              <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                Full operational view for this deal: supplier, reseller, product movement,
-                payments, and next allowed action.
-              </p>
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -649,281 +696,314 @@ export default function InterStoreDetail() {
               </button>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard
+        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+          <SummaryStat
             label="Agreed price"
             value={formatMoney(deal.agreedPrice)}
             note="Price promised to supplier"
           />
-          <SummaryCard
+          <SummaryStat
             label="Amount owed"
             value={formatMoney(paymentSummary.owed)}
             note="Based on sold quantity"
             tone={paymentSummary.owed > 0 ? "warning" : "neutral"}
           />
-          <SummaryCard
+          <SummaryStat
             label="Paid so far"
             value={formatMoney(paymentSummary.totalPaid)}
             note={`${paymentSummary.count} payment(s) recorded`}
             tone={paymentSummary.totalPaid > 0 ? "success" : "neutral"}
           />
-          <SummaryCard
+          <SummaryStat
             label="Balance due"
             value={formatMoney(paymentSummary.balanceDue)}
             note={paymentSummary.balanceDue > 0 ? "Still outstanding" : "No remaining balance"}
             tone={paymentSummary.balanceDue > 0 ? "danger" : "success"}
           />
-        </div>
-      </section>
+        </section>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="space-y-5">
-          <section className={cx(shell(), "p-5")}>
-            <div>
-              <h2 className={cx("text-lg font-semibold", strongText())}>Deal overview</h2>
-              <p className={cx("mt-1 text-sm", mutedText())}>
-                Clear business summary for non-technical users.
-              </p>
-            </div>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-5">
+            <section className={cx(pageCard(), "p-5 sm:p-6")}>
+              <SectionHeading
+                eyebrow="Overview"
+                title="Deal overview"
+                text="A clear business summary of the deal without needing to dig into raw data."
+              />
 
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <InfoCard label="Serial number" value={deal.serial} />
-              <InfoCard label="Supplier" value={supplierLabel} sub={deal.externalSupplierPhone || null} />
-              <InfoCard label="Reseller" value={deal.resellerName} sub={deal.resellerPhone || null} />
-              <InfoCard label="Reseller store" value={deal.resellerStore || "—"} />
-              <InfoCard label="Quantity" value={String(deal.quantity || 0)} />
-              <InfoCard label="Sold quantity" value={String(deal.soldQuantity || 0)} />
-              <InfoCard label="Returned quantity" value={String(deal.returnedQuantity || 0)} />
-              <InfoCard label="Due date" value={toDateLabel(deal.dueDate)} />
-              <InfoCard label="Created" value={toDateLabel(deal.createdAt)} sub={toDateTimeLabel(deal.createdAt)} />
-            </div>
-
-            {deal.notes ? (
-              <div className="mt-4 rounded-2xl border border-dashed border-stone-300 px-4 py-3 text-sm text-stone-700 dark:border-[rgb(var(--border))] dark:text-[rgb(var(--text-muted))]">
-                {deal.notes}
+              <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <InfoCard label="Serial number" value={deal.serial} />
+                <InfoCard label="Supplier" value={supplierLabel} sub={deal.externalSupplierPhone || null} />
+                <InfoCard label="Reseller" value={deal.resellerName} sub={deal.resellerPhone || null} />
+                <InfoCard label="Reseller store" value={deal.resellerStore || "—"} />
+                <InfoCard label="Quantity" value={String(deal.quantity || 0)} />
+                <InfoCard label="Sold quantity" value={String(deal.soldQuantity || 0)} />
+                <InfoCard label="Returned quantity" value={String(deal.returnedQuantity || 0)} />
+                <InfoCard label="Due date" value={toDateLabel(deal.dueDate)} />
+                <InfoCard label="Created" value={toDateLabel(deal.createdAt)} sub={toDateTimeLabel(deal.createdAt)} />
               </div>
-            ) : null}
-          </section>
 
-          <section className={cx(shell(), "p-5")}>
-            <div>
-              <h2 className={cx("text-lg font-semibold", strongText())}>Payments</h2>
-              <p className={cx("mt-1 text-sm", mutedText())}>
-                Record installments and see the running balance clearly.
-              </p>
-            </div>
+              {deal.notes ? (
+                <div className="mt-4 rounded-[22px] bg-[var(--color-surface-2)] px-4 py-3 text-sm leading-6 text-[var(--color-text-muted)]">
+                  {deal.notes}
+                </div>
+              ) : null}
+            </section>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-              <InfoCard label="Owed" value={formatMoney(paymentSummary.owed)} />
-              <InfoCard label="Total paid" value={formatMoney(paymentSummary.totalPaid)} />
-              <InfoCard label="Balance due" value={formatMoney(paymentSummary.balanceDue)} />
-            </div>
+            <section className={cx(pageCard(), "p-5 sm:p-6")}>
+              <SectionHeading
+                eyebrow="Payments"
+                title="Payment progress"
+                text="Record installments and keep the running supplier balance visible at all times."
+              />
 
-            {canAddPayment ? (
-              <div className="mt-5 rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))]">
-                <div className={cx("text-sm font-semibold", strongText())}>Add installment payment</div>
+              <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
+                <SummaryStat label="Owed" value={formatMoney(paymentSummary.owed)} />
+                <SummaryStat label="Total paid" value={formatMoney(paymentSummary.totalPaid)} />
+                <SummaryStat
+                  label="Balance due"
+                  value={formatMoney(paymentSummary.balanceDue)}
+                  tone={paymentSummary.balanceDue > 0 ? "danger" : "success"}
+                />
+              </div>
 
-                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <label className={cx("text-sm font-medium", strongText())}>Amount</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className={cx(inputClass(), "mt-2")}
-                      value={paymentForm.amount}
-                      onChange={(e) => setPaymentForm((prev) => ({ ...prev, amount: e.target.value }))}
-                      placeholder="0"
-                    />
-                  </div>
+              {canAddPayment ? (
+                <div className={cx(softPanel(), "mt-5 p-5")}>
+                  <div className={cx("text-sm font-semibold", strongText())}>Add installment payment</div>
 
-                  <div>
-                    <label className={cx("text-sm font-medium", strongText())}>Method</label>
-                    <select
-                      className={cx(inputClass(), "mt-2")}
-                      value={paymentForm.method}
-                      onChange={(e) => setPaymentForm((prev) => ({ ...prev, method: e.target.value }))}
+                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField
+                      label="Amount"
+                      hint="Record the exact amount received for this installment."
                     >
-                      <option value="CASH">Cash</option>
-                      <option value="MOMO">MoMo</option>
-                      <option value="BANK">Bank</option>
-                      <option value="OTHER">Other</option>
-                    </select>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className={cx("text-sm font-medium", strongText())}>Note</label>
-                    <textarea
-                      className={cx(textareaClass(), "mt-2")}
-                      value={paymentForm.note}
-                      onChange={(e) => setPaymentForm((prev) => ({ ...prev, note: e.target.value }))}
-                      placeholder="Optional note about this payment"
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleAddPayment}
-                    disabled={busyAction === "payment"}
-                    className={successBtn()}
-                  >
-                    {busyAction === "payment" ? "Saving..." : "Record payment"}
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            {payments.length === 0 ? (
-              <div className={cx("mt-5 rounded-2xl border border-dashed px-4 py-8 text-center text-sm", mutedText())}>
-                No payments recorded yet.
-              </div>
-            ) : (
-              <div className="mt-5 space-y-3">
-                {payments.map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="rounded-2xl border border-stone-200 bg-white px-4 py-3 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]"
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <div className={cx("text-sm font-semibold", strongText())}>
-                          {formatMoney(payment.amount)}
-                        </div>
-                        <div className={cx("mt-1 text-sm", mutedText())}>
-                          {payment.method || "—"}
-                        </div>
-                      </div>
-
-                      <div className="text-left sm:text-right">
-                        <div className={cx("text-sm", strongText())}>{toDateTimeLabel(payment.createdAt)}</div>
-                      </div>
-                    </div>
-
-                    {payment.note ? (
-                      <div className={cx("mt-3 text-sm", mutedText())}>{payment.note}</div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-
-        <div className="space-y-5">
-          <section className={cx(shell(), "p-5")}>
-            <div>
-              <h2 className={cx("text-lg font-semibold", strongText())}>Next actions</h2>
-              <p className={cx("mt-1 text-sm", mutedText())}>
-                Only show what still makes sense for this deal.
-              </p>
-            </div>
-
-            <div className="mt-4 flex flex-col gap-3">
-              {canReceive ? (
-                <button
-                  type="button"
-                  onClick={handleReceive}
-                  disabled={busyAction === "receive"}
-                  className={successBtn()}
-                >
-                  {busyAction === "receive" ? "Receiving..." : "Mark as received"}
-                </button>
-              ) : null}
-
-              {canSell ? (
-                <button
-                  type="button"
-                  onClick={() => setSellModalOpen(true)}
-                  disabled={busyAction !== ""}
-                  className={warningBtn()}
-                >
-                  Record sale
-                </button>
-              ) : null}
-
-              {canReturn ? (
-                <button
-                  type="button"
-                  onClick={() => setReturnModalOpen(true)}
-                  disabled={busyAction !== ""}
-                  className={dangerBtn()}
-                >
-                  Record return
-                </button>
-              ) : null}
-
-              {canMarkPaid ? (
-                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))]">
-                  <div className={cx("text-sm font-semibold", strongText())}>Complete payment</div>
-
-                  <div className="mt-4 grid grid-cols-1 gap-4">
-                    <div>
-                      <label className={cx("text-sm font-medium", strongText())}>Paid amount</label>
                       <input
                         type="number"
                         min="0"
                         step="0.01"
-                        className={cx(inputClass(), "mt-2")}
-                        value={markPaidForm.paidAmount}
-                        onChange={(e) => setMarkPaidForm((prev) => ({ ...prev, paidAmount: e.target.value }))}
-                        placeholder="Enter final paid amount"
+                        className={inputClass()}
+                        value={paymentForm.amount}
+                        onChange={(e) => setPaymentForm((prev) => ({ ...prev, amount: e.target.value }))}
+                        placeholder="0"
                       />
-                    </div>
+                    </FormField>
 
-                    <div>
-                      <label className={cx("text-sm font-medium", strongText())}>Method</label>
+                    <FormField
+                      label="Method"
+                      hint="How this payment was received."
+                    >
                       <select
-                        className={cx(inputClass(), "mt-2")}
-                        value={markPaidForm.paymentMethod}
-                        onChange={(e) => setMarkPaidForm((prev) => ({ ...prev, paymentMethod: e.target.value }))}
+                        className={inputClass()}
+                        value={paymentForm.method}
+                        onChange={(e) => setPaymentForm((prev) => ({ ...prev, method: e.target.value }))}
                       >
                         <option value="CASH">Cash</option>
                         <option value="MOMO">MoMo</option>
                         <option value="BANK">Bank</option>
                         <option value="OTHER">Other</option>
                       </select>
-                    </div>
+                    </FormField>
 
-                    <button
-                      type="button"
-                      onClick={handleMarkPaid}
-                      disabled={busyAction === "paid"}
-                      className={primaryBtn()}
+                    <div className="md:col-span-2">
+                      <FormField
+                        label="Note"
+                        hint="Optional note for audit clarity."
+                      >
+                        <textarea
+                          className={cx(textareaClass(), "min-h-[110px]")}
+                          value={paymentForm.note}
+                          onChange={(e) => setPaymentForm((prev) => ({ ...prev, note: e.target.value }))}
+                          placeholder="Optional note about this payment"
+                        />
+                      </FormField>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <AsyncButton
+                      loading={busyAction === "payment"}
+                      onClick={handleAddPayment}
+                      className={successBtn()}
                     >
-                      {busyAction === "paid" ? "Saving..." : "Mark fully paid"}
-                    </button>
+                      Record payment
+                    </AsyncButton>
                   </div>
                 </div>
               ) : null}
 
-              {!canReceive && !canSell && !canReturn && !canAddPayment && !canMarkPaid ? (
-                <div className="rounded-2xl border border-dashed border-stone-300 px-4 py-6 text-sm text-stone-600 dark:border-[rgb(var(--border))] dark:text-[rgb(var(--text-muted))]">
-                  No further operational action is needed for this deal right now.
+              {payments.length === 0 ? (
+                <div className={cx("mt-5 rounded-[22px] bg-[var(--color-surface-2)] px-4 py-8 text-center text-sm", mutedText())}>
+                  No payments recorded yet.
                 </div>
-              ) : null}
-            </div>
-          </section>
+              ) : (
+                <div className="mt-5 space-y-3">
+                  {payments.map((payment) => (
+                    <div key={payment.id} className={cx(softPanel(), "p-4")}>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <div className={cx("text-sm font-semibold", strongText())}>
+                            {formatMoney(payment.amount)}
+                          </div>
+                          <div className={cx("mt-1 text-sm", mutedText())}>
+                            {payment.method || "—"}
+                          </div>
+                        </div>
 
-          <section className={cx(shell(), "p-5")}>
-            <div>
-              <h2 className={cx("text-lg font-semibold", strongText())}>Timeline</h2>
-            </div>
+                        <div className="text-left sm:text-right">
+                          <div className={cx("text-sm", strongText())}>
+                            {toDateTimeLabel(payment.createdAt)}
+                          </div>
+                        </div>
+                      </div>
 
-            <div className="mt-4 space-y-3">
-              <InfoCard label="Borrowed at" value={toDateTimeLabel(deal.borrowedAt)} />
-              <InfoCard label="Taken at" value={toDateTimeLabel(deal.takenAt)} />
-              <InfoCard label="Received at" value={toDateTimeLabel(deal.receivedAt)} />
-              <InfoCard label="Sold at" value={toDateTimeLabel(deal.soldAt)} />
-              <InfoCard label="Returned at" value={toDateTimeLabel(deal.returnedAt)} />
-              <InfoCard label="Paid at" value={toDateTimeLabel(deal.paidAt)} />
-            </div>
-          </section>
+                      {payment.note ? (
+                        <div className={cx("mt-3 text-sm leading-6", mutedText())}>{payment.note}</div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
+          <aside className="space-y-5">
+            <section className={cx(pageCard(), "p-5 sm:p-6")}>
+              <SectionHeading
+                eyebrow="Actions"
+                title="Next actions"
+                text="Only show what still makes sense for this deal right now."
+              />
+
+              <div className="mt-5 flex flex-col gap-3">
+                {canReceive ? (
+                  <AsyncButton
+                    loading={busyAction === "receive"}
+                    onClick={handleReceive}
+                    className={successBtn()}
+                  >
+                    Mark as received
+                  </AsyncButton>
+                ) : null}
+
+                {canSell ? (
+                  <button
+                    type="button"
+                    onClick={() => setSellModalOpen(true)}
+                    disabled={busyAction !== ""}
+                    className={warningBtn()}
+                  >
+                    Record sale
+                  </button>
+                ) : null}
+
+                {canReturn ? (
+                  <button
+                    type="button"
+                    onClick={() => setReturnModalOpen(true)}
+                    disabled={busyAction !== ""}
+                    className={dangerBtn()}
+                  >
+                    Record return
+                  </button>
+                ) : null}
+
+                {canMarkPaid ? (
+                  <div className={cx(softPanel(), "p-4")}>
+                    <div className={cx("text-sm font-semibold", strongText())}>Complete payment</div>
+
+                    <div className="mt-4 grid grid-cols-1 gap-4">
+                      <FormField
+                        label="Paid amount"
+                        hint="Enter the final amount paid to close this deal."
+                      >
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className={inputClass()}
+                          value={markPaidForm.paidAmount}
+                          onChange={(e) => setMarkPaidForm((prev) => ({ ...prev, paidAmount: e.target.value }))}
+                          placeholder="Enter final paid amount"
+                        />
+                      </FormField>
+
+                      <FormField
+                        label="Method"
+                        hint="Final settlement method."
+                      >
+                        <select
+                          className={inputClass()}
+                          value={markPaidForm.paymentMethod}
+                          onChange={(e) => setMarkPaidForm((prev) => ({ ...prev, paymentMethod: e.target.value }))}
+                        >
+                          <option value="CASH">Cash</option>
+                          <option value="MOMO">MoMo</option>
+                          <option value="BANK">Bank</option>
+                          <option value="OTHER">Other</option>
+                        </select>
+                      </FormField>
+
+                      <AsyncButton
+                        loading={busyAction === "paid"}
+                        onClick={handleMarkPaid}
+                        className={primaryBtn()}
+                      >
+                        Mark fully paid
+                      </AsyncButton>
+                    </div>
+                  </div>
+                ) : null}
+
+                {!canReceive && !canSell && !canReturn && !canAddPayment && !canMarkPaid ? (
+                  <div className={cx(softPanel(), "px-4 py-6 text-sm leading-6", mutedText())}>
+                    No further operational action is needed for this deal right now.
+                  </div>
+                ) : null}
+              </div>
+            </section>
+
+            <section className={cx(pageCard(), "p-5 sm:p-6")}>
+              <SectionHeading
+                eyebrow="Timeline"
+                title="Movement timeline"
+                text="Every critical stage of this deal in one clean place."
+              />
+
+              <div className="mt-5 space-y-3">
+                <InfoCard label="Borrowed at" value={toDateTimeLabel(deal.borrowedAt)} />
+                <InfoCard label="Taken at" value={toDateTimeLabel(deal.takenAt)} />
+                <InfoCard label="Received at" value={toDateTimeLabel(deal.receivedAt)} />
+                <InfoCard label="Sold at" value={toDateTimeLabel(deal.soldAt)} />
+                <InfoCard label="Returned at" value={toDateTimeLabel(deal.returnedAt)} />
+                <InfoCard label="Paid at" value={toDateTimeLabel(deal.paidAt)} />
+              </div>
+            </section>
+
+            <section className={cx(pageCard(), "p-5 sm:p-6")}>
+              <SectionHeading
+                eyebrow="Discipline"
+                title="Operational rules"
+                text="These keep inter-store accountability strong as the module grows."
+              />
+
+              <div className="mt-5 space-y-3">
+                {[
+                  "Receive first before recording a sale.",
+                  "Return only unsold quantity still physically available.",
+                  "Use payment records for installments before final closure.",
+                  "Mark fully paid only when supplier settlement is truly complete.",
+                  "Keep serial-based deals strict and explainable later.",
+                ].map((item) => (
+                  <div key={item} className={cx(softPanel(), "px-4 py-3 text-sm leading-6", mutedText())}>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </section>
+          </aside>
         </div>
       </div>
-    </div>
+    </>
   );
 }

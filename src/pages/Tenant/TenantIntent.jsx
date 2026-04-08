@@ -205,11 +205,11 @@ export default function TenantIntent() {
         },
       ]}
       footer={
-        <div className="text-sm text-[rgb(var(--text-muted))]">
+        <div className="text-sm text-[var(--color-text-muted)]">
           Already have an account?{" "}
           <Link
             to="/login"
-            className="font-medium text-[rgb(var(--text))] underline-offset-4 hover:underline"
+            className="font-medium text-[var(--color-text)] underline-offset-4 hover:underline"
           >
             Log in
           </Link>
@@ -220,7 +220,7 @@ export default function TenantIntent() {
       <form onSubmit={submit} className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
               Store name
             </label>
             <input
@@ -234,7 +234,7 @@ export default function TenantIntent() {
           </div>
 
           <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
               Owner name
             </label>
             <input
@@ -248,7 +248,7 @@ export default function TenantIntent() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
               Email
             </label>
             <input
@@ -263,7 +263,7 @@ export default function TenantIntent() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
               Phone
             </label>
             <input
@@ -274,13 +274,13 @@ export default function TenantIntent() {
               autoComplete="tel"
               required
             />
-            <div className="mt-1 text-xs text-[rgb(var(--text-soft))]">
+            <div className="mt-1 text-xs text-[var(--color-text-muted)]">
               Use the owner phone number that can receive verification and payment requests.
             </div>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
               Store category
             </label>
             <select
@@ -298,7 +298,7 @@ export default function TenantIntent() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
               District
             </label>
             <input
@@ -310,7 +310,7 @@ export default function TenantIntent() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
               Sector
             </label>
             <input
@@ -321,8 +321,8 @@ export default function TenantIntent() {
             />
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
+          <div className="sm:col-span-2">
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
               Address
             </label>
             <input
@@ -334,7 +334,7 @@ export default function TenantIntent() {
           </div>
         </div>
 
-        <AsyncButton type="submit" loading={loading} className="w-full">
+        <AsyncButton type="submit" loading={loading} loadingText="Saving store..." className="w-full">
           Continue to verification
         </AsyncButton>
       </form>

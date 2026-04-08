@@ -50,18 +50,20 @@ import SupplierView from "./pages/suppliers/SupplierView";
 import SupplierSupplyCreate from "./pages/suppliers/SupplierSupplyCreate";
 
 import DeliveryNoteCreate from "./pages/deliveryNotes/DeliveryNoteCreate";
-// Add these when you have them:
 import DeliveryNoteEdit from "./pages/deliveryNotes/DeliveryNoteEdit";
 
 import SettingsLayout from "./pages/settings/SettingsLayout";
 import SettingsGeneral from "./pages/settings/SettingsGeneral";
 import SettingsRoles from "./pages/settings/SettingsRoles";
-import SettingsStub from "./pages/settings/SettingsStub";
 import SettingsMembers from "./pages/settings/SettingsMembers";
+import SettingsSecurity from "./pages/settings/SettingsSecurity";
+import SettingsAudit from "./pages/settings/SettingsAudit";
 
 import WhatsAppDrafts from "./pages/whatsapp/WhatsAppDrafts";
 import WhatsAppInbox from "./pages/whatsapp/WhatsAppInbox";
 import WhatsAppConversation from "./pages/whatsapp/WhatsAppConversation";
+import WhatsAppAccounts from "./pages/whatsapp/WhatsAppAccounts";
+import WhatsAppActivity from "./pages/whatsapp/WhatsAppActivity";
 
 import DocumentsHome from "./pages/documents/DocumentsHome";
 import DocumentListPage from "./pages/documents/DocumentListPage";
@@ -119,8 +121,8 @@ export default function App() {
                 <Route index element={<SettingsGeneral />} />
                 <Route path="members" element={<SettingsMembers />} />
                 <Route path="roles" element={<SettingsRoles />} />
-                <Route path="security" element={<SettingsStub title="Login & security" />} />
-                <Route path="audit" element={<SettingsStub title="Audit logs" />} />
+                <Route path="security" element={<SettingsSecurity />} />
+                <Route path="audit" element={<SettingsAudit />} />
               </Route>
             </Route>
 
@@ -250,19 +252,20 @@ export default function App() {
               <Route path="documents/warranties/create" element={<WarrantyCreate />} />
               <Route path="documents/warranties/:id/edit" element={<WarrantyEdit />} />
             </Route>
+              <Route element={<RequireRole roles={["OWNER", "MANAGER", "CASHIER"]} />}>
+                <Route path="whatsapp/inbox" element={<WhatsAppInbox />} />
+                <Route path="whatsapp/inbox/:conversationId" element={<WhatsAppConversation />} />
+                <Route path="whatsapp/drafts" element={<WhatsAppDrafts />} />
+                <Route path="whatsapp/accounts" element={<WhatsAppAccounts />} />
+                <Route path="pos/drawer" element={<CashDrawer />} />
+                <Route path="interstore" element={<InterStoreDeals />} />
+                <Route path="interstore/:id" element={<InterStoreDetail />} />
+              </Route>
 
-            <Route element={<RequireRole roles={["OWNER", "MANAGER", "CASHIER"]} />}>
-              <Route path="whatsapp/inbox" element={<WhatsAppInbox />} />
-              <Route path="whatsapp/inbox/:conversationId" element={<WhatsAppConversation />} />
-              <Route path="whatsapp/drafts" element={<WhatsAppDrafts />} />
-              <Route path="pos/drawer" element={<CashDrawer />} />
-              <Route path="interstore" element={<InterStoreDeals />} />
-              <Route path="/app/interstore/:id" element={<InterStoreDetail />} />
-            </Route>
-
-            <Route element={<RequireRole roles={["OWNER", "MANAGER"]} />}>
-              <Route path="reports" element={<Reports />} />
-            </Route>
+              <Route element={<RequireRole roles={["OWNER", "MANAGER"]} />}>
+                <Route path="reports" element={<Reports />} />
+                <Route path="whatsapp/activity" element={<WhatsAppActivity />} />
+              </Route>
 
             <Route element={<RequireRole roles={["OWNER", "CASHIER", "TECHNICIAN"]} />}>
               <Route path="repairs" element={<Repairs />} />

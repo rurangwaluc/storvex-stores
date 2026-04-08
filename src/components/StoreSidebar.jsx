@@ -50,15 +50,20 @@ function Icon({ name }) {
     case "dashboard":
       return (
         <svg {...common}>
-          <path d="M4 13h7V4H4v9zm9 7h7V11h-7v9zM4 20h7v-5H4v5zm9-9h7V4h-7v7z" fill="currentColor" />
+          <path
+            d="M4 13h7V4H4v9zm9 7h7V11h-7v9zM4 20h7v-5H4v5zm9-9h7V4h-7v7z"
+            fill="currentColor"
+          />
         </svg>
       );
+
     case "pos":
       return (
         <svg {...common}>
           <path d="M7 4h10v3H7V4zm-2 5h14v11H5V9zm3 2v2h8v-2H8zm0 4v2h5v-2H8z" fill="currentColor" />
         </svg>
       );
+
     case "interstore":
       return (
         <svg {...common}>
@@ -70,6 +75,7 @@ function Icon({ name }) {
           />
         </svg>
       );
+
     case "inventory":
       return (
         <svg {...common}>
@@ -81,27 +87,63 @@ function Icon({ name }) {
           />
         </svg>
       );
+
     case "reorder":
       return (
         <svg {...common}>
-          <path d="M4 7h16M4 12h10M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path
+            d="M4 7h16M4 12h10M4 17h16"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
         </svg>
       );
+
     case "history":
       return (
         <svg {...common}>
-          <path d="M12 8v5l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M21 12a9 9 0 11-3.3-6.9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M12 8v5l3 2"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M21 12a9 9 0 11-3.3-6.9"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M21 3v6h-6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
+
     case "suppliers":
       return (
         <svg {...common}>
-          <path d="M4 20v-2a4 4 0 014-4h8a4 4 0 014 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M12 12a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path
+            d="M4 20v-2a4 4 0 014-4h8a4 4 0 014 4v2"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M12 12a4 4 0 100-8 4 4 0 000 8z"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
         </svg>
       );
+
     case "documents":
       return (
         <svg {...common}>
@@ -115,12 +157,19 @@ function Icon({ name }) {
           <path d="M9 12h6M9 16h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
+
     case "customers":
       return (
         <svg {...common}>
-          <path d="M16 11a4 4 0 10-8 0 4 4 0 008 0zM4 20a8 8 0 0116 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path
+            d="M16 11a4 4 0 10-8 0 4 4 0 008 0zM4 20a8 8 0 0116 0"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
         </svg>
       );
+
     case "whatsapp-inbox":
       return (
         <svg {...common}>
@@ -134,6 +183,7 @@ function Icon({ name }) {
           <path d="M8 10.5h8M8 13.5h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
+
     case "whatsapp-drafts":
       return (
         <svg {...common}>
@@ -153,30 +203,86 @@ function Icon({ name }) {
           />
         </svg>
       );
+
+    case "whatsapp-accounts":
+      return (
+        <svg {...common}>
+          <path
+            d="M12 3a9 9 0 00-7.8 13.5L3 21l4.7-1.2A9 9 0 1012 3z"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path d="M12 8v8M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+
+    case "whatsapp-activity":
+      return (
+        <svg {...common}>
+          <path
+            d="M12 3a9 9 0 00-7.8 13.5L3 21l4.7-1.2A9 9 0 1012 3z"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M8 14l2-2 2 1 3-4"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+
     case "repairs":
       return (
         <svg {...common}>
-          <path d="M14 7l3 3-9 9H5v-3l9-9zM16 5l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M14 7l3 3-9 9H5v-3l9-9zM16 5l3 3"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
+
     case "reports":
       return (
         <svg {...common}>
-          <path d="M6 20V4h12v16H6zm3-3h6m-6-4h6m-6-4h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path
+            d="M6 20V4h12v16H6zm3-3h6m-6-4h6m-6-4h6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
         </svg>
       );
+
     case "close":
       return (
         <svg {...common}>
           <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
+
     case "chev":
       return (
         <svg {...common}>
-          <path d="M14 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M14 6l-6 6 6 6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
+
     case "settings":
       return (
         <svg {...common}>
@@ -190,6 +296,7 @@ function Icon({ name }) {
           />
         </svg>
       );
+
     default:
       return <span className="inline-block w-[18px]" />;
   }
@@ -294,6 +401,22 @@ const NAV_ITEMS = [
     label: "WhatsApp drafts",
     section: "customers",
     roles: ["OWNER", "MANAGER", "CASHIER"],
+  },
+  {
+    key: "whatsapp-accounts",
+    to: "/app/whatsapp/accounts",
+    icon: "whatsapp-accounts",
+    label: "WhatsApp accounts",
+    section: "customers",
+    roles: ["OWNER", "MANAGER", "CASHIER"],
+  },
+  {
+    key: "whatsapp-activity",
+    to: "/app/whatsapp/activity",
+    icon: "whatsapp-activity",
+    label: "WhatsApp activity",
+    section: "customers",
+    roles: ["OWNER", "MANAGER"],
   },
   {
     key: "documents",
@@ -472,7 +595,12 @@ export default function StoreSidebar({
         if (!isMobile && collapsed) setHoverOpen(false);
       }}
     >
-      <div className={cx("border-b border-[rgb(var(--border))]", isMobile ? "px-4 pb-4 pt-5" : "p-4")}>
+      <div
+        className={cx(
+          "border-b border-[rgb(var(--border))]",
+          isMobile ? "px-4 pb-4 pt-5" : "p-4"
+        )}
+      >
         <div className="flex items-start justify-between gap-3">
           <div
             className={cx(
@@ -504,7 +632,12 @@ export default function StoreSidebar({
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               title={collapsed ? "Expand" : "Collapse"}
             >
-              <span className={cx(collapsed ? "rotate-180" : "", "transition-transform duration-200")}>
+              <span
+                className={cx(
+                  collapsed ? "rotate-180" : "",
+                  "transition-transform duration-200"
+                )}
+              >
                 <Icon name="chev" />
               </span>
             </button>
@@ -561,16 +694,18 @@ export default function StoreSidebar({
               </div>
             ) : null}
 
-            {groupedItems.filter((section) => section.key !== "primary").map((section) => (
-              <div key={section.key}>
-                <MobileSectionTitle>{section.label}</MobileSectionTitle>
-                <div className="space-y-1.5">
-                  {section.items.map((item) => (
-                    <NavItem key={item.key} item={item} />
-                  ))}
+            {groupedItems
+              .filter((section) => section.key !== "primary")
+              .map((section) => (
+                <div key={section.key}>
+                  <MobileSectionTitle>{section.label}</MobileSectionTitle>
+                  <div className="space-y-1.5">
+                    {section.items.map((item) => (
+                      <NavItem key={item.key} item={item} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </>
         ) : (
           <>
@@ -580,16 +715,18 @@ export default function StoreSidebar({
                 <NavItem key={item.key} item={item} />
               ))}
 
-            {groupedItems.filter((section) => section.key !== "primary").map((section) => (
-              <div key={section.key}>
-                {sectionTitle(section.label)}
-                <div className="space-y-1">
-                  {section.items.map((item) => (
-                    <NavItem key={item.key} item={item} />
-                  ))}
+            {groupedItems
+              .filter((section) => section.key !== "primary")
+              .map((section) => (
+                <div key={section.key}>
+                  {sectionTitle(section.label)}
+                  <div className="space-y-1">
+                    {section.items.map((item) => (
+                      <NavItem key={item.key} item={item} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </>
         )}
       </nav>

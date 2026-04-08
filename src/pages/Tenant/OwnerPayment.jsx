@@ -88,20 +88,20 @@ function segmentLabel(segment) {
 }
 
 function getSegmentDescription(segment) {
-  if (segment === "SOLO") return "Best for one operator starting small.";
-  if (segment === "DUO") return "Good for two active users sharing daily operations.";
-  if (segment === "TEAM_3") return "Best for a small but structured retail team.";
-  if (segment === "TEAM_4") return "Good for a growing shop with clearer separation of roles.";
-  if (segment === "TEAM_5") return "Built for more active operations and broader staff coverage.";
-  if (segment === "TEAM_10") return "Best for busier stores with multiple daily operators.";
-  return "Choose the plan that matches your current store operations.";
+  if (segment === "SOLO") return "One operator starting small.";
+  if (segment === "DUO") return "Two active users sharing daily operations.";
+  if (segment === "TEAM_3") return "A small but structured retail team.";
+  if (segment === "TEAM_4") return "A growing shop with clearer role separation.";
+  if (segment === "TEAM_5") return "More active operations and broader staff coverage.";
+  if (segment === "TEAM_10") return "Busier stores with multiple daily operators.";
+  return "Choose the plan that matches your current operations.";
 }
 
 function getCycleRecommendation(cycle) {
   if (cycle === "HALF_YEAR") return "Best value for most growing stores.";
-  if (cycle === "YEARLY") return "Strong long-term value if you are fully committed.";
-  if (cycle === "QUARTERLY") return "A balanced option with lower upfront commitment.";
-  return "Lowest upfront commitment to start quickly.";
+  if (cycle === "YEARLY") return "Strong long-term value.";
+  if (cycle === "QUARTERLY") return "Balanced commitment.";
+  return "Lowest upfront commitment.";
 }
 
 function groupPlans(plans) {
@@ -133,36 +133,26 @@ function groupPlans(plans) {
 
 function findRecommendedPlan(plans) {
   if (!plans.length) return null;
-
   const preferred = plans.find((p) => p.segment === "DUO" && p.cycle === "HALF_YEAR");
   if (preferred) return preferred;
-
   const fallback = plans.find((p) => p.segment === "DUO" && p.cycle === "QUARTERLY");
   return fallback || plans[0];
 }
 
-function cardBase() {
-  return "rounded-2xl border transition";
-}
-
 function selectCardClass(active) {
   return active
-    ? "border-stone-900 bg-stone-900 text-white shadow-lg shadow-stone-950/10 dark:border-[rgb(var(--text))] dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg))]"
-    : "border-[rgb(var(--border))] bg-[rgb(var(--bg))] text-[rgb(var(--text))] hover:border-[rgb(var(--border-strong))] hover:bg-[rgb(var(--bg-muted))]";
+    ? "border-transparent bg-[var(--color-primary)] text-white shadow-[var(--shadow-card)]"
+    : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-2)]";
 }
 
 function chipClass(active) {
   return active
-    ? "border-stone-900 bg-stone-900 text-white dark:border-[rgb(var(--text))] dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg))]"
-    : "border-[rgb(var(--border))] bg-[rgb(var(--bg))] text-[rgb(var(--text-muted))] hover:border-[rgb(var(--border-strong))] hover:bg-[rgb(var(--bg-muted))]";
+    ? "border-transparent bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
+    : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-2)]";
 }
 
 function softPanel() {
-  return "rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] p-4";
-}
-
-function labelClass() {
-  return "mb-1.5 block text-sm font-medium text-[rgb(var(--text))]";
+  return "rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4";
 }
 
 export default function OwnerPayment() {
@@ -359,251 +349,254 @@ export default function OwnerPayment() {
   }
 
   if (loadingPlans) {
-    return <AuthPageSkeleton titleWidth="w-64" lines={3} showSide />;
+    return <AuthPageSkeleton titleWidth="w-72" lines={4} showSide={false} />;
   }
 
   return (
     <AuthShell
       eyebrow="Paid activation"
       title="Choose your plan with confidence"
-      subtitle="Select the business size first, then the billing cycle. Keep the decision simple, clear, and commercial."
-      sideTitle="This should feel like serious software"
-      sideBody="A store owner paying for Storvex should immediately understand what plan fits the business, what it costs, and what happens next."
-      sideItems={[
-        {
-          title: "Choose by business size",
-          body: "Start with the team size that reflects your real operations.",
-        },
-        {
-          title: "Then choose billing cycle",
-          body: "Compare only the relevant cycle options instead of scanning a giant pricing wall.",
-        },
-        {
-          title: "Enterprise is separate",
-          body: "Custom rollout is kept out of self-serve checkout until the real enterprise payment flow is built.",
-        },
-      ]}
+      subtitle="Select the business size, choose the billing cycle, confirm the plan, and send the payment request."
       footer={
-        <div className="text-sm text-[rgb(var(--text-muted))]">
+        <div className="text-sm text-[var(--color-text-muted)]">
           Prefer the trial path?{" "}
           <Link
             to="/verify-otp"
-            className="font-medium text-[rgb(var(--text))] underline-offset-4 hover:underline"
+            className="font-medium text-[var(--color-text)] underline-offset-4 hover:underline"
           >
             Go back to verification
           </Link>
         </div>
       }
-      compact
+      singleColumn
+      contentWidth="max-w-5xl"
     >
       <div className="space-y-5">
-        <div className={softPanel()}>
-          <div className="text-sm font-medium text-[rgb(var(--text))]">Store</div>
-          <div className="mt-1 text-lg font-semibold text-[rgb(var(--text))]">
-            {storeName || "Your store"}
+        <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className={softPanel()}>
+            <div className="text-sm font-medium text-[var(--color-text-muted)]">Store</div>
+            <div className="mt-1 text-2xl font-black tracking-tight text-[var(--color-text)]">
+              {storeName || "Your store"}
+            </div>
+            {ownerName ? (
+              <div className="mt-2 text-sm text-[var(--color-text-muted)]">
+                Owner: <span className="font-medium text-[var(--color-text)]">{ownerName}</span>
+              </div>
+            ) : null}
           </div>
-          {ownerName ? (
-            <div className="mt-2 text-sm text-[rgb(var(--text-muted))]">
-              Owner: <span className="font-medium text-[rgb(var(--text))]">{ownerName}</span>
-            </div>
-          ) : null}
-        </div>
 
-        <form onSubmit={pay} className="space-y-5">
-          <section className="space-y-3">
+          <div className={softPanel()}>
+            <div className="text-sm font-medium text-[var(--color-text-muted)]">Readiness</div>
+            <div className="mt-2 text-sm font-semibold text-[var(--color-text)]">
+              Email and phone verified
+            </div>
+            <div className="mt-1 text-sm text-[var(--color-text-muted)]">
+              You can activate a paid plan now.
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-end justify-between gap-3">
             <div>
-              <div className="text-sm font-medium text-[rgb(var(--text))]">1. Choose business size</div>
-              <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">
-                Pick the package that matches your current team size.
+              <div className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--color-primary)]">
+                Step 1
+              </div>
+              <div className="mt-1 text-lg font-extrabold text-[var(--color-text)]">
+                Choose business size
               </div>
             </div>
+          </div>
 
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
-              {grouped.segments.map((segment) => {
-                const active = selectedSegment === segment;
-                return (
-                  <button
-                    key={segment}
-                    type="button"
-                    onClick={() => chooseSegment(segment)}
-                    className={`${cardBase()} p-4 text-left ${selectCardClass(active)}`}
-                  >
-                    <div className="text-sm font-semibold">{segmentLabel(segment)}</div>
-                    <div
-                      className={`mt-1 text-xs ${
-                        active
-                          ? "text-white/80 dark:text-[rgb(var(--bg))]/80"
-                          : "text-[rgb(var(--text-soft))]"
-                      }`}
-                    >
-                      {getSegmentDescription(segment)}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <div>
-              <div className="text-sm font-medium text-[rgb(var(--text))]">2. Choose billing cycle</div>
-              <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">
-                Compare only the cycle options for your selected business size.
-              </div>
-            </div>
-
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-              {grouped.cycles.map((cycle) => {
-                const active = selectedCycle === cycle;
-                return (
-                  <button
-                    key={cycle}
-                    type="button"
-                    onClick={() => chooseCycle(cycle)}
-                    className={`${cardBase()} px-4 py-3 text-sm font-medium ${chipClass(active)}`}
-                  >
-                    {cycleLabel(cycle)}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <div>
-              <div className="text-sm font-medium text-[rgb(var(--text))]">3. Confirm plan</div>
-              <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">
-                Review the exact option you are about to activate.
-              </div>
-            </div>
-
-            <div className="grid gap-3">
-              {visiblePlans.map((plan) => {
-                const active = selectedPlan?.key === plan.key;
-                const recommended = recommendedPlan?.key === plan.key;
-
-                return (
-                  <button
-                    key={plan.key}
-                    type="button"
-                    onClick={() => choosePlan(plan)}
-                    className={`${cardBase()} p-4 text-left ${selectCardClass(active)}`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-semibold">{plan.label}</div>
-                        <div
-                          className={`mt-1 text-xs ${
-                            active
-                              ? "text-white/80 dark:text-[rgb(var(--bg))]/80"
-                              : "text-[rgb(var(--text-soft))]"
-                          }`}
-                        >
-                          {Number(plan.days || 0)} days • {getCycleRecommendation(plan.cycle)}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-1">
-                        {recommended ? (
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${
-                              active
-                                ? "bg-white/15 text-white dark:text-[rgb(var(--bg))]"
-                                : "border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] text-[rgb(var(--text-muted))]"
-                            }`}
-                          >
-                            Recommended
-                          </span>
-                        ) : null}
-
-                        {active ? <span className="badge-success">Selected</span> : null}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 text-lg font-semibold">
-                      {formatMoney(plan.price, plan.currency)}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {grouped.enterprise ? (
-            <section className={softPanel()}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <div className="text-sm font-semibold text-[rgb(var(--text))]">Enterprise setup</div>
-                  <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">
-                    Enterprise is intentionally separated from self-serve activation until the final custom payment flow is built.
-                  </div>
-                </div>
-                <span className="badge-info">Custom path</span>
-              </div>
-
-              <div className="mt-4 text-sm text-[rgb(var(--text-muted))]">
-                For now, requesting enterprise setup saves the owner’s enterprise interest and keeps them out of the normal MoMo checkout path.
-              </div>
-
-              <div className="mt-4">
-                <AsyncButton
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {grouped.segments.map((segment) => {
+              const active = selectedSegment === segment;
+              return (
+                <button
+                  key={segment}
                   type="button"
-                  variant="secondary"
-                  onClick={requestEnterpriseSetup}
-                  className="w-full sm:w-auto"
+                  onClick={() => chooseSegment(segment)}
+                  className={`rounded-[22px] border p-4 text-left transition ${selectCardClass(active)}`}
                 >
-                  Request enterprise setup
-                </AsyncButton>
-              </div>
-            </section>
-          ) : null}
+                  <div className="text-base font-bold">{segmentLabel(segment)}</div>
+                  <div className={`mt-2 text-sm leading-6 ${active ? "text-white/80" : "text-[var(--color-text-muted)]"}`}>
+                    {getSegmentDescription(segment)}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
-          <section className={softPanel()}>
-            <div className="text-sm font-medium text-[rgb(var(--text))]">Selected summary</div>
+        <section className="space-y-3">
+          <div>
+            <div className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--color-primary)]">
+              Step 2
+            </div>
+            <div className="mt-1 text-lg font-extrabold text-[var(--color-text)]">
+              Choose billing cycle
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {grouped.cycles.map((cycle) => {
+              const active = selectedCycle === cycle;
+              return (
+                <button
+                  key={cycle}
+                  type="button"
+                  onClick={() => chooseCycle(cycle)}
+                  className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${chipClass(active)}`}
+                >
+                  {cycleLabel(cycle)}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div>
+            <div className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--color-primary)]">
+              Step 3
+            </div>
+            <div className="mt-1 text-lg font-extrabold text-[var(--color-text)]">
+              Confirm plan
+            </div>
+          </div>
+
+          <div className="grid gap-3">
+            {visiblePlans.map((plan) => {
+              const active = selectedPlan?.key === plan.key;
+              const recommended = recommendedPlan?.key === plan.key;
+
+              return (
+                <button
+                  key={plan.key}
+                  type="button"
+                  onClick={() => choosePlan(plan)}
+                  className={`rounded-[22px] border p-5 text-left transition ${selectCardClass(active)}`}
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="text-base font-bold">{plan.label}</div>
+                      <div className={`mt-2 text-sm ${active ? "text-white/80" : "text-[var(--color-text-muted)]"}`}>
+                        {Number(plan.days || 0)} days • {getCycleRecommendation(plan.cycle)}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                      {recommended ? (
+                        <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                          active
+                            ? "bg-white/15 text-white"
+                            : "border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-muted)]"
+                        }`}>
+                          Recommended
+                        </span>
+                      ) : null}
+
+                      {active ? <span className="badge-success">Selected</span> : null}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 text-2xl font-black tracking-tight">
+                    {formatMoney(plan.price, plan.currency)}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-[1fr_360px]">
+          <div className="space-y-4">
+            {grouped.enterprise ? (
+              <div className={softPanel()}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="text-base font-bold text-[var(--color-text)]">Enterprise setup</div>
+                    <div className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
+                      Enterprise is intentionally separated from self-serve activation until the custom payment flow is built.
+                    </div>
+                  </div>
+                  <span className="badge-info">Custom path</span>
+                </div>
+
+                <div className="mt-4">
+                  <AsyncButton
+                    type="button"
+                    variant="secondary"
+                    onClick={requestEnterpriseSetup}
+                    className="w-full sm:w-auto"
+                  >
+                    Request enterprise setup
+                  </AsyncButton>
+                </div>
+              </div>
+            ) : null}
+
+            <div className={softPanel()}>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+                Phone number for MoMo request
+              </label>
+              <input
+                className="app-input"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="078xxxxxxx or 25078xxxxxxx"
+                required
+              />
+              <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+                This phone should be able to receive and approve the payment request.
+              </div>
+            </div>
+          </div>
+
+          <aside className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[var(--shadow-card)] lg:sticky lg:top-24 h-fit">
+            <div className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--color-primary)]">
+              Summary
+            </div>
 
             {selectedPlan ? (
               <>
-                <div className="mt-2 text-base font-semibold text-[rgb(var(--text))]">
-                  {selectedPlan.label} — {formatMoney(selectedPlan.price, selectedPlan.currency)}
+                <div className="mt-3 text-lg font-extrabold text-[var(--color-text)]">
+                  {selectedPlan.label}
                 </div>
-                <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">
+                <div className="mt-2 text-2xl font-black tracking-tight text-[var(--color-text)]">
+                  {formatMoney(selectedPlan.price, selectedPlan.currency)}
+                </div>
+                <div className="mt-2 text-sm text-[var(--color-text-muted)]">
                   Access period: {selectedPlan.days} days
                 </div>
               </>
             ) : (
-              <div className="mt-2 text-sm text-[rgb(var(--text-muted))]">No plan selected yet.</div>
+              <div className="mt-3 text-sm text-[var(--color-text-muted)]">
+                No plan selected yet.
+              </div>
             )}
-          </section>
 
-          <div>
-            <label className={labelClass()}>Phone number for MoMo request</label>
-            <input
-              className="app-input"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="078xxxxxxx or 25078xxxxxxx"
-              required
-            />
-            <div className="mt-1 text-xs text-[rgb(var(--text-soft))]">
-              This phone should be able to receive and approve the payment request now.
+            <div className="mt-5 grid gap-3">
+              <AsyncButton
+                type="submit"
+                loading={loading}
+                loadingText="Sending request..."
+                className="w-full"
+              >
+                Send payment request
+              </AsyncButton>
+
+              <AsyncButton
+                type="button"
+                variant="secondary"
+                onClick={() => nav("/confirm-signup")}
+                className="w-full"
+              >
+                I already paid
+              </AsyncButton>
             </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <AsyncButton type="submit" loading={loading} className="w-full">
-              Send payment request
-            </AsyncButton>
-
-            <AsyncButton
-              type="button"
-              variant="secondary"
-              onClick={() => nav("/confirm-signup")}
-              className="w-full"
-            >
-              I already paid
-            </AsyncButton>
-          </div>
-        </form>
+          </aside>
+        </section>
       </div>
     </AuthShell>
   );

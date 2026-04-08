@@ -18,32 +18,106 @@ function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
-function sectionEyebrow() {
-  return "text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgb(var(--text-soft))]";
-}
-
 function strongText() {
-  return "text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function card() {
-  return "app-card";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
+}
+
+function inputClass() {
+  return "app-input";
+}
+
+function textareaClass() {
+  return [
+    "min-h-[132px] w-full rounded-[22px]",
+    "border border-[var(--color-border)]",
+    "bg-[var(--color-surface)]",
+    "px-4 py-3.5",
+    "text-sm leading-6 text-[var(--color-text)]",
+    "placeholder:text-[var(--color-text-muted)]",
+    "outline-none transition",
+    "shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
+    "focus:border-[var(--color-primary)]",
+    "focus:ring-2 focus:ring-[var(--color-primary-ring)]",
+    "disabled:cursor-not-allowed disabled:opacity-70",
+    "resize-y",
+  ].join(" ");
+}
+
+function TextareaField({
+  label,
+  value,
+  onChange,
+  placeholder = "",
+  disabled = false,
+  help = "",
+  rows = 4,
+}) {
+  return (
+    <div>
+      <label className={fieldLabel()}>{label}</label>
+      <textarea
+        rows={rows}
+        className={cx(textareaClass(), readOnlyInputState(disabled))}
+        value={value}
+        disabled={disabled}
+        onChange={onChange}
+        placeholder={placeholder}
+      />
+      {help ? <p className={fieldHelp()}>{help}</p> : null}
+    </div>
+  );
+}
+
+function primaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function sectionBadge(tone = "neutral") {
+  if (tone === "blue") {
+    return "inline-flex h-8 items-center justify-center rounded-full px-3 text-xs font-semibold bg-[#4ea8ff] text-[#0b1220]";
+  }
+
+  if (tone === "orange") {
+    return "inline-flex h-8 items-center justify-center rounded-full px-3 text-xs font-semibold bg-[#ff9f43] text-[#23160a]";
+  }
+
+  if (tone === "yellow") {
+    return "inline-flex h-8 items-center justify-center rounded-full px-3 text-xs font-semibold bg-[#f7df4f] text-[#2a2508]";
+  }
+
+  if (tone === "mint") {
+    return "inline-flex h-8 items-center justify-center rounded-full px-3 text-xs font-semibold bg-[#83f7db] text-[#0b2a24]";
+  }
+
+  return "inline-flex h-8 items-center justify-center rounded-full px-3 text-xs font-semibold bg-[var(--color-surface)] text-[var(--color-text-muted)]";
 }
 
 function fieldLabel() {
-  return "mb-1.5 block text-sm font-medium text-[rgb(var(--text))]";
+  return "mb-1.5 block text-sm font-medium text-[var(--color-text)]";
 }
 
 function fieldHelp() {
-  return "mt-1.5 text-xs leading-5 text-[rgb(var(--text-soft))]";
+  return "mt-1.5 text-xs leading-5 text-[var(--color-text-muted)]";
 }
 
 function readOnlyInputState(disabled) {
@@ -71,10 +145,10 @@ function initialsFromName(name) {
   return parts.map((p) => p[0]?.toUpperCase() || "").join("");
 }
 
-
 function normalizeHex(value, fallback) {
   const raw = String(value || "").trim();
   if (!raw) return fallback;
+
   const normalized = raw.startsWith("#") ? raw : `#${raw}`;
 
   if (/^#[0-9a-fA-F]{6}$/.test(normalized)) return normalized.toUpperCase();
@@ -89,48 +163,167 @@ function normalizeHex(value, fallback) {
   return fallback;
 }
 
-function ChecklistPill({ done, required }) {
-  if (done) return <span className="badge-success">Done</span>;
-  if (required) return <span className="badge-warning">Required</span>;
-  return <span className="badge-neutral">Optional</span>;
+function statusMeta(status) {
+  const map = {
+    READY: {
+      label: "Ready",
+      chip: "bg-[#83f7db] text-[#0b2a24]",
+      dot: "bg-[#14c38e]",
+    },
+    DONE: {
+      label: "Done",
+      chip: "bg-[#83f7db] text-[#0b2a24]",
+      dot: "bg-[#14c38e]",
+    },
+    ACTIVE: {
+      label: "Active",
+      chip: "bg-[#83f7db] text-[#0b2a24]",
+      dot: "bg-[#14c38e]",
+    },
+    COMPLETE: {
+      label: "Complete",
+      chip: "bg-[#4ea8ff] text-[#0b1220]",
+      dot: "bg-[#4ea8ff]",
+    },
+    INFO: {
+      label: "Info",
+      chip: "bg-[#4ea8ff] text-[#0b1220]",
+      dot: "bg-[#4ea8ff]",
+    },
+    REQUIRED: {
+      label: "Required",
+      chip: "bg-[#ff9f43] text-[#23160a]",
+      dot: "bg-[#ff9f43]",
+    },
+    PENDING: {
+      label: "Pending",
+      chip: "bg-[#ffcf5a] text-[#2a2508]",
+      dot: "bg-[#ffcf5a]",
+    },
+    PROCESS: {
+      label: "Process",
+      chip: "bg-[#f7df4f] text-[#2a2508]",
+      dot: "bg-[#f7df4f]",
+    },
+    OPTIONAL: {
+      label: "Optional",
+      chip: "bg-[var(--color-surface)] text-[var(--color-text-muted)]",
+      dot: "bg-[var(--color-text-muted)]",
+    },
+    NEUTRAL: {
+      label: "Neutral",
+      chip: "bg-[var(--color-surface)] text-[var(--color-text-muted)]",
+      dot: "bg-[var(--color-text-muted)]",
+    },
+  };
+
+  return map[String(status || "").toUpperCase()] || map.NEUTRAL;
 }
 
-function StatCard({ label, value, note, tone = "neutral" }) {
-  const accent =
+function StatusPill({ status }) {
+  const meta = statusMeta(status);
+
+  return (
+    <span
+      className={cx(
+        "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold",
+        meta.chip
+      )}
+    >
+      {meta.label}
+    </span>
+  );
+}
+
+function ChecklistPill({ done, required }) {
+  if (done) return <StatusPill status="DONE" />;
+  if (required) return <StatusPill status="REQUIRED" />;
+  return <StatusPill status="OPTIONAL" />;
+}
+
+function SummaryCard({ label, value, note, tone = "neutral" }) {
+  const toneClass =
+    tone === "success"
+      ? "text-emerald-600 dark:text-emerald-300"
+      : tone === "warning"
+      ? "text-amber-600 dark:text-amber-300"
+      : tone === "danger"
+      ? "text-[var(--color-danger)]"
+      : strongText();
+
+  const accentClass =
     tone === "success"
       ? "bg-emerald-500"
       : tone === "warning"
       ? "bg-amber-500"
       : tone === "danger"
-      ? "bg-rose-500"
-      : "bg-[rgb(var(--text))]";
+      ? "bg-[var(--color-danger)]"
+      : "bg-[var(--color-primary)]";
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] p-4">
-      <div className={cx("absolute left-0 top-0 h-full w-1.5", accent)} />
+    <article className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
+      <div className={cx("absolute left-0 top-0 h-full w-1.5", accentClass)} />
       <div className="pl-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgb(var(--text-soft))]">
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
           {label}
         </div>
-        <div className="mt-2 text-2xl font-semibold text-[rgb(var(--text))]">{value}</div>
-        {note ? <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">{note}</div> : null}
+        <div className={cx("mt-2 text-[1.7rem] font-black tracking-tight", toneClass)}>{value}</div>
+        {note ? <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div> : null}
       </div>
+    </article>
+  );
+}
+
+function SectionHeading({ eyebrow, title, subtitle }) {
+  return (
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
+        </div>
+      ) : null}
+      <h2 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
+        {title}
+      </h2>
+      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
+    </div>
+  );
+}
+
+function SectionHeader({ eyebrow, title, text, action = null }) {
+  return (
+    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div className="max-w-3xl">
+        <SectionHeading eyebrow={eyebrow} title={title} subtitle={text} />
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
+
+function InfoStat({ label, value, sub }) {
+  return (
+    <div className={cx(softPanel(), "p-4")}>
+      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+        {label}
+      </div>
+      <div className={cx("mt-2 text-sm font-bold leading-6", strongText())}>{value || "—"}</div>
+      {sub ? <div className={cx("mt-1 text-xs leading-5", mutedText())}>{sub}</div> : null}
     </div>
   );
 }
 
 function ReadOnlyBanner() {
   return (
-    <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] p-4">
+    <div className={cx(pageCard(), "p-4")}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-[rgb(var(--text))]">Read-only access</div>
-          <p className="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))]">
-            Managers can review store identity, document numbering, and print branding, but only
-            the owner can save changes. This matches the backend contract exactly.
+          <div className={cx("text-sm font-bold", strongText())}>Read-only access</div>
+          <p className={cx("mt-1 text-sm leading-6", mutedText())}>
+            Managers can review store identity, document numbering, and print branding, but only the owner can save changes.
           </p>
         </div>
-        <span className="badge-neutral shrink-0">Manager view</span>
+        <span className={sectionBadge()}>Manager view</span>
       </div>
     </div>
   );
@@ -148,47 +341,47 @@ function PreviewDocument({
   previewFallback = "Not available",
 }) {
   return (
-    <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] p-4">
-      <div className="overflow-hidden rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))]">
+    <div className={cx(softPanel(), "p-4")}>
+      <div className="overflow-hidden rounded-[22px] bg-[var(--color-surface)] ring-1 ring-[var(--color-border)]">
         <div
-          className="relative h-28 px-4 py-4"
+          className="relative h-24 px-4 py-4"
           style={{
             background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor} 100%)`,
           }}
         >
           <div className="relative z-10 flex items-start justify-between gap-3">
-            <div className="text-lg font-black uppercase tracking-[0.18em] text-white">{title}</div>
-            <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white">
-              BRAND
+            <div className="text-sm font-black uppercase tracking-[0.18em] text-white">{title}</div>
+            <div className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
+              Brand
             </div>
           </div>
 
           <div
-            className="absolute -bottom-10 left-[-8%] right-[-8%] h-24 rounded-[999px] shadow-[0_-8px_18px_rgba(15,23,42,0.08)]"
+            className="absolute -bottom-8 left-[-8%] right-[-8%] h-16 rounded-[999px]"
             style={{ backgroundColor: "rgba(255,255,255,0.97)" }}
           />
           <div
-            className="absolute -bottom-12 left-[-10%] right-[-10%] h-24 rounded-[999px] blur-md"
+            className="absolute -bottom-11 left-[-10%] right-[-10%] h-20 rounded-[999px] blur-md"
             style={{ backgroundColor: `${accentColor}66` }}
           />
         </div>
 
         <div className="px-4 py-4">
-          <div className="text-xs uppercase tracking-[0.14em] text-[rgb(var(--text-soft))]">
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
             {previewLabel}
           </div>
-          <div className="mt-1 break-all text-base font-semibold text-[rgb(var(--text))]">
+          <div className={cx("mt-2 break-all text-sm font-bold leading-6", strongText())}>
             {preview || previewFallback}
           </div>
 
           {(prefix || padding) && (
             <div className="mt-3 flex flex-wrap gap-2">
-              {prefix ? <span className="badge-neutral">Prefix {prefix}</span> : null}
-              {padding ? <span className="badge-neutral">Padding {padding}</span> : null}
+              {prefix ? <span className={sectionBadge()}>{prefix}</span> : null}
+              {padding ? <span className={sectionBadge()}>{padding} digits</span> : null}
             </div>
           )}
 
-          <p className="mt-3 line-clamp-3 text-sm leading-6 text-[rgb(var(--text-muted))]">
+          <p className={cx("mt-3 line-clamp-3 text-xs leading-6", mutedText())}>
             {terms?.trim() || "No terms added yet."}
           </p>
         </div>
@@ -202,7 +395,7 @@ function NumberField({ label, value, onChange, disabled = false, min = 4, max = 
     <div>
       <label className={fieldLabel()}>{label}</label>
       <input
-        className={cx("app-input", readOnlyInputState(disabled))}
+        className={cx(inputClass(), readOnlyInputState(disabled))}
         type="number"
         min={min}
         max={max}
@@ -218,16 +411,18 @@ function ColorField({ label, value, onChange, disabled = false }) {
   return (
     <div>
       <label className={fieldLabel()}>{label}</label>
+
       <div className="flex items-center gap-3">
         <input
           type="color"
           value={value}
           disabled={disabled}
           onChange={(e) => onChange(normalizeHex(e.target.value, value))}
-          className="h-12 w-14 cursor-pointer rounded-xl border border-[rgb(var(--border))] bg-transparent p-1 disabled:cursor-not-allowed"
+          className="h-12 w-14 cursor-pointer rounded-2xl border border-[var(--color-border)] bg-transparent p-1 disabled:cursor-not-allowed"
         />
+
         <input
-          className={cx("app-input font-mono uppercase", readOnlyInputState(disabled))}
+          className={cx(inputClass(), "font-mono uppercase", readOnlyInputState(disabled))}
           value={value}
           disabled={disabled}
           onChange={(e) => onChange(normalizeHex(e.target.value, value))}
@@ -271,17 +466,14 @@ export default function SettingsGeneral() {
     invoicePrefix: "INV",
     warrantyPrefix: "WAR",
     proformaPrefix: "PRF",
-
     receiptPadding: 6,
     invoicePadding: 6,
     warrantyPadding: 6,
     proformaPadding: 6,
-
     invoiceTerms: "",
     warrantyTerms: "",
     proformaTerms: "",
     deliveryNoteTerms: "",
-
     documentPrimaryColor: "#0F4C81",
     documentAccentColor: "#E8EEF5",
   });
@@ -338,17 +530,14 @@ export default function SettingsGeneral() {
               invoicePrefix: ds.invoicePrefix || "INV",
               warrantyPrefix: ds.warrantyPrefix || "WAR",
               proformaPrefix: ds.proformaPrefix || "PRF",
-
               receiptPadding: ds.receiptPadding || 6,
               invoicePadding: ds.invoicePadding || 6,
               warrantyPadding: ds.warrantyPadding || 6,
               proformaPadding: ds.proformaPadding || 6,
-
               invoiceTerms: ds.invoiceTerms || "",
               warrantyTerms: ds.warrantyTerms || "",
               proformaTerms: ds.proformaTerms || "",
               deliveryNoteTerms: ds.deliveryNoteTerms || "",
-
               documentPrimaryColor: ds.documentPrimaryColor || "#0F4C81",
               documentAccentColor: ds.documentAccentColor || "#E8EEF5",
             });
@@ -399,17 +588,14 @@ export default function SettingsGeneral() {
         invoicePrefix: documentSettings.invoicePrefix || "INV",
         warrantyPrefix: documentSettings.warrantyPrefix || "WAR",
         proformaPrefix: documentSettings.proformaPrefix || "PRF",
-
         receiptPadding: documentSettings.receiptPadding || 6,
         invoicePadding: documentSettings.invoicePadding || 6,
         warrantyPadding: documentSettings.warrantyPadding || 6,
         proformaPadding: documentSettings.proformaPadding || 6,
-
         invoiceTerms: documentSettings.invoiceTerms || "",
         warrantyTerms: documentSettings.warrantyTerms || "",
         proformaTerms: documentSettings.proformaTerms || "",
         deliveryNoteTerms: documentSettings.deliveryNoteTerms || "",
-
         documentPrimaryColor: documentSettings.documentPrimaryColor || "#0F4C81",
         documentAccentColor: documentSettings.documentAccentColor || "#E8EEF5",
       })
@@ -500,17 +686,14 @@ export default function SettingsGeneral() {
           invoicePrefix: next.invoicePrefix || "INV",
           warrantyPrefix: next.warrantyPrefix || "WAR",
           proformaPrefix: next.proformaPrefix || "PRF",
-
           receiptPadding: next.receiptPadding || 6,
           invoicePadding: next.invoicePadding || 6,
           warrantyPadding: next.warrantyPadding || 6,
           proformaPadding: next.proformaPadding || 6,
-
           invoiceTerms: next.invoiceTerms || "",
           warrantyTerms: next.warrantyTerms || "",
           proformaTerms: next.proformaTerms || "",
           deliveryNoteTerms: next.deliveryNoteTerms || "",
-
           documentPrimaryColor: next.documentPrimaryColor || "#0F4C81",
           documentAccentColor: next.documentAccentColor || "#E8EEF5",
         });
@@ -593,7 +776,11 @@ export default function SettingsGeneral() {
   }
 
   if (!profile) {
-    return <div className={card()}>Store settings are not available.</div>;
+    return (
+      <div className={cx(pageCard(), "p-5")}>
+        <div className={cx("text-base font-bold", strongText())}>Store settings are not available.</div>
+      </div>
+    );
   }
 
   const readinessPercent = checklist?.readinessPercent || 0;
@@ -601,78 +788,79 @@ export default function SettingsGeneral() {
   const isOperationallyReady = Boolean(checklist?.isOperationallyReady);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {isReadOnly ? <ReadOnlyBanner /> : null}
 
-      <section className={card()}>
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-          <div className="min-w-0">
-            <div className={sectionEyebrow()}>Overview</div>
-            <h2 className={cx("mt-2 text-2xl font-semibold tracking-tight", strongText())}>
-              Store settings
-            </h2>
-            <p className={cx("mt-2 max-w-2xl text-sm leading-6", mutedText())}>
-              Control your store identity, printed document defaults, and operational rules from
-              one clean workspace.
-            </p>
+      <section className="space-y-5">
+        <div className={cx(pageCard(), "overflow-hidden")}>
+          <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+            <SectionHeader
+              eyebrow="Overview"
+              title="Store settings"
+              text="Control store identity, printed document defaults, and operational rules from one clean locked workspace."
+            />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={isOperationallyReady ? "badge-success" : "badge-warning"}>
-              {isOperationallyReady ? "Operationally ready" : "Needs attention"}
-            </span>
-            <span className="badge-neutral">{readinessPercent}% complete</span>
-            <span className="badge-info">
-              {form.currencyCode} • {form.timezone}
-            </span>
-          </div>
-        </div>
+          <div className="px-5 py-5 sm:px-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={isOperationallyReady ? sectionBadge("mint") : sectionBadge("orange")}>
+                {isOperationallyReady ? "Operationally ready" : "Needs attention"}
+              </span>
+              <span className={sectionBadge()}>{readinessPercent}% complete</span>
+              <span className={sectionBadge("blue")}>
+                {form.currencyCode} • {form.timezone}
+              </span>
+            </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <StatCard
-            label="Readiness"
-            value={`${readinessPercent}%`}
-            note={isOperationallyReady ? "Core setup completed" : "Important items still missing"}
-            tone={isOperationallyReady ? "success" : "warning"}
-          />
-          <StatCard
-            label="Documents"
-            value={documentSettings ? "Ready" : "Pending"}
-            note="Receipts, invoices, delivery notes, proformas, warranties"
-            tone={documentSettings ? "success" : "neutral"}
-          />
-          <StatCard
-            label="Cash rule"
-            value={form.cashDrawerBlockCashSales ? "Strict" : "Flexible"}
-            note="Cash sales when drawer is closed"
-            tone={form.cashDrawerBlockCashSales ? "warning" : "neutral"}
-          />
+            <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <SummaryCard
+                label="Readiness"
+                value={`${readinessPercent}%`}
+                note={isOperationallyReady ? "Core setup completed" : "Important items still missing"}
+                tone={isOperationallyReady ? "success" : "warning"}
+              />
+              <SummaryCard
+                label="Documents"
+                value={documentSettings ? "Ready" : "Pending"}
+                note="Receipts, invoices, delivery notes, proformas, warranties"
+                tone={documentSettings ? "success" : "warning"}
+              />
+              <SummaryCard
+                label="Cash rule"
+                value={form.cashDrawerBlockCashSales ? "Strict" : "Flexible"}
+                note="Cash sales when drawer is closed"
+                tone={form.cashDrawerBlockCashSales ? "warning" : "neutral"}
+              />
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className={card()}>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="section-title">Setup checklist</div>
-            <div className="section-subtitle mt-1">
-              Track what is still missing before the store is fully ready.
-            </div>
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-3xl">
+            <SectionHeading
+              eyebrow="Checklist"
+              title="Setup checklist"
+              subtitle="Track what is still missing before the store is fully ready."
+            />
           </div>
-          <div className="badge-info">{checks.length} checkpoints</div>
+
+          <div className={cx(softPanel(), "px-4 py-3")}>
+            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+              Checkpoints
+            </div>
+            <div className={cx("mt-2 text-xl font-black tracking-tight", strongText())}>{checks.length}</div>
+          </div>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {checks.map((item) => (
-            <div
-              key={item.key}
-              className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] p-4"
-            >
+            <div key={item.key} className={cx(softPanel(), "p-4")}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-[rgb(var(--text))]">{item.label}</div>
-                  <div className="mt-1 text-xs leading-5 text-[rgb(var(--text-muted))]">
-                    {item.detail}
-                  </div>
+                  <div className={cx("text-sm font-bold", strongText())}>{item.label}</div>
+                  <div className={cx("mt-1 text-xs leading-5", mutedText())}>{item.detail}</div>
                 </div>
                 <ChecklistPill done={item.done} required={item.required} />
               </div>
@@ -681,46 +869,50 @@ export default function SettingsGeneral() {
         </div>
       </section>
 
-      <section className={card()}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="section-title">Store identity</div>
-            <div className="section-subtitle mt-1">
-              This information appears across the workspace and on printed documents.
-            </div>
-          </div>
-
-          <AsyncButton
-            type="button"
-            loading={saving}
-            disabled={!dirty || isReadOnly}
-            onClick={onSave}
-          >
-            Save profile
-          </AsyncButton>
-        </div>
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <SectionHeader
+          eyebrow="Identity"
+          title="Store identity"
+          text="This information appears across the workspace and on printed documents."
+          action={
+            <AsyncButton
+              type="button"
+              loading={saving}
+              disabled={!dirty || isReadOnly}
+              onClick={onSave}
+              className={primaryBtn()}
+            >
+              Save profile
+            </AsyncButton>
+          }
+        />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-12">
           <div className="xl:col-span-4">
-            <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] p-5">
+            <div className={cx(softPanel(), "p-5")}>
               <div className="flex items-start gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] text-lg font-semibold text-[rgb(var(--text))]">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[var(--color-surface)] text-lg font-black text-[var(--color-text)] ring-1 ring-[var(--color-border)]">
                   {form.logoUrl ? (
-                    <img src={form.logoUrl} alt="Store logo" className="h-full w-full object-contain" />
+                    <img
+                      src={form.logoUrl}
+                      alt="Store logo"
+                      className="h-full w-full object-contain"
+                    />
                   ) : (
                     initialsFromName(form.name)
                   )}
                 </div>
 
                 <div className="min-w-0">
-                  <div className={cx("truncate text-base font-semibold", strongText())}>
+                  <div className={cx("truncate text-base font-black tracking-tight", strongText())}>
                     {form.name || "Your store"}
                   </div>
                   <div className={cx("mt-1 truncate text-sm", mutedText())}>
                     {form.email || "store@example.com"}
                   </div>
                   <div className={cx("mt-2 text-xs", softText())}>
-                    {STORE_CATEGORY_OPTIONS.find((x) => x.value === form.shopType)?.label || "Store category not set"}
+                    {STORE_CATEGORY_OPTIONS.find((x) => x.value === form.shopType)?.label ||
+                      "Store category not set"}
                   </div>
                 </div>
               </div>
@@ -741,15 +933,14 @@ export default function SettingsGeneral() {
                   <AsyncButton
                     type="button"
                     loading={uploadingLogo}
-                    variant="secondary"
                     onClick={openLogoPicker}
                     disabled={isReadOnly}
-                    className="w-full sm:w-auto"
+                    className={secondaryBtn()}
                   >
                     {form.logoUrl ? "Replace logo" : "Upload logo"}
                   </AsyncButton>
 
-                  <div className="min-w-0 text-sm text-[rgb(var(--text-muted))]">
+                  <div className={cx("min-w-0 text-sm", mutedText())}>
                     {selectedLogoName ? (
                       <span className="truncate">{selectedLogoName}</span>
                     ) : (
@@ -763,23 +954,25 @@ export default function SettingsGeneral() {
                 </p>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[rgb(var(--text-soft))]">
+              <div className={cx("mt-5 rounded-[20px] bg-[var(--color-surface)] p-4 ring-1 ring-[var(--color-border)]")}>
+                <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
                   Operating rule
                 </div>
+
                 <label className="mt-3 flex items-start gap-3">
                   <input
                     type="checkbox"
                     checked={Boolean(form.cashDrawerBlockCashSales)}
                     disabled={isReadOnly}
                     onChange={(e) => updateField("cashDrawerBlockCashSales", e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-[rgb(var(--border-strong))]"
+                    className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)]"
                   />
+
                   <div>
-                    <div className="text-sm font-medium text-[rgb(var(--text))]">
+                    <div className={cx("text-sm font-bold", strongText())}>
                       Block cash sales when drawer is closed
                     </div>
-                    <div className="mt-1 text-xs leading-5 text-[rgb(var(--text-muted))]">
+                    <div className={cx("mt-1 text-xs leading-5", mutedText())}>
                       Recommended for stronger day-end cash discipline.
                     </div>
                   </div>
@@ -793,7 +986,7 @@ export default function SettingsGeneral() {
               <div>
                 <label className={fieldLabel()}>Store name</label>
                 <input
-                  className={cx("app-input", readOnlyInputState(isReadOnly))}
+                  className={cx(inputClass(), readOnlyInputState(isReadOnly))}
                   value={form.name}
                   disabled={isReadOnly}
                   onChange={(e) => updateField("name", e.target.value)}
@@ -803,7 +996,7 @@ export default function SettingsGeneral() {
               <div>
                 <label className={fieldLabel()}>Store category</label>
                 <select
-                  className={cx("app-input", readOnlyInputState(isReadOnly))}
+                  className={cx(inputClass(), readOnlyInputState(isReadOnly))}
                   value={form.shopType}
                   disabled={isReadOnly}
                   onChange={(e) => updateField("shopType", e.target.value)}
@@ -822,7 +1015,7 @@ export default function SettingsGeneral() {
               <div>
                 <label className={fieldLabel()}>Email</label>
                 <input
-                  className={cx("app-input", readOnlyInputState(isReadOnly))}
+                  className={cx(inputClass(), readOnlyInputState(isReadOnly))}
                   value={form.email}
                   disabled={isReadOnly}
                   onChange={(e) => updateField("email", e.target.value)}
@@ -832,7 +1025,7 @@ export default function SettingsGeneral() {
               <div>
                 <label className={fieldLabel()}>Phone</label>
                 <input
-                  className={cx("app-input", readOnlyInputState(isReadOnly))}
+                  className={cx(inputClass(), readOnlyInputState(isReadOnly))}
                   value={form.phone}
                   disabled={isReadOnly}
                   onChange={(e) => updateField("phone", e.target.value)}
@@ -842,7 +1035,7 @@ export default function SettingsGeneral() {
               <div>
                 <label className={fieldLabel()}>District</label>
                 <input
-                  className={cx("app-input", readOnlyInputState(isReadOnly))}
+                  className={cx(inputClass(), readOnlyInputState(isReadOnly))}
                   value={form.district}
                   disabled={isReadOnly}
                   onChange={(e) => updateField("district", e.target.value)}
@@ -852,7 +1045,7 @@ export default function SettingsGeneral() {
               <div>
                 <label className={fieldLabel()}>Sector</label>
                 <input
-                  className={cx("app-input", readOnlyInputState(isReadOnly))}
+                  className={cx(inputClass(), readOnlyInputState(isReadOnly))}
                   value={form.sector}
                   disabled={isReadOnly}
                   onChange={(e) => updateField("sector", e.target.value)}
@@ -862,7 +1055,7 @@ export default function SettingsGeneral() {
               <div className="sm:col-span-2">
                 <label className={fieldLabel()}>Address</label>
                 <input
-                  className={cx("app-input", readOnlyInputState(isReadOnly))}
+                  className={cx(inputClass(), readOnlyInputState(isReadOnly))}
                   value={form.address}
                   disabled={isReadOnly}
                   onChange={(e) => updateField("address", e.target.value)}
@@ -872,7 +1065,7 @@ export default function SettingsGeneral() {
               <div>
                 <label className={fieldLabel()}>Country code</label>
                 <input
-                  className={cx("app-input", readOnlyInputState(isReadOnly))}
+                  className={cx(inputClass(), readOnlyInputState(isReadOnly))}
                   value={form.countryCode}
                   disabled={isReadOnly}
                   onChange={(e) => updateField("countryCode", e.target.value)}
@@ -882,7 +1075,7 @@ export default function SettingsGeneral() {
               <div>
                 <label className={fieldLabel()}>Currency code</label>
                 <input
-                  className={cx("app-input", readOnlyInputState(isReadOnly))}
+                  className={cx(inputClass(), readOnlyInputState(isReadOnly))}
                   value={form.currencyCode}
                   disabled={isReadOnly}
                   onChange={(e) => updateField("currencyCode", e.target.value)}
@@ -892,7 +1085,7 @@ export default function SettingsGeneral() {
               <div className="sm:col-span-2">
                 <label className={fieldLabel()}>Timezone</label>
                 <input
-                  className={cx("app-input", readOnlyInputState(isReadOnly))}
+                  className={cx(inputClass(), readOnlyInputState(isReadOnly))}
                   value={form.timezone}
                   disabled={isReadOnly}
                   onChange={(e) => updateField("timezone", e.target.value)}
@@ -903,60 +1096,63 @@ export default function SettingsGeneral() {
         </div>
       </section>
 
-      <section className={card()}>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="section-title">Receipt copy</div>
-            <div className="section-subtitle mt-1">
-              Header and footer text used in your receipt experience.
-            </div>
-          </div>
-          <span className="badge-neutral">Receipt experience</span>
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="max-w-3xl">
+        <SectionHeading
+        eyebrow="Receipt"
+        title="Receipt copy"
+        subtitle="Header and footer text used in your receipt experience."
+        />
+        </div>
+
+        <span className={sectionBadge("yellow")}>Receipt experience</span>
         </div>
 
         <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          <div>
-            <label className={fieldLabel()}>Receipt header</label>
-            <textarea
-              className={cx("app-textarea", readOnlyInputState(isReadOnly))}
-              value={form.receiptHeader}
-              disabled={isReadOnly}
-              onChange={(e) => updateField("receiptHeader", e.target.value)}
-              placeholder="Example: Thank you for shopping with us."
-            />
-          </div>
-
-          <div>
-            <label className={fieldLabel()}>Receipt footer</label>
-            <textarea
-              className={cx("app-textarea", readOnlyInputState(isReadOnly))}
-              value={form.receiptFooter}
-              disabled={isReadOnly}
-              onChange={(e) => updateField("receiptFooter", e.target.value)}
-              placeholder="Example: Goods sold are not returnable without receipt."
-            />
-          </div>
+        <div className={cx(softPanel(), "p-4")}>
+        <TextareaField
+        label="Receipt header"
+        value={form.receiptHeader}
+        disabled={isReadOnly}
+        onChange={(e) => updateField("receiptHeader", e.target.value)}
+        placeholder="Example: Thank you for shopping with us."
+        help="Shown near the top of the printed receipt."
+        rows={4}
+        />
         </div>
-      </section>
 
-      <section className={card()}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="section-title">Document branding</div>
-            <div className="section-subtitle mt-1">
-              Owner-controlled theme colors applied across invoices, receipts, delivery notes,
-              proformas, and warranties.
-            </div>
-          </div>
-          <AsyncButton
-            type="button"
-            loading={savingDocs}
-            disabled={!docDirty || isReadOnly}
-            onClick={onSaveDocs}
-          >
-            Save document settings
-          </AsyncButton>
+        <div className={cx(softPanel(), "p-4")}>
+        <TextareaField
+        label="Receipt footer"
+        value={form.receiptFooter}
+        disabled={isReadOnly}
+        onChange={(e) => updateField("receiptFooter", e.target.value)}
+        placeholder="Example: Goods sold are not returnable without receipt."
+        help="Used for policy notes, return rules, or store reminders."
+        rows={4}
+        />
         </div>
+        </div>
+</section>
+
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <SectionHeader
+          eyebrow="Branding"
+          title="Document branding"
+          text="Owner-controlled theme colors applied across invoices, receipts, delivery notes, proformas, and warranties."
+          action={
+            <AsyncButton
+              type="button"
+              loading={savingDocs}
+              disabled={!docDirty || isReadOnly}
+              onClick={onSaveDocs}
+              className={primaryBtn()}
+            >
+              Save document settings
+            </AsyncButton>
+          }
+        />
 
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <ColorField
@@ -975,15 +1171,14 @@ export default function SettingsGeneral() {
         </div>
 
         <p className={fieldHelp()}>
-          Use one strong owner color and one soft accent. This keeps every document consistent and
-          premium.
+          Use one strong owner color and one soft accent. This keeps every document consistent and premium.
         </p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <label className={fieldLabel()}>Receipt prefix</label>
             <input
-              className={cx("app-input", readOnlyInputState(isReadOnly))}
+              className={cx(inputClass(), readOnlyInputState(isReadOnly))}
               value={docForm.receiptPrefix}
               disabled={isReadOnly}
               onChange={(e) => updateDocField("receiptPrefix", e.target.value)}
@@ -993,7 +1188,7 @@ export default function SettingsGeneral() {
           <div>
             <label className={fieldLabel()}>Invoice prefix</label>
             <input
-              className={cx("app-input", readOnlyInputState(isReadOnly))}
+              className={cx(inputClass(), readOnlyInputState(isReadOnly))}
               value={docForm.invoicePrefix}
               disabled={isReadOnly}
               onChange={(e) => updateDocField("invoicePrefix", e.target.value)}
@@ -1003,7 +1198,7 @@ export default function SettingsGeneral() {
           <div>
             <label className={fieldLabel()}>Warranty prefix</label>
             <input
-              className={cx("app-input", readOnlyInputState(isReadOnly))}
+              className={cx(inputClass(), readOnlyInputState(isReadOnly))}
               value={docForm.warrantyPrefix}
               disabled={isReadOnly}
               onChange={(e) => updateDocField("warrantyPrefix", e.target.value)}
@@ -1013,7 +1208,7 @@ export default function SettingsGeneral() {
           <div>
             <label className={fieldLabel()}>Proforma prefix</label>
             <input
-              className={cx("app-input", readOnlyInputState(isReadOnly))}
+              className={cx(inputClass(), readOnlyInputState(isReadOnly))}
               value={docForm.proformaPrefix}
               disabled={isReadOnly}
               onChange={(e) => updateDocField("proformaPrefix", e.target.value)}
@@ -1102,44 +1297,51 @@ export default function SettingsGeneral() {
         </div>
 
         <div className="mt-6 grid gap-4 xl:grid-cols-2">
-          <div>
-            <label className={fieldLabel()}>Invoice terms</label>
-            <textarea
-              className={cx("app-textarea", readOnlyInputState(isReadOnly))}
+          <div className={cx(softPanel(), "p-4")}>
+            <TextareaField
+              label="Invoice terms"
               value={docForm.invoiceTerms}
               disabled={isReadOnly}
               onChange={(e) => updateDocField("invoiceTerms", e.target.value)}
+              placeholder="Example: Payment due within 7 days from invoice date."
+              help="Printed on invoice documents."
+              rows={4}
             />
           </div>
 
-          <div>
-            <label className={fieldLabel()}>Warranty terms</label>
-            <textarea
-              className={cx("app-textarea", readOnlyInputState(isReadOnly))}
+          <div className={cx(softPanel(), "p-4")}>
+            <TextareaField
+              label="Warranty terms"
               value={docForm.warrantyTerms}
               disabled={isReadOnly}
               onChange={(e) => updateDocField("warrantyTerms", e.target.value)}
+              placeholder="Example: Warranty void if seal is broken or device is physically damaged."
+              help="Printed on warranty documents."
+              rows={4}
             />
           </div>
 
-          <div>
-            <label className={fieldLabel()}>Proforma terms</label>
-            <textarea
-              className={cx("app-textarea", readOnlyInputState(isReadOnly))}
+          <div className={cx(softPanel(), "p-4")}>
+            <TextareaField
+              label="Proforma terms"
               value={docForm.proformaTerms}
               disabled={isReadOnly}
               onChange={(e) => updateDocField("proformaTerms", e.target.value)}
+              placeholder="Example: Prices are valid for 3 days from issue date."
+              help="Printed on proforma documents."
+              rows={4}
             />
           </div>
 
-          <div>
-            <label className={fieldLabel()}>Delivery note terms</label>
-            <textarea
-              className={cx("app-textarea", readOnlyInputState(isReadOnly))}
+          <div className={cx(softPanel(), "p-4")}>
+            <TextareaField
+              label="Delivery note terms"
               value={docForm.deliveryNoteTerms}
               disabled={isReadOnly}
               onChange={(e) => updateDocField("deliveryNoteTerms", e.target.value)}
               placeholder="Example: Please verify all items before signing."
+              help="Printed on delivery note documents."
+              rows={4}
             />
           </div>
         </div>

@@ -1,5 +1,57 @@
 import { useEffect } from "react";
 
+function cx(...xs) {
+  return xs.filter(Boolean).join(" ");
+}
+
+function strongText() {
+  return "text-[var(--color-text)]";
+}
+
+function mutedText() {
+  return "text-[var(--color-text-muted)]";
+}
+
+function softText() {
+  return "text-[var(--color-text-muted)]";
+}
+
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
+}
+
+function sectionBadge(color = "blue") {
+  const map = {
+    blue: "bg-[#57b5ff] text-[#06263d]",
+    orange: "bg-[#ff9f43] text-[#402100]",
+    yellow: "bg-[#ffe45e] text-[#4a4300]",
+    green: "bg-[#7cfcc6] text-[#0b3b2e]",
+    neutral: "bg-[var(--color-surface)] text-[var(--color-text-muted)]",
+  };
+
+  return cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", map[color]);
+}
+
+function SectionHeading({ eyebrow, title, subtitle }) {
+  return (
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
+        </div>
+      ) : null}
+      <h2 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
+        {title}
+      </h2>
+      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
+    </div>
+  );
+}
+
 function titleItems(title) {
   if (title === "User roles") {
     return [
@@ -44,28 +96,32 @@ export default function SettingsStub({ title = "Coming soon" }) {
   const items = titleItems(title);
 
   return (
-    <div className="app-card">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="text-lg font-semibold text-[rgb(var(--text))]">{title}</div>
-          <p className="mt-1 text-sm text-[rgb(var(--text-muted))]">
-            This section is prepared and will be enabled next.
-          </p>
+    <div className="space-y-6">
+      <section className={cx(pageCard(), "overflow-hidden")}>
+        <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+          <SectionHeading
+            eyebrow="Settings"
+            title={title}
+            subtitle="This section is prepared and will be enabled next."
+          />
         </div>
 
-        <span className="badge-neutral">Coming soon</span>
-      </div>
+        <div className="flex flex-wrap gap-2 px-5 py-5 sm:px-6">
+          <span className={sectionBadge("orange")}>Coming soon</span>
+          <span className={sectionBadge("neutral")}>Prepared screen</span>
+        </div>
+      </section>
 
-      <div className="mt-5 border-t border-[rgb(var(--border))] pt-5">
-        <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] p-4">
-          <div className="text-sm font-medium text-[rgb(var(--text))]">What will live here</div>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[rgb(var(--text-muted))]">
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <div className={cx(softPanel(), "p-4 sm:p-5")}>
+          <div className={cx("text-sm font-semibold", strongText())}>What will live here</div>
+          <ul className={cx("mt-3 space-y-2 text-sm leading-6", mutedText())}>
             {items.map((x) => (
-              <li key={x}>{x}</li>
+              <li key={x}>• {x}</li>
             ))}
           </ul>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

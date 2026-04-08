@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
-import AsyncButton from "../../components/ui/AsyncButton";
 import { updateEmployee } from "../../services/employeesApi";
 
 const ROLE_OPTIONS = [
@@ -16,32 +15,64 @@ function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
-function shell() {
-  return "rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
-}
-
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function fieldLabel() {
-  return "text-sm font-medium text-stone-800 dark:text-[rgb(var(--text))]";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
-function sectionEyebrow() {
-  return "text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500 dark:text-[rgb(var(--text-soft))]";
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
+}
+
+function inputClass() {
+  return "app-input";
+}
+
+function primaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function sectionBadge(color = "blue") {
+  const map = {
+    blue: "bg-[#57b5ff] text-[#06263d]",
+    orange: "bg-[#ff9f43] text-[#402100]",
+    yellow: "bg-[#ffe45e] text-[#4a4300]",
+    green: "bg-[#7cfcc6] text-[#0b3b2e]",
+    neutral: "bg-[var(--color-surface)] text-[var(--color-text-muted)]",
+  };
+
+  return cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", map[color]);
+}
+
+function SectionHeading({ eyebrow, title, subtitle }) {
+  return (
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
+        </div>
+      ) : null}
+      <h2 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
+        {title}
+      </h2>
+      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
+    </div>
+  );
 }
 
 function initialsFromName(name) {
@@ -57,35 +88,23 @@ function initialsFromName(name) {
 
 function passwordStrengthLabel(password) {
   const p = String(password || "");
-  if (!p) return { label: "Unchanged", cls: "badge-neutral" };
-  if (p.length < 6) return { label: "Too short", cls: "badge-danger" };
-  if (p.length < 8) return { label: "Basic", cls: "badge-warning" };
+  if (!p) return { label: "Unchanged", color: "neutral" };
+  if (p.length < 6) return { label: "Too short", color: "orange" };
+  if (p.length < 8) return { label: "Basic", color: "yellow" };
   if (/[A-Z]/.test(p) && /\d/.test(p) && /[^A-Za-z0-9]/.test(p)) {
-    return { label: "Strong", cls: "badge-success" };
+    return { label: "Strong", color: "green" };
   }
-  return { label: "Good", cls: "badge-info" };
+  return { label: "Good", color: "blue" };
 }
 
-function roleTone(role) {
+function roleColor(role) {
   const r = String(role || "").toUpperCase();
-
-  if (r === "MANAGER") {
-    return "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200";
-  }
-  if (r === "CASHIER") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200";
-  }
-  if (r === "SELLER") {
-    return "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-900/60 dark:bg-violet-950/30 dark:text-violet-200";
-  }
-  if (r === "STOREKEEPER") {
-    return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200";
-  }
-  if (r === "TECHNICIAN") {
-    return "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800 dark:border-fuchsia-900/60 dark:bg-fuchsia-950/30 dark:text-fuchsia-200";
-  }
-
-  return "border-stone-200 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-900/30 dark:text-stone-300";
+  if (r === "MANAGER") return "blue";
+  if (r === "CASHIER") return "green";
+  if (r === "SELLER") return "orange";
+  if (r === "STOREKEEPER") return "yellow";
+  if (r === "TECHNICIAN") return "green";
+  return "neutral";
 }
 
 function EyeIcon({ open }) {
@@ -118,35 +137,6 @@ function EyeIcon({ open }) {
         strokeLinejoin="round"
       />
     </svg>
-  );
-}
-
-function CompactRolePicker({ value, onChange, disabled = false }) {
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:hidden">
-      {ROLE_OPTIONS.map((role) => {
-        const active = value === role.value;
-        return (
-          <button
-            key={role.value}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(role.value)}
-            className={cx(
-              "rounded-xl border px-3 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60",
-              active
-                ? "border-stone-900 bg-stone-900 text-white dark:border-[rgb(var(--text))] dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))]"
-                : "border-stone-200 bg-white text-stone-800 hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]"
-            )}
-          >
-            <div className="text-sm font-semibold">{role.label}</div>
-            <div className={cx("mt-1 text-[11px] leading-5", active ? "text-white/80" : softText())}>
-              {role.short}
-            </div>
-          </button>
-        );
-      })}
-    </div>
   );
 }
 
@@ -232,7 +222,7 @@ export default function EmployeeEdit({ employee, onSaved, onCancel, canEdit = tr
 
   if (!canEdit) {
     return (
-      <div className={cx(shell(), "p-6")}>
+      <div className={cx(pageCard(), "p-6")}>
         <div className={cx("text-lg font-semibold", strongText())}>Edit access restricted</div>
         <p className={cx("mt-2 text-sm", mutedText())}>
           You do not have permission to update staff accounts.
@@ -242,227 +232,145 @@ export default function EmployeeEdit({ employee, onSaved, onCancel, canEdit = tr
   }
 
   return (
-    <form onSubmit={submit} className={cx(shell(), "overflow-hidden")}>
-      <div className="border-b border-stone-200 px-4 py-4 dark:border-[rgb(var(--border))] sm:px-6 sm:py-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className={sectionEyebrow()}>Edit team member</div>
-            <h2 className={cx("mt-1 text-2xl font-semibold tracking-tight sm:text-3xl", strongText())}>
-              Update a staff account
-            </h2>
-            <p className={cx("mt-2 max-w-2xl text-sm leading-6", mutedText())}>
-              Refine account details, adjust the operational role, or set a new password when needed.
-            </p>
+    <form onSubmit={submit} className={cx(pageCard(), "overflow-hidden")}>
+      <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-3xl">
+            <SectionHeading
+              eyebrow="Edit team member"
+              title="Update a staff account"
+              subtitle="Refine account details, adjust the operational role, or set a new password when needed."
+            />
           </div>
 
-          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row">
             {onCancel ? (
               <button type="button" onClick={onCancel} disabled={saving} className={secondaryBtn()}>
                 Close
               </button>
             ) : null}
 
-            <AsyncButton
-              type="submit"
-              loading={saving}
-              className="btn-primary"
+            <button type="submit" disabled={saving || isProtectedOwner} className={primaryBtn()}>
+              {saving ? "Saving..." : "Save changes"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-5 px-5 py-5 sm:px-6">
+        <div className={cx(softPanel(), "p-4")}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-sm font-bold text-white">
+              {initialsFromName(form.name)}
+            </div>
+
+            <div className="min-w-0">
+              <div className={cx("truncate text-sm font-semibold", strongText())}>
+                {form.name.trim() || "Team member"}
+              </div>
+              <div className={cx("truncate text-xs", mutedText())}>
+                {form.email.trim() || "employee@example.com"}
+              </div>
+            </div>
+
+            <span className={cx("ml-auto", sectionBadge(isProtectedOwner ? "neutral" : roleColor(form.role)))}>
+              {isProtectedOwner ? "Owner" : selectedRole.label}
+            </span>
+          </div>
+        </div>
+
+        {isProtectedOwner ? (
+          <div className={cx(softPanel(), "p-4")}>
+            <div className={cx("text-sm font-semibold", strongText())}>Protected account</div>
+            <p className={cx("mt-2 text-sm leading-6", mutedText())}>
+              OWNER account details cannot be changed from this screen. This prevents accidental lockout or privilege mistakes.
+            </p>
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className={cx("text-sm font-medium", strongText())}>Full name</label>
+            <input
+              className={cx(inputClass(), "mt-2")}
+              placeholder="Example: Jules Uwase"
+              value={form.name}
+              onChange={(e) => setField("name", e.target.value)}
+              disabled={isProtectedOwner}
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className={cx("text-sm font-medium", strongText())}>Email address</label>
+            <input
+              className={cx(inputClass(), "mt-2")}
+              placeholder="employee@example.com"
+              value={form.email}
+              onChange={(e) => setField("email", e.target.value)}
+              disabled={isProtectedOwner}
+            />
+          </div>
+
+          <div>
+            <label className={cx("text-sm font-medium", strongText())}>New password</label>
+            <div className="relative mt-2">
+              <input
+                type={showPassword ? "text" : "password"}
+                className={cx(inputClass(), "pr-12")}
+                placeholder="Leave blank to keep current password"
+                value={form.password}
+                onChange={(e) => setField("password", e.target.value)}
+                disabled={isProtectedOwner}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-[var(--color-text-muted)] transition hover:text-[var(--color-text)]"
+                disabled={isProtectedOwner}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                <EyeIcon open={showPassword} />
+              </button>
+            </div>
+
+            <div className="mt-2">
+              <span className={sectionBadge(passwordState.color)}>{passwordState.label}</span>
+            </div>
+          </div>
+
+          <div>
+            <label className={cx("text-sm font-medium", strongText())}>Phone number</label>
+            <input
+              className={cx(inputClass(), "mt-2")}
+              placeholder="Optional"
+              value={form.phone}
+              onChange={(e) => setField("phone", e.target.value)}
+              disabled={isProtectedOwner}
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className={cx("text-sm font-medium", strongText())}>Role</label>
+            <select
+              className={cx(inputClass(), "mt-2")}
+              value={form.role}
+              onChange={(e) => setField("role", e.target.value)}
               disabled={isProtectedOwner}
             >
-              Save changes
-            </AsyncButton>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 py-4 sm:px-6 sm:py-6">
-        <div className="grid grid-cols-1 gap-4">
-          <div className="rounded-2xl border border-stone-200 p-4 dark:border-[rgb(var(--border))]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-stone-950 text-sm font-semibold text-white dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))]">
-                {initialsFromName(form.name)}
-              </div>
-
-              <div className="min-w-0">
-                <div className={cx("truncate text-sm font-semibold", strongText())}>
-                  {form.name.trim() || "Team member"}
-                </div>
-                <div className={cx("truncate text-xs", mutedText())}>
-                  {form.email.trim() || "employee@example.com"}
-                </div>
-              </div>
-
-              <span
-                className={cx(
-                  "ml-auto hidden items-center rounded-full border px-2.5 py-1 text-xs font-semibold sm:inline-flex",
-                  roleTone(form.role)
-                )}
-              >
-                {String(employee.role || "").toUpperCase() === "OWNER" ? "Owner" : selectedRole.label}
-              </span>
-            </div>
-          </div>
-
-          {isProtectedOwner ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
-              <div className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                Protected account
-              </div>
-              <p className="mt-2 text-sm leading-6 text-amber-800 dark:text-amber-300">
-                OWNER account details cannot be changed from this screen. This prevents accidental lockout
-                or privilege mistakes.
-              </p>
-            </div>
-          ) : null}
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className={fieldLabel()}>Full name</label>
-              <input
-                className="app-input mt-2"
-                placeholder="Example: Jules Uwase"
-                value={form.name}
-                onChange={(e) => setField("name", e.target.value)}
-                disabled={isProtectedOwner}
-              />
-              <p className={cx("mt-2 text-xs", softText())}>
-                Use the employee’s real full name for clean reporting and audit history.
-              </p>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className={fieldLabel()}>Email address</label>
-              <input
-                className="app-input mt-2"
-                placeholder="employee@example.com"
-                value={form.email}
-                onChange={(e) => setField("email", e.target.value)}
-                disabled={isProtectedOwner}
-              />
-              <p className={cx("mt-2 text-xs", softText())}>
-                This remains the login identity for the staff account.
-              </p>
-            </div>
-
-            <div>
-              <label className={fieldLabel()}>New password</label>
-              <div className="relative mt-2">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className="app-input pr-12"
-                  placeholder="Leave blank to keep current password"
-                  value={form.password}
-                  onChange={(e) => setField("password", e.target.value)}
-                  disabled={isProtectedOwner}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-stone-500 transition hover:text-stone-800 dark:text-[rgb(var(--text-soft))] dark:hover:text-[rgb(var(--text))]"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  title={showPassword ? "Hide password" : "Show password"}
-                  disabled={isProtectedOwner}
-                >
-                  <EyeIcon open={showPassword} />
-                </button>
-              </div>
-
-              <div className="mt-2 flex items-center gap-2">
-                <span className={passwordState.cls}>{passwordState.label}</span>
-              </div>
-
-              <p className={cx("mt-2 text-xs", softText())}>
-                Only fill this when you want to replace the current password.
-              </p>
-            </div>
-
-            <div>
-              <label className={fieldLabel()}>Phone number</label>
-              <input
-                className="app-input mt-2"
-                placeholder="Optional"
-                value={form.phone}
-                onChange={(e) => setField("phone", e.target.value)}
-                disabled={isProtectedOwner}
-              />
-              <p className={cx("mt-2 text-xs", softText())}>
-                Useful for internal contact and staff directory records.
-              </p>
-            </div>
-
-            <div className="sm:col-span-2">
-              <div className="flex items-center justify-between gap-3">
-                <label className={fieldLabel()}>Role assignment</label>
-                <span
-                  className={cx(
-                    "hidden rounded-full border px-2.5 py-1 text-xs font-semibold sm:inline-flex",
-                    roleTone(form.role)
-                  )}
-                >
-                  {isProtectedOwner ? "Owner" : selectedRole.label}
-                </span>
-              </div>
-
-              <div className="mt-2 hidden sm:block">
-                <select
-                  className="app-input"
-                  value={form.role}
-                  onChange={(e) => setField("role", e.target.value)}
-                  disabled={isProtectedOwner}
-                >
-                  {ROLE_OPTIONS.map((role) => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mt-2 sm:hidden">
-                <CompactRolePicker
-                  value={form.role}
-                  onChange={(value) => setField("role", value)}
-                  disabled={isProtectedOwner}
-                />
-              </div>
-
-              <p className={cx("mt-2 text-xs", softText())}>
-                {isProtectedOwner
-                  ? "OWNER role cannot be changed here."
-                  : selectedRole.short}
-              </p>
-            </div>
-          </div>
-
-          {/* <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
-            <div className={sectionEyebrow()}>Access note</div>
-            <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-              Role changes should reflect real responsibilities. Small permission mistakes create big operational risk.
+              {ROLE_OPTIONS.map((role) => (
+                <option key={role.value} value={role.value}>
+                  {role.label}
+                </option>
+              ))}
+            </select>
+            <p className={cx("mt-2 text-xs", mutedText())}>
+              {isProtectedOwner ? "OWNER role cannot be changed here." : selectedRole.short}
             </p>
-
-            <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <div>
-                <div className={cx("text-[11px] font-semibold uppercase tracking-[0.14em]", softText())}>
-                  Password update
-                </div>
-                <p className={cx("mt-1 text-sm leading-6", mutedText())}>
-                  Leave the password field empty when you only want to update profile details.
-                </p>
-              </div>
-
-              <div>
-                <div className={cx("text-[11px] font-semibold uppercase tracking-[0.14em]", softText())}>
-                  Role discipline
-                </div>
-                <p className={cx("mt-1 text-sm leading-6", mutedText())}>
-                  Avoid assigning broader access than the employee actually needs in daily work.
-                </p>
-              </div>
-            </div>
-          </div> */}
+          </div>
         </div>
       </div>
 
-      <div className="border-t border-stone-200 px-4 py-4 dark:border-[rgb(var(--border))] sm:px-6">
+      <div className="border-t border-[var(--color-border)] px-5 py-4 sm:px-6">
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           {onCancel ? (
             <button type="button" onClick={onCancel} disabled={saving} className={secondaryBtn()}>
@@ -470,14 +378,9 @@ export default function EmployeeEdit({ employee, onSaved, onCancel, canEdit = tr
             </button>
           ) : null}
 
-          <AsyncButton
-            type="submit"
-            loading={saving}
-            className="btn-primary"
-            disabled={isProtectedOwner}
-          >
-            Save changes
-          </AsyncButton>
+          <button type="submit" disabled={saving || isProtectedOwner} className={primaryBtn()}>
+            {saving ? "Saving..." : "Save changes"}
+          </button>
         </div>
       </div>
     </form>

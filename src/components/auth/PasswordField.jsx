@@ -1,88 +1,75 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 
-function EyeIcon({ open }) {
-  if (open) {
-    return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-      </svg>
-    );
-  }
-
+function EyeIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M3 3l18 18"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M10.58 10.58A2 2 0 0013.42 13.42"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M9.88 5.09A10.94 10.94 0 0112 5c5.5 0 9 7 9 7a17.63 17.63 0 01-2.52 3.19M6.61 6.61C4.46 8.07 3 12 3 12s3.5 7 9 7a8.9 8.9 0 003.39-.61"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3 3l18 18" />
+      <path d="M10.6 10.7A3 3 0 0 0 13.3 13.4" />
+      <path d="M9.9 5.2A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a16.5 16.5 0 0 1-4 4.8" />
+      <path d="M6.1 6.1A16.9 16.9 0 0 0 2 12s3.5 7 10 7a10.7 10.7 0 0 0 4-.8" />
     </svg>
   );
 }
 
 export default function PasswordField({
   id,
-  label,
+  label = "Password",
+  helperText = "",
+  error = "",
   value,
   onChange,
-  placeholder,
-  autoComplete,
-  helperText,
-  error,
+  placeholder = "Enter password",
+  autoComplete = "current-password",
+  ...props
 }) {
+  const generatedId = useId();
+  const inputId = id || generatedId;
   const [visible, setVisible] = useState(false);
 
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
+      <label
+        htmlFor={inputId}
+        className="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
+      >
         {label}
       </label>
 
       <div className="relative">
         <input
-          id={id}
+          id={inputId}
           type={visible ? "text" : "password"}
           className="app-input pr-12"
           value={value}
           onChange={onChange}
           placeholder={placeholder}
           autoComplete={autoComplete}
+          {...props}
         />
+
         <button
           type="button"
-          onClick={() => setVisible((v) => !v)}
-          className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[rgb(var(--text-muted))] transition hover:bg-[rgb(var(--bg-muted))] hover:text-[rgb(var(--text))]"
+          onClick={() => setVisible((current) => !current)}
+          className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
           aria-label={visible ? "Hide password" : "Show password"}
         >
-          <EyeIcon open={visible} />
+          {visible ? <EyeOffIcon /> : <EyeIcon />}
         </button>
       </div>
 
       {error ? (
-        <p className="mt-1.5 text-xs text-[rgb(var(--danger-text))]">{error}</p>
+        <div className="mt-1 text-xs text-[var(--color-danger)]">{error}</div>
       ) : helperText ? (
-        <p className="mt-1.5 text-xs text-[rgb(var(--text-soft))]">{helperText}</p>
+        <div className="mt-1 text-xs text-[var(--color-text-muted)]">{helperText}</div>
       ) : null}
     </div>
   );

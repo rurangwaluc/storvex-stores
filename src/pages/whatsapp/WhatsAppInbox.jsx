@@ -2,62 +2,68 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-import { listWhatsAppConversations } from "../../services/whatsappInboxApi";
+import AsyncButton from "../../components/ui/AsyncButton";
+import PageSkeleton from "../../components/ui/PageSkeleton";
+import {
+  listWhatsAppConversations,
+  listWhatsAppSaleDrafts,
+} from "../../services/whatsappInboxApi";
 import WhatsAppConversationDrawer from "./WhatsAppConversationDrawer";
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
-function shell() {
-  return "rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
-}
-
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
+}
+
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
 }
 
 function inputClass() {
-  return "h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "app-input";
 }
 
 function primaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-stone-950 px-4 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function statCardTone(kind = "neutral") {
-  if (kind === "success") {
-    return "border-emerald-200/80 bg-emerald-50/80 dark:border-emerald-900/40 dark:bg-emerald-950/20";
-  }
-  if (kind === "warning") {
-    return "border-amber-200/80 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/20";
-  }
-  return "border-stone-200 bg-white dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]";
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function statusPill(kind, text) {
-  const cls =
-    kind === "success"
-      ? "badge-success"
-      : kind === "warning"
-      ? "badge-warning"
-      : kind === "danger"
-      ? "badge-danger"
-      : "badge-neutral";
+function successBadge() {
+  return "bg-[#7cfcc6] text-[#0b3b2e]";
+}
 
-  return <span className={cls}>{text}</span>;
+function infoBadge() {
+  return "bg-[#57b5ff] text-[#06263d]";
+}
+
+function warningBadge() {
+  return "bg-[#ff9f43] text-[#402100]";
+}
+
+function processBadge() {
+  return "bg-[#ffe45e] text-[#4a4300]";
+}
+
+function neutralBadge() {
+  return "bg-[var(--color-surface)] text-[var(--color-text-muted)]";
 }
 
 function formatDateTime(value) {
@@ -67,90 +73,115 @@ function formatDateTime(value) {
   return date.toLocaleString();
 }
 
-function relativeTime(value) {
-  if (!value) return "";
+function formatTimeAgo(value) {
+  if (!value) return "—";
+
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
+  if (Number.isNaN(date.getTime())) return "—";
 
-  const diffMs = Date.now() - date.getTime();
-  const mins = Math.floor(diffMs / 60000);
-  const hrs = Math.floor(diffMs / 3600000);
-  const days = Math.floor(diffMs / 86400000);
+  const diff = Date.now() - date.getTime();
+  if (diff < 60 * 1000) return "Just now";
 
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  if (hrs < 24) return `${hrs}h ago`;
-  if (days < 7) return `${days}d ago`;
+  const mins = Math.floor(diff / (60 * 1000));
+  if (mins < 60) return `${mins} min ago`;
+
+  const hours = Math.floor(diff / (60 * 60 * 1000));
+  if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+
   return date.toLocaleDateString();
 }
 
-function normalizeConversation(raw) {
-  if (!raw) return null;
+function SectionHeading({ eyebrow, title, subtitle }) {
+  return (
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
+        </div>
+      ) : null}
 
-  return {
-    id: raw.id,
-    phone: raw.phone || "",
-    status: String(raw.status || "OPEN").toUpperCase(),
-    assignedToId: raw.assignedToId || "",
-    accountId: raw.accountId || "",
-    customerId: raw.customerId || raw.customer?.id || "",
-    updatedAt: raw.updatedAt || null,
-    createdAt: raw.createdAt || null,
-    customer: raw.customer
-      ? {
-          id: raw.customer.id || "",
-          name: raw.customer.name || "",
-          phone: raw.customer.phone || raw.phone || "",
-          email: raw.customer.email || "",
-        }
-      : null,
-  };
+      <h2
+        className={cx(
+          "mt-3 text-[1.5rem] font-black tracking-tight sm:text-[1.8rem]",
+          strongText()
+        )}
+      >
+        {title}
+      </h2>
+
+      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, note, tone = "neutral" }) {
+  const toneClass =
+    tone === "success"
+      ? "text-emerald-600 dark:text-emerald-300"
+      : tone === "warning"
+      ? "text-amber-600 dark:text-amber-300"
+      : tone === "danger"
+      ? "text-[var(--color-danger)]"
+      : strongText();
+
+  const accentClass =
+    tone === "success"
+      ? "bg-emerald-500"
+      : tone === "warning"
+      ? "bg-amber-500"
+      : tone === "danger"
+      ? "bg-[var(--color-danger)]"
+      : "bg-[var(--color-primary)]";
+
+  return (
+    <article className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
+      <div className={cx("absolute left-0 top-0 h-full w-1.5", accentClass)} />
+      <div className="pl-2">
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {label}
+        </div>
+        <div className={cx("mt-2 text-[1.55rem] font-black tracking-tight", toneClass)}>
+          {value}
+        </div>
+        {note ? <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div> : null}
+      </div>
+    </article>
+  );
+}
+
+function ProtectionPill({ tone = "neutral", children }) {
+  const cls =
+    tone === "success"
+      ? successBadge()
+      : tone === "info"
+      ? infoBadge()
+      : tone === "warning"
+      ? warningBadge()
+      : tone === "process"
+      ? processBadge()
+      : neutralBadge();
+
+  return (
+    <span
+      className={cx(
+        "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-semibold",
+        cls
+      )}
+    >
+      {children}
+    </span>
+  );
 }
 
 function EmptyState({ title, text }) {
   return (
-    <div className="flex min-h-[320px] items-center justify-center">
-      <div className="max-w-md text-center">
-        <div className={cx("text-base font-semibold", strongText())}>{title}</div>
-        <div className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</div>
-      </div>
+    <div className={cx(softPanel(), "px-5 py-10 text-center")}>
+      <div className={cx("text-base font-semibold", strongText())}>{title}</div>
+      <div className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</div>
     </div>
-  );
-}
-
-function ConversationListSkeleton() {
-  return (
-    <div className="grid grid-cols-1 gap-3 xl:grid-cols-2 2xl:grid-cols-3">
-      {[...Array(9)].map((_, i) => (
-        <div
-          key={i}
-          className="rounded-[24px] border border-stone-200 bg-white p-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]"
-        >
-          <div className="flex items-start gap-3">
-            <div className="h-11 w-11 rounded-2xl bg-stone-200 dark:bg-[rgb(var(--bg-muted))]" />
-            <div className="min-w-0 flex-1">
-              <div className="h-4 w-36 rounded bg-stone-200 dark:bg-[rgb(var(--bg-muted))]" />
-              <div className="mt-2 h-3 w-24 rounded bg-stone-100 dark:bg-[rgb(var(--bg-muted))]" />
-              <div className="mt-3 h-3 w-40 rounded bg-stone-100 dark:bg-[rgb(var(--bg-muted))]" />
-            </div>
-          </div>
-          <div className="mt-4 h-3 w-28 rounded bg-stone-100 dark:bg-[rgb(var(--bg-muted))]" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ChatIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M7 17l-3 3V6a2 2 0 012-2h12a2 2 0 012 2v9a2 2 0 01-2 2H7z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 
@@ -190,59 +221,244 @@ function CustomerAvatar({ conversation }) {
     .toUpperCase();
 
   return (
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-sm font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] text-sm font-semibold text-[var(--color-primary)] ring-1 ring-[var(--color-primary-ring)]">
       {label}
     </div>
   );
 }
+
+function normalizeConversation(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id || "",
+    phone: raw.phone || "",
+    status: String(raw.status || "OPEN").toUpperCase(),
+    assignedToId: raw.assignedToId || "",
+    accountId: raw.accountId || "",
+    customerId: raw.customerId || raw.customer?.id || "",
+    updatedAt: raw.updatedAt || null,
+    createdAt: raw.createdAt || null,
+    customer: raw.customer
+      ? {
+          id: raw.customer.id || "",
+          name: raw.customer.name || "",
+          phone: raw.customer.phone || raw.phone || "",
+          email: raw.customer.email || "",
+          address: raw.customer.address || "",
+        }
+      : null,
+  };
+}
+
+function normalizeDraft(raw) {
+  if (!raw) return null;
+
+  return {
+    id: raw.id || "",
+    conversationId: raw.conversationId || raw.conversation?.id || "",
+    customerId: raw.customerId || "",
+    saleType: String(raw.saleType || "CREDIT").toUpperCase(),
+    status: raw.status || "",
+    total: Number(raw.total || 0),
+    balanceDue: Number(raw.balanceDue || 0),
+    createdAt: raw.createdAt || null,
+    updatedAt: raw.updatedAt || raw.finalizedAt || raw.createdAt || null,
+  };
+}
+
+function groupLabel(status) {
+  return status === "OPEN" ? "Open conversations" : "Closed conversations";
+}
+
+function getConversationSearchText(item, linkedDraft) {
+  return [
+    item?.phone,
+    item?.status,
+    item?.customer?.name,
+    item?.customer?.phone,
+    item?.customer?.email,
+    linkedDraft?.id,
+    linkedDraft?.saleType,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function CompactQueueRow({ item, linkedDraft, selected, onOpen }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cx(
+        "w-full rounded-[22px] border px-3 py-3 text-left transition sm:px-4",
+        selected
+          ? "border-[var(--color-primary-ring)] bg-[var(--color-primary-soft)]"
+          : "border-transparent bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)]"
+      )}
+    >
+      <div className="flex min-w-0 items-start gap-3">
+        <CustomerAvatar conversation={item} />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className={cx("truncate text-sm font-bold", strongText())}>
+                {item.customer?.name || "Unknown customer"}
+              </div>
+
+              <div className={cx("mt-1 truncate text-xs", mutedText())}>
+                {item.customer?.phone || item.phone || "—"}
+              </div>
+
+              {item.customer?.email ? (
+                <div className={cx("mt-1 truncate text-xs", softText())}>{item.customer.email}</div>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <ProtectionPill tone={item.status === "OPEN" ? "success" : "warning"}>
+                {item.status === "OPEN" ? "Open" : "Closed"}
+              </ProtectionPill>
+
+              {linkedDraft ? (
+                <ProtectionPill tone="process">
+                  Draft #{String(linkedDraft.id).slice(-6).toUpperCase()}
+                </ProtectionPill>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <div className={cx("min-w-0 truncate", mutedText())}>
+              {linkedDraft
+                ? `${linkedDraft.saleType} draft • RWF ${Number(linkedDraft.total || 0).toLocaleString()}`
+                : "No linked draft yet"}
+            </div>
+
+            <div className={cx("shrink-0", softText())}>
+              {formatTimeAgo(item.updatedAt || item.createdAt)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function QueueGroup({ title, items, draftsByConversationId, selectedConversationId, onOpen }) {
+  if (!items.length) return null;
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className={cx("text-sm font-bold", strongText())}>{title}</div>
+        <div className={cx("text-xs", mutedText())}>{items.length}</div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2">
+        {items.map((item) => (
+          <CompactQueueRow
+            key={item.id}
+            item={item}
+            linkedDraft={draftsByConversationId[item.id] || null}
+            selected={selectedConversationId === item.id}
+            onOpen={() => onOpen(item)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function LoadMoreRow({ onClick, remaining }) {
+  return (
+    <div className="flex justify-center pt-2">
+      <button type="button" onClick={onClick} className={secondaryBtn()}>
+        Show more conversations{remaining > 0 ? ` (${remaining} left)` : ""}
+      </button>
+    </div>
+  );
+}
+
+const INITIAL_RENDER_COUNT = 60;
+const LOAD_MORE_STEP = 80;
 
 export default function WhatsAppInbox() {
   const nav = useNavigate();
   const mountedRef = useRef(true);
 
   const [conversations, setConversations] = useState([]);
+  const [drafts, setDrafts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [linkedFilter, setLinkedFilter] = useState("ALL");
+  const [renderCount, setRenderCount] = useState(INITIAL_RENDER_COUNT);
+
   const [selectedConversationId, setSelectedConversationId] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     mountedRef.current = true;
+    document.title = "WhatsApp Inbox • Storvex";
+
     return () => {
       mountedRef.current = false;
     };
   }, []);
 
-  async function loadConversations({ silent = false } = {}) {
-    if (!silent) setLoading(true);
-    setRefreshing(true);
-
+  async function loadInbox(showToast = false) {
     try {
-      const res = await listWhatsAppConversations();
+      if (!conversations.length && !drafts.length) setLoading(true);
+      else setRefreshing(true);
+
+      const [conversationRes, draftRes] = await Promise.all([
+        listWhatsAppConversations(),
+        listWhatsAppSaleDrafts(),
+      ]);
+
       if (!mountedRef.current) return;
 
-      const list = Array.isArray(res?.conversations)
-        ? res.conversations.map(normalizeConversation).filter(Boolean)
+      const nextConversations = Array.isArray(conversationRes?.conversations)
+        ? conversationRes.conversations.map(normalizeConversation).filter(Boolean)
         : [];
 
-      list.sort(
+      const nextDrafts = Array.isArray(draftRes?.drafts)
+        ? draftRes.drafts.map(normalizeDraft).filter(Boolean)
+        : [];
+
+      nextConversations.sort(
         (a, b) =>
           new Date(b.updatedAt || b.createdAt || 0).getTime() -
           new Date(a.updatedAt || a.createdAt || 0).getTime()
       );
 
-      setConversations(list);
+      setConversations(nextConversations);
+      setDrafts(nextDrafts);
+      setRenderCount(INITIAL_RENDER_COUNT);
 
-      if (selectedConversationId && !list.some((item) => item.id === selectedConversationId)) {
-        setSelectedConversationId("");
-        setDrawerOpen(false);
+      if (selectedConversationId) {
+        const stillExists = nextConversations.some((item) => item.id === selectedConversationId);
+        if (!stillExists) {
+          setSelectedConversationId("");
+          setDrawerOpen(false);
+        }
       }
+
+      if (showToast) toast.success("WhatsApp inbox refreshed");
     } catch (err) {
       console.error(err);
-      toast.error(err?.message || "Failed to load WhatsApp inbox");
       if (!mountedRef.current) return;
+
+      toast.error(err?.message || "Failed to load WhatsApp inbox");
       setConversations([]);
+      setDrafts([]);
+      setSelectedConversationId("");
+      setDrawerOpen(false);
     } finally {
       if (!mountedRef.current) return;
       setLoading(false);
@@ -251,41 +467,79 @@ export default function WhatsAppInbox() {
   }
 
   useEffect(() => {
-    void loadConversations();
+    loadInbox();
   }, []);
+
+  const draftsByConversationId = useMemo(() => {
+    const map = {};
+    for (const draft of drafts) {
+      if (!draft?.conversationId) continue;
+
+      const existing = map[draft.conversationId];
+      if (!existing) {
+        map[draft.conversationId] = draft;
+        continue;
+      }
+
+      const existingTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+      const nextTime = new Date(draft.updatedAt || draft.createdAt || 0).getTime();
+
+      if (nextTime > existingTime) {
+        map[draft.conversationId] = draft;
+      }
+    }
+    return map;
+  }, [drafts]);
 
   const filteredConversations = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return conversations;
 
-    return conversations.filter((item) => {
-      const phone = String(item.phone || "").toLowerCase();
-      const customerName = String(item.customer?.name || "").toLowerCase();
-      const customerPhone = String(item.customer?.phone || "").toLowerCase();
-      const email = String(item.customer?.email || "").toLowerCase();
+    const out = conversations.filter((item) => {
+      const linkedDraft = draftsByConversationId[item.id] || null;
 
-      return (
-        phone.includes(q) ||
-        customerName.includes(q) ||
-        customerPhone.includes(q) ||
-        email.includes(q)
-      );
+      if (statusFilter !== "ALL" && item.status !== statusFilter) return false;
+
+      if (linkedFilter === "LINKED" && !linkedDraft) return false;
+      if (linkedFilter === "UNLINKED" && linkedDraft) return false;
+
+      if (!q) return true;
+
+      return getConversationSearchText(item, linkedDraft).includes(q);
     });
-  }, [conversations, query]);
+
+    return out;
+  }, [conversations, draftsByConversationId, query, statusFilter, linkedFilter]);
+
+  const visibleConversations = useMemo(() => {
+    return filteredConversations.slice(0, renderCount);
+  }, [filteredConversations, renderCount]);
 
   const selectedConversation = useMemo(() => {
     return conversations.find((item) => item.id === selectedConversationId) || null;
   }, [conversations, selectedConversationId]);
 
   const summary = useMemo(() => {
-    const openCount = conversations.filter((x) => x.status === "OPEN").length;
-    const closedCount = conversations.filter((x) => x.status === "CLOSED").length;
-    return {
-      total: conversations.length,
-      open: openCount,
-      closed: closedCount,
-    };
-  }, [conversations]);
+    const total = conversations.length;
+    const open = conversations.filter((x) => x.status === "OPEN").length;
+    const closed = conversations.filter((x) => x.status === "CLOSED").length;
+    const linkedDrafts = conversations.filter((x) => draftsByConversationId[x.id]).length;
+
+    return { total, open, closed, linkedDrafts };
+  }, [conversations, draftsByConversationId]);
+
+  const groupedVisible = useMemo(() => {
+    const openItems = [];
+    const closedItems = [];
+
+    for (const item of visibleConversations) {
+      if (item.status === "CLOSED") closedItems.push(item);
+      else openItems.push(item);
+    }
+
+    return { openItems, closedItems };
+  }, [visibleConversations]);
+
+  const remainingCount = Math.max(0, filteredConversations.length - visibleConversations.length);
 
   function openConversation(item) {
     setSelectedConversationId(item.id);
@@ -293,9 +547,19 @@ export default function WhatsAppInbox() {
   }
 
   function patchConversation(nextConversation) {
+    if (!nextConversation?.id) return;
+
     setConversations((prev) => {
       const next = prev.map((item) =>
-        item.id === nextConversation.id ? { ...item, ...nextConversation } : item
+        item.id === nextConversation.id
+          ? {
+              ...item,
+              ...nextConversation,
+              customer: nextConversation.customer
+                ? { ...(item.customer || {}), ...nextConversation.customer }
+                : item.customer,
+            }
+          : item
       );
 
       next.sort(
@@ -308,26 +572,38 @@ export default function WhatsAppInbox() {
     });
   }
 
+  function resetFilters() {
+    setQuery("");
+    setStatusFilter("ALL");
+    setLinkedFilter("ALL");
+    setRenderCount(INITIAL_RENDER_COUNT);
+  }
+
+  useEffect(() => {
+    setRenderCount(INITIAL_RENDER_COUNT);
+  }, [query, statusFilter, linkedFilter]);
+
+  if (loading) {
+    return <PageSkeleton titleWidth="w-40" lines={5} variant="default" />;
+  }
+
   return (
     <>
-      <div className="space-y-5">
-        <section className={cx(shell(), "overflow-hidden")}>
-          <div className="border-b border-stone-200 px-5 py-5 dark:border-[rgb(var(--border))]">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <div className="space-y-6">
+        <section className={cx(pageCard(), "overflow-hidden")}>
+          <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="max-w-3xl">
-                <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                  WhatsApp
-                </div>
-                <h1 className={cx("mt-2 text-3xl font-semibold tracking-tight", strongText())}>
-                  Inbox
-                </h1>
-                <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                  Manage live customer conversations, reply quickly, and move buying intent into
-                  WhatsApp drafts for staff review.
-                </p>
+                <SectionHeading
+                  eyebrow="WhatsApp"
+                  title="Inbox"
+                  subtitle="Manage live customer conversations, reply quickly, and move buying interest into drafts your staff can review and finalize."
+                />
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                <ProtectionPill tone="info">{summary.open} open</ProtectionPill>
+
                 <button
                   type="button"
                   onClick={() => nav("/app/whatsapp/drafts")}
@@ -336,137 +612,173 @@ export default function WhatsAppInbox() {
                   Open drafts
                 </button>
 
-                <button
+                <AsyncButton
                   type="button"
-                  onClick={() => void loadConversations()}
+                  loading={refreshing}
+                  loadingText="Refreshing..."
+                  onClick={() => loadInbox(true)}
                   className={primaryBtn()}
-                  disabled={refreshing}
                 >
                   <span className={cx("mr-2 inline-flex", refreshing ? "animate-spin" : "")}>
                     <RefreshIcon />
                   </span>
-                  {refreshing ? "Refreshing..." : "Refresh inbox"}
-                </button>
+                  Refresh inbox
+                </AsyncButton>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-3">
-            <div className={cx(shell(), statCardTone("neutral"), "p-4")}>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-                Total conversations
-              </div>
-              <div className={cx("mt-2 text-2xl font-semibold", strongText())}>{summary.total}</div>
-              <div className={cx("mt-1 text-sm", mutedText())}>All WhatsApp threads in this store</div>
-            </div>
-
-            <div className={cx(shell(), statCardTone("success"), "p-4")}>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-                Open
-              </div>
-              <div className={cx("mt-2 text-2xl font-semibold", strongText())}>{summary.open}</div>
-              <div className={cx("mt-1 text-sm", mutedText())}>Active threads needing attention</div>
-            </div>
-
-            <div className={cx(shell(), statCardTone("warning"), "p-4")}>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-                Closed
-              </div>
-              <div className={cx("mt-2 text-2xl font-semibold", strongText())}>{summary.closed}</div>
-              <div className={cx("mt-1 text-sm", mutedText())}>Resolved or parked conversations</div>
-            </div>
+          <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-2 xl:grid-cols-4">
+            <SummaryCard
+              label="Total conversations"
+              value={summary.total}
+              note="All WhatsApp threads in this store"
+            />
+            <SummaryCard
+              label="Open"
+              value={summary.open}
+              note="Threads that still need attention"
+              tone="success"
+            />
+            <SummaryCard
+              label="Closed"
+              value={summary.closed}
+              note="Resolved or parked conversations"
+              tone="warning"
+            />
+            <SummaryCard
+              label="Linked drafts"
+              value={summary.linkedDrafts}
+              note="Conversations already connected to drafts"
+              tone="neutral"
+            />
           </div>
         </section>
 
-        <section className={cx(shell(), "overflow-hidden")}>
-          <div className="border-b border-stone-200 px-5 py-4 dark:border-[rgb(var(--border))]">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className={cx("text-lg font-semibold", strongText())}>Conversation queue</h2>
-                <p className={cx("mt-1 text-sm", mutedText())}>
-                  Open any card to launch the slide-over conversation workspace.
-                </p>
+        <section className={cx(pageCard(), "overflow-hidden")}>
+          <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className={cx("text-lg font-black tracking-tight", strongText())}>
+                    Conversation queue
+                  </div>
+                  <p className={cx("mt-1 text-sm leading-6", mutedText())}>
+                    Compact queue built for high volume. Open any thread to reply, update status,
+                    and jump into related draft work.
+                  </p>
+                </div>
+
+                <div className="relative w-full max-w-md">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+                    <SearchIcon />
+                  </span>
+                  <input
+                    className={cx(inputClass(), "pl-10")}
+                    placeholder="Search by phone, name, email, draft, or status..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </div>
               </div>
 
-              <div className="relative w-full max-w-md">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-[rgb(var(--text-soft))]">
-                  <SearchIcon />
-                </span>
-                <input
-                  className={cx(inputClass(), "pl-10")}
-                  placeholder="Search by phone, customer name, or email..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
+              <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={cx(
+                      statusFilter === "ALL" ? primaryBtn() : secondaryBtn(),
+                      "h-10 px-4 text-xs sm:text-sm"
+                    )}
+                    onClick={() => setStatusFilter("ALL")}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    className={cx(
+                      statusFilter === "OPEN" ? primaryBtn() : secondaryBtn(),
+                      "h-10 px-4 text-xs sm:text-sm"
+                    )}
+                    onClick={() => setStatusFilter("OPEN")}
+                  >
+                    Open
+                  </button>
+                  <button
+                    type="button"
+                    className={cx(
+                      statusFilter === "CLOSED" ? primaryBtn() : secondaryBtn(),
+                      "h-10 px-4 text-xs sm:text-sm"
+                    )}
+                    onClick={() => setStatusFilter("CLOSED")}
+                  >
+                    Closed
+                  </button>
+
+                  <button
+                    type="button"
+                    className={cx(
+                      linkedFilter === "LINKED" ? primaryBtn() : secondaryBtn(),
+                      "h-10 px-4 text-xs sm:text-sm"
+                    )}
+                    onClick={() => setLinkedFilter("LINKED")}
+                  >
+                    Linked drafts
+                  </button>
+                  <button
+                    type="button"
+                    className={cx(
+                      linkedFilter === "UNLINKED" ? primaryBtn() : secondaryBtn(),
+                      "h-10 px-4 text-xs sm:text-sm"
+                    )}
+                    onClick={() => setLinkedFilter("UNLINKED")}
+                  >
+                    No draft
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <ProtectionPill tone="neutral">{filteredConversations.length} matched</ProtectionPill>
+                  {(query || statusFilter !== "ALL" || linkedFilter !== "ALL") && (
+                    <button type="button" onClick={resetFilters} className={secondaryBtn()}>
+                      Reset filters
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="p-5">
-            {loading ? (
-              <ConversationListSkeleton />
-            ) : filteredConversations.length === 0 ? (
+          <div className="p-5 sm:p-6">
+            {filteredConversations.length === 0 ? (
               <EmptyState
                 title="No conversations found"
-                text="There are no WhatsApp conversations matching your current search."
+                text="There are no WhatsApp conversations matching your current filters."
               />
             ) : (
-              <div className="grid grid-cols-1 gap-3 xl:grid-cols-2 2xl:grid-cols-3">
-                {filteredConversations.map((item) => {
-                  const customerName = item.customer?.name || "Unknown customer";
-                  const customerPhone = item.customer?.phone || item.phone || "—";
-                  const isSelected = drawerOpen && item.id === selectedConversationId;
-                  const lastSeen = item.updatedAt || item.createdAt || null;
+              <div className="space-y-6">
+                <QueueGroup
+                  title={groupLabel("OPEN")}
+                  items={groupedVisible.openItems}
+                  draftsByConversationId={draftsByConversationId}
+                  selectedConversationId={selectedConversationId}
+                  onOpen={openConversation}
+                />
 
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => openConversation(item)}
-                      className={cx(
-                        "group rounded-[24px] border p-4 text-left transition-all duration-200",
-                        isSelected
-                          ? "border-emerald-300 bg-emerald-50 shadow-sm dark:border-emerald-800/40 dark:bg-emerald-950/20"
-                          : "border-stone-200 bg-white hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-md dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:hover:bg-[rgb(var(--bg-muted))]"
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <CustomerAvatar conversation={item} />
+                <QueueGroup
+                  title={groupLabel("CLOSED")}
+                  items={groupedVisible.closedItems}
+                  draftsByConversationId={draftsByConversationId}
+                  selectedConversationId={selectedConversationId}
+                  onOpen={openConversation}
+                />
 
-                          <div className="min-w-0">
-                            <div className={cx("truncate text-sm font-semibold", strongText())}>
-                              {customerName}
-                            </div>
-                            <div className={cx("mt-1 text-xs", mutedText())}>{customerPhone}</div>
-                            {item.customer?.email ? (
-                              <div className={cx("mt-1 truncate text-xs", softText())}>
-                                {item.customer.email}
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-
-                        {statusPill(item.status === "OPEN" ? "success" : "warning", item.status)}
-                      </div>
-
-                      <div className="mt-4 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className={cx("text-xs", softText())}>
-                            {lastSeen ? `Last activity ${relativeTime(lastSeen)}` : "—"}
-                          </div>
-                          <div className={cx("mt-1 text-xs", mutedText())}>
-                            {formatDateTime(lastSeen)}
-                          </div>
-                        </div>
-
-                        <div className="shrink-0 text-xs font-medium text-emerald-700 transition group-hover:translate-x-0.5 dark:text-emerald-300">
-                          Open →
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                {remainingCount > 0 ? (
+                  <LoadMoreRow
+                    remaining={remainingCount}
+                    onClick={() => setRenderCount((prev) => prev + LOAD_MORE_STEP)}
+                  />
+                ) : null}
               </div>
             )}
           </div>
@@ -478,6 +790,7 @@ export default function WhatsAppInbox() {
         conversation={selectedConversation}
         onClose={() => setDrawerOpen(false)}
         onConversationPatched={patchConversation}
+        draftsByConversationId={draftsByConversationId}
       />
     </>
   );

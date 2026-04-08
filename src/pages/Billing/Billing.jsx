@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
+
 import apiClient from "../../services/apiClient";
 import AsyncButton from "../../components/ui/AsyncButton";
 import PageSkeleton from "../../components/ui/PageSkeleton";
@@ -10,23 +11,51 @@ function cx(...xs) {
 }
 
 function strongText() {
-  return "text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function shell() {
-  return "rounded-[32px] border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] shadow-sm";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
-function card() {
-  return "rounded-[24px] border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] shadow-sm";
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
+}
+
+function primaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function infoBadge() {
+  return "bg-[#57b5ff] text-[#06263d]";
+}
+
+function warningBadge() {
+  return "bg-[#ff9f43] text-[#402100]";
+}
+
+function processBadge() {
+  return "bg-[#ffe45e] text-[#4a4300]";
+}
+
+function successBadge() {
+  return "bg-[#7cfcc6] text-[#0b3b2e]";
+}
+
+function neutralBadge() {
+  return "bg-[var(--color-surface)] text-[var(--color-text-muted)]";
 }
 
 function formatMoney(n, currency) {
@@ -58,6 +87,7 @@ function inferSegment(label = "") {
 function inferCycle(label = "", days = 0) {
   const text = String(label).toLowerCase();
   const d = Number(days || 0);
+
   if (text.includes("1 year") || text.includes("year") || d >= 360) return "YEARLY";
   if (text.includes("6 months") || text.includes("6 month") || d >= 175) return "HALF_YEAR";
   if (text.includes("3 months") || text.includes("3 month") || d >= 85) return "QUARTERLY";
@@ -100,37 +130,142 @@ function groupPlans(plans) {
   return { standard, segments, cycles };
 }
 
-function badgeClass(sub) {
+function subscriptionTone(sub) {
   const status = String(sub?.status || "").toUpperCase();
   const mode = String(sub?.accessMode || "").toUpperCase();
   const canOperate = Boolean(sub?.canOperate);
 
-  if (status === "EXPIRED" || canOperate === false) return "badge-danger";
-  if (mode === "READ_ONLY") return "badge-warning";
-  if (mode === "TRIAL") return "badge-info";
-  return "badge-success";
+  if (status === "EXPIRED" || canOperate === false) {
+    return { label: "Expired", cls: warningBadge() };
+  }
+
+  if (mode === "READ_ONLY") {
+    return { label: "Read-only", cls: processBadge() };
+  }
+
+  if (mode === "TRIAL") {
+    return { label: "Trial", cls: infoBadge() };
+  }
+
+  return { label: "Active", cls: successBadge() };
 }
 
-function badgeLabel(sub) {
-  const status = String(sub?.status || "").toUpperCase();
-  const mode = String(sub?.accessMode || "").toUpperCase();
-  const canOperate = Boolean(sub?.canOperate);
-
-  if (status === "EXPIRED" || canOperate === false) return "Expired";
-  if (mode === "READ_ONLY") return "Read-only";
-  if (mode === "TRIAL") return "Trial";
-  return "Active";
-}
-
-function StatCard({ label, value, note }) {
+function SectionHeading({ eyebrow, title, subtitle }) {
   return (
-    <div className="rounded-[24px] border border-[rgb(var(--border))] bg-[rgb(var(--bg))] p-4">
-      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.14em]", softText())}>
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
+        </div>
+      ) : null}
+
+      <h2 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
+        {title}
+      </h2>
+
+      {subtitle ? (
+        <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, note, tone = "neutral" }) {
+  const toneClass =
+    tone === "success"
+      ? "text-emerald-600 dark:text-emerald-300"
+      : tone === "warning"
+      ? "text-amber-600 dark:text-amber-300"
+      : tone === "danger"
+      ? "text-[var(--color-danger)]"
+      : strongText();
+
+  const accentClass =
+    tone === "success"
+      ? "bg-emerald-500"
+      : tone === "warning"
+      ? "bg-amber-500"
+      : tone === "danger"
+      ? "bg-[var(--color-danger)]"
+      : "bg-[var(--color-primary)]";
+
+  return (
+    <article className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
+      <div className={cx("absolute left-0 top-0 h-full w-1.5", accentClass)} />
+      <div className="pl-2">
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {label}
+        </div>
+        <div className={cx("mt-2 text-[1.7rem] font-black tracking-tight", toneClass)}>{value}</div>
+        {note ? <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div> : null}
+      </div>
+    </article>
+  );
+}
+
+function FilterChip({ active, children, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-semibold transition",
+        active
+          ? "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function InfoStat({ label, value, sub }) {
+  return (
+    <div className={cx(softPanel(), "p-4")}>
+      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
         {label}
       </div>
-      <div className={cx("mt-2 text-lg font-semibold", strongText())}>{value}</div>
-      {note ? <div className={cx("mt-1 text-sm", mutedText())}>{note}</div> : null}
+      <div className={cx("mt-2 text-sm font-bold leading-6", strongText())}>{value || "—"}</div>
+      {sub ? <div className={cx("mt-1 text-xs leading-5", mutedText())}>{sub}</div> : null}
     </div>
+  );
+}
+
+function PlanCard({ plan, active, onSelect }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(plan.key)}
+      className={cx(
+        "w-full rounded-[24px] p-4 text-left transition",
+        active
+          ? "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-sm font-black tracking-tight">{plan.label}</div>
+          <div className={cx("mt-1 text-xs leading-5", active ? "text-white/80" : mutedText())}>
+            {segmentLabel(plan.segment)} • {cycleLabel(plan.cycle)}
+          </div>
+        </div>
+
+        <div
+          className={cx(
+            "rounded-full px-3 py-1 text-[11px] font-semibold",
+            active ? "bg-white/16 text-white" : infoBadge()
+          )}
+        >
+          {plan.days} days
+        </div>
+      </div>
+
+      <div className="mt-4 text-lg font-black tracking-tight">
+        {formatMoney(plan.price, plan.currency)}
+      </div>
+    </button>
   );
 }
 
@@ -219,8 +354,10 @@ export default function Billing() {
 
   function chooseCycle(cycle) {
     setSelectedCycle(cycle);
+
     const match =
       grouped.standard.find((p) => p.segment === selectedSegment && p.cycle === cycle) || null;
+
     if (match) setPlanKey(match.key);
   }
 
@@ -295,162 +432,164 @@ export default function Billing() {
 
   const sub = me?.subscription || null;
   const tenantName = me?.tenant?.name || "Your store";
+  const subMeta = subscriptionTone(sub);
 
   return (
-    <div className="space-y-5">
-      <section className={cx(shell(), "relative overflow-hidden p-5 md:p-6")}>
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-stone-950 via-stone-800 to-stone-950 opacity-[0.03] dark:from-white dark:via-white dark:to-white dark:opacity-[0.04]" />
+    <div className="space-y-6">
+      <section className="space-y-5">
+        <div className={cx(pageCard(), "overflow-hidden")}>
+          <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div className="max-w-3xl">
+                <SectionHeading
+                  eyebrow="Billing control"
+                  title="Billing & subscription"
+                  subtitle="Monitor access status, choose a renewal plan, and restore or extend operations from one locked screen."
+                />
+              </div>
 
-        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div className="min-w-0">
-            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-              Billing control
+              <div className="flex flex-wrap gap-2">
+                <span className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", subMeta.cls)}>
+                  {subMeta.label}
+                </span>
+
+                <Link to="/renew" className={secondaryBtn()}>
+                  Open recovery page
+                </Link>
+              </div>
             </div>
-
-            <h1 className={cx("mt-2 text-2xl font-semibold tracking-tight md:text-3xl", strongText())}>
-              Billing & subscription
-            </h1>
-
-            <p className={cx("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", mutedText())}>
-              Monitor access status, choose a renewal plan, and restore or extend operations without leaving the workspace.
-            </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <span className={badgeClass(sub)}>{badgeLabel(sub)}</span>
-            <Link to="/renew" className="btn-secondary">
-              Open recovery page
-            </Link>
+          <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-2 xl:grid-cols-4">
+            <SummaryCard label="Store" value={tenantName} note="Current workspace store" />
+            <SummaryCard label="Plan key" value={sub?.planKey || "—"} note="Current subscription plan" />
+            <SummaryCard label="Ends" value={formatDate(sub?.endDate)} note="Subscription end date" />
+            <SummaryCard label="Grace ends" value={formatDate(sub?.graceEndDate)} note="Read-only fallback window" tone="warning" />
           </div>
-        </div>
-
-        <div className="mt-6 grid gap-3 md:grid-cols-4">
-          <StatCard label="Store" value={tenantName} note="Current workspace store" />
-          <StatCard label="Plan key" value={sub?.planKey || "—"} note="Current subscription plan" />
-          <StatCard label="Ends" value={formatDate(sub?.endDate)} note="Subscription end date" />
-          <StatCard label="Grace ends" value={formatDate(sub?.graceEndDate)} note="Read-only fallback window" />
         </div>
       </section>
 
-      <section className="app-card">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="section-title">Renew or extend access</div>
-            <div className="section-subtitle mt-1">
-              Choose the business size and cycle that fits your store.
-            </div>
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
+            <SectionHeading
+              eyebrow="Renewal"
+              title="Renew or extend access"
+              subtitle="Choose the business size and cycle that fit your current store setup."
+            />
           </div>
 
           <AsyncButton
             type="button"
-            variant="secondary"
             loading={refreshing}
             onClick={refreshStatus}
+            className={secondaryBtn()}
           >
             Refresh billing status
           </AsyncButton>
         </div>
 
-        <form onSubmit={startRenewal} className="mt-6 space-y-5">
+        <form onSubmit={startRenewal} className="mt-6 space-y-6">
           <div>
-            <div className="text-sm font-medium text-[rgb(var(--text))]">1. Choose business size</div>
-            <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">
-              Match the renewal plan family to your current store size.
+            <div className={cx("text-sm font-medium", strongText())}>1. Choose business size</div>
+            <div className={cx("mt-1 text-sm leading-6", mutedText())}>
+              Match the renewal family to your current store team size.
             </div>
 
-            <div className="mt-3 grid gap-3 grid-cols-2 sm:grid-cols-3">
-              {grouped.segments.map((segment) => {
-                const active = selectedSegment === segment;
-                return (
-                  <button
-                    key={segment}
-                    type="button"
-                    onClick={() => chooseSegment(segment)}
-                    className={cx(
-                      "rounded-2xl border px-4 py-3 text-left text-sm font-medium transition",
-                      active
-                        ? "border-stone-950 bg-stone-950 text-white dark:border-[rgb(var(--text))] dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg))]"
-                        : "border-[rgb(var(--border))] bg-[rgb(var(--bg))] hover:bg-[rgb(var(--bg-muted))]"
-                    )}
-                  >
-                    {segmentLabel(segment)}
-                  </button>
-                );
-              })}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {grouped.segments.map((segment) => (
+                <FilterChip
+                  key={segment}
+                  active={selectedSegment === segment}
+                  onClick={() => chooseSegment(segment)}
+                >
+                  {segmentLabel(segment)}
+                </FilterChip>
+              ))}
             </div>
           </div>
 
           <div>
-            <div className="text-sm font-medium text-[rgb(var(--text))]">2. Choose billing cycle</div>
-            <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">
+            <div className={cx("text-sm font-medium", strongText())}>2. Choose billing cycle</div>
+            <div className={cx("mt-1 text-sm leading-6", mutedText())}>
               Pick the duration that matches your commitment.
             </div>
 
-            <div className="mt-3 grid gap-3 grid-cols-2 sm:grid-cols-4">
-              {grouped.cycles.map((cycle) => {
-                const active = selectedCycle === cycle;
-                return (
-                  <button
-                    key={cycle}
-                    type="button"
-                    onClick={() => chooseCycle(cycle)}
-                    className={cx(
-                      "rounded-2xl border px-4 py-3 text-sm font-medium transition",
-                      active
-                        ? "border-stone-950 bg-stone-950 text-white dark:border-[rgb(var(--text))] dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg))]"
-                        : "border-[rgb(var(--border))] bg-[rgb(var(--bg))] hover:bg-[rgb(var(--bg-muted))]"
-                    )}
-                  >
-                    {cycleLabel(cycle)}
-                  </button>
-                );
-              })}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {grouped.cycles.map((cycle) => (
+                <FilterChip
+                  key={cycle}
+                  active={selectedCycle === cycle}
+                  onClick={() => chooseCycle(cycle)}
+                >
+                  {cycleLabel(cycle)}
+                </FilterChip>
+              ))}
             </div>
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
-              Selected plan
-            </label>
-            <select
-              className="app-input"
-              value={planKey}
-              onChange={(e) => setPlanKey(e.target.value)}
-              disabled={!visiblePlans.length}
-            >
-              {visiblePlans.map((p) => (
-                <option key={p.key} value={p.key}>
-                  {p.label} — {formatMoney(p.price, p.currency)}
-                </option>
-              ))}
-            </select>
-
-            {selectedPlan ? (
-              <div className="mt-2 rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-muted))] px-4 py-3 text-sm text-[rgb(var(--text-muted))]">
-                You will pay{" "}
-                <span className="font-semibold text-[rgb(var(--text))]">
-                  {formatMoney(selectedPlan.price, selectedPlan.currency)}
-                </span>{" "}
-                for{" "}
-                <span className="font-semibold text-[rgb(var(--text))]">
-                  {selectedPlan.days} days
-                </span>
-                .
-              </div>
-            ) : null}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+            {visiblePlans.map((plan) => (
+              <PlanCard
+                key={plan.key}
+                plan={plan}
+                active={plan.key === selectedPlan?.key}
+                onSelect={setPlanKey}
+              />
+            ))}
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
-              MoMo phone
-            </label>
-            <input
-              className="app-input"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="07XXXXXXXX or 2507XXXXXXXX"
-              required
-            />
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+              <div className="lg:col-span-7">
+                <label className={cx("text-sm font-medium", strongText())}>Selected plan</label>
+                <select
+                  className="app-input mt-2"
+                  value={planKey}
+                  onChange={(e) => setPlanKey(e.target.value)}
+                  disabled={!visiblePlans.length}
+                >
+                  {visiblePlans.map((p) => (
+                    <option key={p.key} value={p.key}>
+                      {p.label} — {formatMoney(p.price, p.currency)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="lg:col-span-5">
+                <label className={cx("text-sm font-medium", strongText())}>MoMo phone</label>
+                <input
+                  className="app-input mt-2"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="07XXXXXXXX or 2507XXXXXXXX"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className={cx(softPanel(), "p-4")}>
+              <div className={cx("text-sm font-semibold", strongText())}>Selected summary</div>
+              {selectedPlan ? (
+                <>
+                  <div className={cx("mt-3 text-2xl font-black tracking-tight", strongText())}>
+                    {formatMoney(selectedPlan.price, selectedPlan.currency)}
+                  </div>
+                  <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+                    {selectedPlan.label}
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <InfoStat label="Cycle" value={cycleLabel(selectedPlan.cycle)} />
+                    <InfoStat label="Duration" value={`${selectedPlan.days} days`} />
+                  </div>
+                </>
+              ) : (
+                <div className={cx("mt-3 text-sm leading-6", mutedText())}>
+                  No matching plan available for the current filters.
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -458,23 +597,23 @@ export default function Billing() {
               type="submit"
               loading={submitting}
               disabled={!selectedPlan}
-              className="w-full"
+              className={primaryBtn()}
             >
               Send MoMo request
             </AsyncButton>
 
-            <Link to="/renew" className="btn-secondary flex h-12 items-center justify-center rounded-2xl">
+            <Link to="/renew" className={secondaryBtn()}>
               Open full recovery page
             </Link>
           </div>
 
           {paymentRef ? (
-            <div className="rounded-3xl border border-[rgb(var(--border))] bg-[rgb(var(--bg))] p-4 text-sm">
-              <div className="font-medium text-[rgb(var(--text))]">Payment request created</div>
-              <div className="mt-2 text-[rgb(var(--text-muted))]">
-                Reference: <span className="font-mono text-[rgb(var(--text))]">{paymentRef}</span>
+            <div className="rounded-[24px] bg-[var(--color-surface-2)] p-4">
+              <div className={cx("text-sm font-bold", strongText())}>Payment request created</div>
+              <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+                Reference: <span className={strongText()}>{paymentRef}</span>
               </div>
-              <div className="mt-3 text-[rgb(var(--text-muted))]">
+              <div className={cx("mt-2 text-sm leading-6", mutedText())}>
                 Confirm on your phone, then refresh billing status.
               </div>
             </div>

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import AsyncButton from "../../components/ui/AsyncButton";
-import TableSkeleton from "../../components/ui/TableSkeleton";
 import InlineSpinner from "../../components/ui/InlineSpinner";
 
 import { createSale, getQuickPicks } from "../../services/posApi";
@@ -12,7 +11,7 @@ import { listCustomers } from "../../services/customersApi";
 import { getCashDrawerStatus } from "../../services/cashDrawerApi";
 import { handleSubscriptionBlockedError } from "../../utils/subscriptionError";
 
-const formatMoney = (n) => `RWF ${Number(n || 0).toLocaleString()}`;
+const formatMoney = (n) => `Rwf ${Number(n || 0).toLocaleString("en-US")}`;
 
 function normalizeDigits(value) {
   return String(value || "").replace(/[^\d]/g, "");
@@ -23,120 +22,80 @@ function cx(...xs) {
 }
 
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function shell() {
-  return "rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
 }
 
 function inputClass() {
-  return "h-11 w-full rounded-xl border border-stone-300 bg-white px-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
+  return "app-input";
 }
 
 function textareaClass() {
-  return "min-h-[96px] w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "min-h-[110px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)]";
 }
 
 function primaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-xl bg-stone-950 px-4 text-sm font-medium text-white transition hover:bg-stone-800 disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function successBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[#16a34a] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function warningBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[#d9a700] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function dangerBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-danger)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function modeBtn(active, tone = "neutral") {
   if (!active) return secondaryBtn();
 
-  if (tone === "success") {
-    return "inline-flex h-10 items-center justify-center rounded-xl border border-emerald-600 bg-emerald-600 px-4 text-sm font-medium text-white";
-  }
-
-  if (tone === "warning") {
-    return "inline-flex h-10 items-center justify-center rounded-xl border border-amber-600 bg-amber-600 px-4 text-sm font-medium text-white";
-  }
-
-  return "inline-flex h-10 items-center justify-center rounded-xl border border-stone-900 bg-stone-900 px-4 text-sm font-medium text-white dark:border-[rgb(var(--text))] dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))]";
+  if (tone === "success") return successBtn();
+  if (tone === "warning") return warningBtn();
+  if (tone === "danger") return dangerBtn();
+  return primaryBtn();
 }
 
-function statusPill(kind, text) {
+function SkeletonBlock({ className = "" }) {
+  return <div className={cx("animate-pulse rounded-[20px] bg-[var(--color-surface-2)]", className)} />;
+}
+
+function StatusBadge({ kind = "neutral", children }) {
   const cls =
-    kind === "success"
-      ? "badge-success"
+    kind === "danger"
+      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
       : kind === "warning"
-      ? "badge-warning"
-      : kind === "danger"
-      ? "badge-danger"
-      : "badge-neutral";
-
-  return <span className={cls}>{text}</span>;
-}
-
-function SummaryCard({ label, value, note, tone = "neutral", loading = false }) {
-  const accent =
-    tone === "danger"
-      ? "bg-rose-500"
-      : tone === "warning"
-      ? "bg-amber-500"
-      : tone === "success"
-      ? "bg-emerald-500"
-      : "bg-stone-900 dark:bg-[rgb(var(--text))]";
+      ? "bg-[#fff1c9] text-[#b88900]"
+      : kind === "success"
+      ? "bg-[#dcfce7] text-[#15803d]"
+      : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
 
   return (
-    <div className={cx(shell(), "relative overflow-hidden p-4")}>
-      <div className={cx("absolute left-0 top-0 h-full w-1.5", accent)} />
-      <div className="pl-2">
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-          {label}
-        </div>
-
-        {loading ? (
-          <>
-            <div className="mt-3 h-8 w-28 rounded bg-stone-200 dark:bg-[rgb(var(--bg-muted))]" />
-            <div className="mt-2 h-4 w-40 rounded bg-stone-100 dark:bg-[rgb(var(--bg-muted))]" />
-          </>
-        ) : (
-          <>
-            <div className={cx("mt-2 text-2xl font-semibold", strongText())}>{value}</div>
-            {note ? <div className={cx("mt-1 text-sm", mutedText())}>{note}</div> : null}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function QuickPicksSkeleton() {
-  return (
-    <div className="mt-4">
-      <div className="mb-3 h-4 w-40 rounded bg-stone-200 dark:bg-[rgb(var(--bg-muted))]" />
-      <table className="w-full">
-        <tbody>
-          <TableSkeleton rows={6} cols={3} />
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function CustomerSkeleton() {
-  return (
-    <div className={cx(shell(), "p-4")}>
-      <table className="w-full">
-        <tbody>
-          <TableSkeleton rows={4} cols={2} />
-        </tbody>
-      </table>
-    </div>
+    <span className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", cls)}>
+      {children}
+    </span>
   );
 }
 
@@ -144,31 +103,395 @@ function SectionHeading({ eyebrow, title, subtitle }) {
   return (
     <div>
       {eyebrow ? (
-        <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
           {eyebrow}
         </div>
       ) : null}
-      <h2 className={cx("mt-1 text-lg font-semibold", strongText())}>{title}</h2>
-      {subtitle ? <p className={cx("mt-1 text-sm", mutedText())}>{subtitle}</p> : null}
+      <h2 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
+        {title}
+      </h2>
+      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
     </div>
   );
 }
 
-function EmptyState({ text }) {
+function SummaryCard({ label, value, note, tone = "neutral", loading = false, icon = "default" }) {
+  const iconTone =
+    tone === "danger"
+      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
+      : tone === "warning"
+      ? "bg-[#fff1c9] text-[#b88900]"
+      : tone === "success"
+      ? "bg-[#dcfce7] text-[#15803d]"
+      : "bg-[#dff1ff] text-[#4aa8ff]";
+
+  function CardIcon() {
+    const common = { className: "h-7 w-7", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.9 };
+
+    if (icon === "cart") {
+      return (
+        <svg {...common}>
+          <path d="M4 6h2l2.2 9.2a1 1 0 0 0 1 .8h7.9a1 1 0 0 0 1-.8L20 9H8" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="10" cy="20" r="1.5" fill="currentColor" stroke="none" />
+          <circle cx="18" cy="20" r="1.5" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    }
+
+    if (icon === "money") {
+      return (
+        <svg {...common}>
+          <rect x="3" y="6" width="18" height="12" rx="2.5" strokeLinecap="round" />
+          <circle cx="12" cy="12" r="2.8" />
+          <path d="M7 12h.01M17 12h.01" strokeLinecap="round" />
+        </svg>
+      );
+    }
+
+    if (icon === "customer") {
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="8" r="3.5" />
+          <path d="M5 19a7 7 0 0 1 14 0" strokeLinecap="round" />
+        </svg>
+      );
+    }
+
+    if (icon === "drawer") {
+      return (
+        <svg {...common}>
+          <path d="M4 7h16v10H4z" />
+          <path d="M8 11h8" strokeLinecap="round" />
+          <path d="M10 15h4" strokeLinecap="round" />
+        </svg>
+      );
+    }
+
+    return (
+      <svg {...common}>
+        <path d="M5 19V9M12 19V5M19 19v-8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  return (
+    <article className={cx(pageCard(), "p-5 sm:p-6")}>
+      <div className="flex items-start gap-4 sm:gap-5">
+        <div className={cx("flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] shadow-[var(--shadow-soft)]", iconTone)}>
+          <CardIcon />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className={cx("text-sm font-semibold", strongText())}>{label}</div>
+
+          {loading ? (
+            <>
+              <SkeletonBlock className="mt-3 h-8 w-28" />
+              <SkeletonBlock className="mt-2 h-4 w-40" />
+            </>
+          ) : (
+            <>
+              <div className={cx("mt-2 text-[1.7rem] font-black leading-tight tracking-[-0.02em]", strongText())}>
+                {value}
+              </div>
+              {note ? <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div> : null}
+            </>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function StepCard({ number, title, text, active = false }) {
   return (
     <div
       className={cx(
-        "mt-4 rounded-xl border border-dashed border-stone-300 px-4 py-8 text-center text-sm",
-        mutedText()
+        "rounded-[22px] p-4 transition",
+        active ? "bg-[var(--color-primary-soft)] ring-1 ring-[var(--color-primary-ring)]" : "bg-[var(--color-surface-2)]"
       )}
     >
-      {text}
+      <div className="flex items-start gap-3">
+        <div
+          className={cx(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black",
+            active ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-surface)] text-[var(--color-text)]"
+          )}
+        >
+          {number}
+        </div>
+
+        <div className="min-w-0">
+          <div className={cx("text-sm font-bold", strongText())}>{title}</div>
+          <div className={cx("mt-1 text-xs leading-5", mutedText())}>{text}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ title, text }) {
+  return (
+    <div className={cx(softPanel(), "px-4 py-10 text-center")}>
+      <div className={cx("text-base font-bold", strongText())}>{title}</div>
+      <div className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</div>
+    </div>
+  );
+}
+
+function QuickPicksSkeleton() {
+  return (
+    <div className="mt-5 space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className={cx(softPanel(), "p-4")}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1 space-y-2">
+              <SkeletonBlock className="h-5 w-56" />
+              <SkeletonBlock className="h-4 w-40" />
+            </div>
+            <div className="space-y-2 text-right">
+              <SkeletonBlock className="h-5 w-24 ml-auto" />
+              <SkeletonBlock className="h-9 w-24 rounded-full ml-auto" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CustomerSkeleton() {
+  return (
+    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className={cx(softPanel(), "p-4")}>
+          <SkeletonBlock className="h-5 w-36" />
+          <SkeletonBlock className="mt-2 h-4 w-28" />
+          <SkeletonBlock className="mt-2 h-4 w-44" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PosSaleSkeleton() {
+  return (
+    <div className="space-y-6">
+      <section className="space-y-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="space-y-3">
+            <SkeletonBlock className="h-4 w-20" />
+            <SkeletonBlock className="h-12 w-72" />
+            <SkeletonBlock className="h-4 w-[28rem] max-w-full" />
+          </div>
+
+          <div className="flex gap-2">
+            <SkeletonBlock className="h-11 w-28 rounded-2xl" />
+            <SkeletonBlock className="h-11 w-24 rounded-2xl" />
+            <SkeletonBlock className="h-11 w-32 rounded-2xl" />
+          </div>
+        </div>
+
+        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className={cx(pageCard(), "p-5 sm:p-6")}>
+              <div className="flex items-start gap-4">
+                <SkeletonBlock className="h-16 w-16 rounded-[20px]" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <SkeletonBlock className="h-4 w-24" />
+                  <SkeletonBlock className="h-8 w-28" />
+                  <SkeletonBlock className="h-4 w-40" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonBlock key={i} className="h-24 w-full rounded-[22px]" />
+          ))}
+        </section>
+      </section>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_420px]">
+        <div className="space-y-5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className={cx(pageCard(), "p-5 sm:p-6")}>
+              <SkeletonBlock className="h-8 w-40" />
+              <SkeletonBlock className="mt-3 h-4 w-72 max-w-full" />
+              <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <SkeletonBlock className="h-11 w-full rounded-2xl" />
+                <SkeletonBlock className="h-11 w-full rounded-2xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className={cx(pageCard(), "p-5 sm:p-6")}>
+          <SkeletonBlock className="h-8 w-28" />
+          <SkeletonBlock className="mt-3 h-4 w-48" />
+          <div className="mt-5 space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <SkeletonBlock key={i} className="h-28 w-full rounded-[22px]" />
+            ))}
+          </div>
+          <SkeletonBlock className="mt-5 h-14 w-full rounded-2xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductRow({ product, onAdd }) {
+  const stock = Number(product.stockQty || 0);
+  const soldQty = Number(product.soldQty || 0);
+  const disabled = !Number.isFinite(stock) || stock <= 0;
+
+  return (
+    <div
+      className={cx(
+        softPanel(),
+        "p-4 transition",
+        disabled ? "opacity-60" : "hover:opacity-90"
+      )}
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className={cx("truncate text-base font-bold", strongText())}>{product.name}</div>
+
+          <div className={cx("mt-1 text-sm", mutedText())}>
+            {product.brand || "No brand"}
+            {product.category ? ` • ${product.category}` : ""}
+          </div>
+
+          <div className={cx("mt-2 text-xs leading-5", mutedText())}>
+            Stock: <span className={cx("font-semibold", strongText())}>{stock}</span>
+            {product.sku ? (
+              <>
+                {" • "}SKU: <span className={cx("font-semibold", strongText())}>{product.sku}</span>
+              </>
+            ) : null}
+            {product.serial ? (
+              <>
+                {" • "}Serial: <span className={cx("font-semibold", strongText())}>{product.serial}</span>
+              </>
+            ) : null}
+            {soldQty > 0 ? (
+              <>
+                {" • "}Sold recently: <span className={cx("font-semibold", strongText())}>{soldQty}</span>
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+          <div className={cx("text-lg font-black tracking-tight", strongText())}>
+            {formatMoney(product.sellPrice)}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onAdd(product)}
+            disabled={disabled}
+            className={cx(
+              "inline-flex h-10 items-center justify-center rounded-full px-4 text-xs font-semibold transition",
+              disabled
+                ? "bg-[var(--color-surface)] text-[var(--color-text-muted)]"
+                : "bg-[#dcfce7] text-[#15803d] hover:opacity-90"
+            )}
+          >
+            {disabled ? "Out of stock" : "Tap to add"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CustomerCard({ customer, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "rounded-[22px] p-4 text-left transition",
+        active
+          ? "bg-[var(--color-primary-soft)] ring-1 ring-[var(--color-primary-ring)]"
+          : "bg-[var(--color-surface-2)] hover:opacity-90"
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className={cx("truncate text-sm font-bold", strongText())}>{customer.name}</div>
+          <div className={cx("mt-1 text-xs", mutedText())}>{customer.phone || "No phone"}</div>
+          {customer.email ? <div className={cx("mt-1 text-xs", mutedText())}>{customer.email}</div> : null}
+          {Number(customer.outstanding || 0) > 0 ? (
+            <div className="mt-2">
+              <StatusBadge kind="warning">Outstanding {formatMoney(customer.outstanding)}</StatusBadge>
+            </div>
+          ) : null}
+        </div>
+
+        {active ? <StatusBadge kind="success">Selected</StatusBadge> : null}
+      </div>
+    </button>
+  );
+}
+
+function CartItemCard({ item, onDec, onInc, onRemove }) {
+  return (
+    <div className={cx(softPanel(), "p-4")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className={cx("text-sm font-bold", strongText())}>{item.name}</div>
+          <div className={cx("mt-1 text-xs", mutedText())}>
+            Unit price: <span className={cx("font-semibold", strongText())}>{formatMoney(item.price)}</span>
+          </div>
+          <div className={cx("mt-1 text-xs", mutedText())}>
+            Available stock: <span className={cx("font-semibold", strongText())}>{item.stockQty}</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onRemove(item.productId)}
+          className="text-xs font-semibold text-[var(--color-danger)] transition hover:opacity-80"
+        >
+          Remove
+        </button>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => onDec(item.productId)} className={secondaryBtn()}>
+            −
+          </button>
+
+          <div className={cx("min-w-[2rem] text-center text-base font-black", strongText())}>
+            {item.quantity}
+          </div>
+
+          <button type="button" onClick={() => onInc(item.productId)} className={secondaryBtn()}>
+            +
+          </button>
+        </div>
+
+        <div className="text-right">
+          <div className={cx("text-xs", mutedText())}>Line total</div>
+          <div className={cx("mt-1 text-lg font-black tracking-tight", strongText())}>
+            {formatMoney(item.price * item.quantity)}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function PosSale() {
   const nav = useNavigate();
+
+  const [bootLoading, setBootLoading] = useState(true);
 
   const [productResults, setProductResults] = useState([]);
   const [productQuery, setProductQuery] = useState("");
@@ -267,41 +590,46 @@ export default function PosSale() {
     }
   }
 
-  useEffect(() => {
-    void loadCustomers();
-  }, []);
+  async function loadQuickPicks() {
+    setQuickLoading(true);
+    try {
+      const data = await getQuickPicks(7, 10);
+      if (!mountedRef.current) return;
+
+      setQuickBest(Array.isArray(data?.bestSellers) ? data.bestSellers : []);
+      setQuickLatest(Array.isArray(data?.latest) ? data.latest : []);
+    } catch (e) {
+      if (!mountedRef.current) return;
+      console.error(e);
+      if (!handleSubscriptionBlockedError(e, { toastId: "quick-picks-blocked" })) {
+        setQuickBest([]);
+        setQuickLatest([]);
+      }
+    } finally {
+      if (!mountedRef.current) return;
+      setQuickLoading(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      setQuickLoading(true);
+      setBootLoading(true);
       try {
-        const data = await getQuickPicks(7, 10);
-        if (cancelled || !mountedRef.current) return;
-
-        setQuickBest(Array.isArray(data?.bestSellers) ? data.bestSellers : []);
-        setQuickLatest(Array.isArray(data?.latest) ? data.latest : []);
-      } catch (e) {
-        if (cancelled || !mountedRef.current) return;
-        console.error(e);
-        if (!handleSubscriptionBlockedError(e, { toastId: "quick-picks-blocked" })) {
-          setQuickBest([]);
-          setQuickLatest([]);
-        }
+        await Promise.all([
+          loadQuickPicks(),
+          loadCustomers(),
+          loadDrawerStatus({ silent: true }),
+        ]);
       } finally {
-        if (cancelled || !mountedRef.current) return;
-        setQuickLoading(false);
+        if (!cancelled && mountedRef.current) setBootLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    void loadDrawerStatus({ silent: true });
   }, []);
 
   useEffect(() => {
@@ -338,13 +666,22 @@ export default function PosSale() {
         if (myReqId !== productReqIdRef.current) return;
         setSearching(false);
       }
-    }, 250);
+    }, 220);
 
     return () => {
       cancelled = true;
       if (searchTimer.current) clearTimeout(searchTimer.current);
     };
   }, [productQuery]);
+
+  useEffect(() => {
+    if (saleType === "CASH") {
+      setDueDate("");
+      setAmountPaid("");
+      setPaymentMethod("CASH");
+      void loadDrawerStatus({ silent: true });
+    }
+  }, [saleType]);
 
   function onProductKeyDown(e) {
     if (e.key !== "Enter") return;
@@ -457,9 +794,7 @@ export default function PosSale() {
   function dec(productId) {
     setCart((prev) =>
       prev.map((i) =>
-        i.productId === productId
-          ? { ...i, quantity: Math.max(1, i.quantity - 1) }
-          : i
+        i.productId === productId ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i
       )
     );
   }
@@ -633,57 +968,53 @@ export default function PosSale() {
     }
   }
 
-  useEffect(() => {
-    if (saleType === "CASH") {
-      setDueDate("");
-      setAmountPaid("");
-      setPaymentMethod("CASH");
-      void loadDrawerStatus({ silent: true });
-    }
-  }, [saleType]);
+  const activeStep = useMemo(() => {
+    if (cart.length > 0) return 4;
+    if (productQuery.trim() || quickList.length > 0 || productResults.length > 0) return 3;
+    if (customerMode !== "WALKIN" || selectedCustomerId || customerForm.name) return 2;
+    return 1;
+  }, [cart.length, productQuery, quickList.length, productResults.length, customerMode, selectedCustomerId, customerForm.name]);
+
+  if (bootLoading) {
+    return <PosSaleSkeleton />;
+  }
 
   return (
-    <div className="space-y-5">
-      <section className={cx(shell(), "overflow-hidden")}>
-        <div className="border-b border-stone-200 px-5 py-5 dark:border-[rgb(var(--border))]">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
-              <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                POS
-              </div>
-              <h1 className={cx("mt-2 text-3xl font-semibold tracking-tight", strongText())}>
-                Point of sale
-              </h1>
-              <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                Build the sale, attach the right customer, and complete checkout with confidence.
-              </p>
-            </div>
+    <div className="space-y-6">
+      <section className="space-y-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <SectionHeading
+            eyebrow="POS"
+            title="Point of sale"
+            subtitle="This screen is simple: choose sale type, add products, attach a customer if needed, then finish the sale."
+          />
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => nav("/app/pos/sales")} className={secondaryBtn()}>
-                Sales list
-              </button>
-              <button onClick={() => nav("/app/pos/credit")} className={secondaryBtn()}>
-                Credit
-              </button>
-              <button onClick={() => nav("/app/pos/drawer")} className={secondaryBtn()}>
-                Cash drawer
-              </button>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => nav("/app/pos/sales")} className={secondaryBtn()}>
+              Sales list
+            </button>
+            <button onClick={() => nav("/app/pos/credit")} className={secondaryBtn()}>
+              Credit
+            </button>
+            <button onClick={() => nav("/app/pos/drawer")} className={secondaryBtn()}>
+              Cash drawer
+            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
             label="Cart items"
             value={cartItemsCount}
-            note="Total units currently in cart"
+            note="Units already added"
+            icon="cart"
           />
           <SummaryCard
             label="Cart total"
             value={formatMoney(total)}
             note="Current sale value"
             tone={saleType === "CREDIT" ? "warning" : "success"}
+            icon="money"
           />
           <SummaryCard
             label="Customer"
@@ -703,545 +1034,484 @@ export default function PosSale() {
             }
             tone={saleType === "CREDIT" && customerMode === "WALKIN" ? "danger" : "neutral"}
             loading={customersLoading}
+            icon="customer"
           />
           <SummaryCard
             label="Drawer"
             value={drawerLoading ? "Loading..." : drawerOpen ? "Open" : "Closed"}
-            note={blockCashSales ? "Cash sales blocked when closed" : "Cash sales allowed when closed"}
+            note={blockCashSales ? "Cash sales require open drawer" : "Cash sales allowed when closed"}
             tone={drawerOpen ? "success" : "danger"}
             loading={drawerLoading}
+            icon="drawer"
           />
-        </div>
-      </section>
-
-      <section className={cx(shell(), "p-4")}>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <SectionHeading
-            title="Sale mode"
-            subtitle="Choose payment workflow before finalizing the cart."
-          />
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setSaleType("CASH")}
-              className={modeBtn(saleType === "CASH", "success")}
-            >
-              Cash
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSaleType("CREDIT")}
-              className={modeBtn(saleType === "CREDIT", "warning")}
-            >
-              Credit
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div>
-            <label className={cx("text-sm font-medium", strongText())}>Sale type</label>
-            <div className="mt-2">
-              {saleType === "CREDIT"
-                ? statusPill("warning", "Credit workflow enabled")
-                : statusPill("success", "Immediate payment workflow")}
-            </div>
-          </div>
-
-          {saleType === "CREDIT" ? (
-            <>
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Due date</label>
-                <input
-                  type="date"
-                  className={cx(inputClass(), "mt-2")}
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Deposit (optional)</label>
-                <input
-                  inputMode="numeric"
-                  className={cx(inputClass(), "mt-2")}
-                  value={amountPaid}
-                  onChange={(e) => setAmountPaid(normalizeDigits(e.target.value))}
-                  placeholder="0"
-                />
-              </div>
-
-              <div className="md:col-span-3">
-                <label className={cx("text-sm font-medium", strongText())}>Deposit method</label>
-                <select
-                  className={cx(inputClass(), "mt-2")}
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                >
-                  <option value="CASH">Cash</option>
-                  <option value="MOMO">MoMo</option>
-                  <option value="BANK">Bank</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </div>
-            </>
-          ) : null}
-        </div>
-      </section>
-
-      <section className={cx(shell(), "p-4")}>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <SectionHeading
-            title="Customer"
-            subtitle="Attach a customer to this sale, or continue as walk-in."
-          />
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setCustomerMode("WALKIN");
-                resetCustomerSelection();
-              }}
-              className={modeBtn(customerMode === "WALKIN")}
-            >
-              Walk-in
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setCustomerMode("PICK");
-                resetCustomerForm();
-              }}
-              className={modeBtn(customerMode === "PICK")}
-            >
-              Pick existing
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setCustomerMode("NEW");
-                resetCustomerSelection();
-              }}
-              className={modeBtn(customerMode === "NEW")}
-            >
-              New customer
-            </button>
-          </div>
-        </div>
-
-        {saleType === "CREDIT" && customerMode === "WALKIN" ? (
-          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300">
-            Credit sale cannot be completed as walk-in. Pick an existing customer or create a new one.
-          </div>
-        ) : null}
-
-        {customerMode === "WALKIN" ? (
-          <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
-            <div className={cx("text-sm font-medium", strongText())}>Walk-in customer</div>
-            <p className={cx("mt-1 text-sm", mutedText())}>
-              Use this only for simple cash sales where no customer record is needed.
-            </p>
-          </div>
-        ) : null}
-
-        {customerMode === "PICK" ? (
-          <div className="mt-5">
-            <label className={cx("text-sm font-medium", strongText())}>
-              Search customer by name, phone, email, TIN, or ID
-            </label>
-
-            <input
-              className={cx(inputClass(), "mt-2")}
-              placeholder="Search customer..."
-              value={customerQuery}
-              onChange={(e) => setCustomerQuery(e.target.value)}
-            />
-
-            <div className="mt-3">
-              {customersLoading ? (
-                <CustomerSkeleton />
-              ) : filteredCustomers.length === 0 ? (
-                <EmptyState text="No matching customers found." />
-              ) : (
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  {filteredCustomers.map((c) => (
-                    <button
-                      type="button"
-                      key={c.id}
-                      onClick={() => setSelectedCustomerId(c.id)}
-                      className={cx(
-                        "rounded-xl border px-3 py-3 text-left transition",
-                        selectedCustomerId === c.id
-                          ? "border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/20"
-                          : "border-stone-200 bg-white hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:hover:bg-[rgb(var(--bg-muted))]"
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className={cx("text-sm font-medium", strongText())}>{c.name}</div>
-                          <div className={cx("mt-1 text-xs", mutedText())}>{c.phone}</div>
-
-                          {c.email ? (
-                            <div className={cx("mt-1 text-xs", softText())}>{c.email}</div>
-                          ) : null}
-
-                          {c.outstanding > 0 ? (
-                            <div className="mt-2">
-                              {statusPill("warning", `Outstanding ${formatMoney(c.outstanding)}`)}
-                            </div>
-                          ) : null}
-                        </div>
-
-                        {selectedCustomerId === c.id ? statusPill("success", "Selected") : null}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : null}
-
-        {customerMode === "NEW" ? (
-          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
-              <label className={cx("text-sm font-medium", strongText())}>Full name</label>
-              <input
-                className={cx(inputClass(), "mt-2")}
-                value={customerForm.name}
-                onChange={(e) => setCustomerField("name", e.target.value)}
-                placeholder="Customer name"
-              />
-            </div>
-
-            <div>
-              <label className={cx("text-sm font-medium", strongText())}>Phone</label>
-              <input
-                className={cx(inputClass(), "mt-2")}
-                value={customerForm.phone}
-                onChange={(e) => setCustomerField("phone", e.target.value)}
-                placeholder="Phone number"
-              />
-            </div>
-
-            <div>
-              <label className={cx("text-sm font-medium", strongText())}>Email</label>
-              <input
-                className={cx(inputClass(), "mt-2")}
-                value={customerForm.email}
-                onChange={(e) => setCustomerField("email", e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-
-            <div>
-              <label className={cx("text-sm font-medium", strongText())}>Address</label>
-              <input
-                className={cx(inputClass(), "mt-2")}
-                value={customerForm.address}
-                onChange={(e) => setCustomerField("address", e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-
-            <div>
-              <label className={cx("text-sm font-medium", strongText())}>TIN number</label>
-              <input
-                className={cx(inputClass(), "mt-2")}
-                value={customerForm.tinNumber}
-                onChange={(e) => setCustomerField("tinNumber", e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-
-            <div>
-              <label className={cx("text-sm font-medium", strongText())}>ID number</label>
-              <input
-                className={cx(inputClass(), "mt-2")}
-                value={customerForm.idNumber}
-                onChange={(e) => setCustomerField("idNumber", e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className={cx("text-sm font-medium", strongText())}>Notes</label>
-              <textarea
-                className={cx(textareaClass(), "mt-2")}
-                value={customerForm.notes}
-                onChange={(e) => setCustomerField("notes", e.target.value)}
-                placeholder="Optional customer notes"
-              />
-            </div>
-          </div>
-        ) : null}
-      </section>
-
-      {saleType === "CASH" ? (
-        <section className={cx(shell(), "p-4")}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className={cx("text-sm font-medium", strongText())}>Cash drawer control</div>
-              <div className={cx("mt-1 text-sm", mutedText())}>
-                {drawerLoading
-                  ? "Checking drawer status..."
-                  : drawerOpen
-                  ? "Drawer is open and ready for cash sales."
-                  : "Drawer is closed."}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <AsyncButton
-                loading={drawerRefreshBusy}
-                onClick={() => loadDrawerStatus({ silent: false })}
-                className={secondaryBtn()}
-              >
-                Refresh drawer
-              </AsyncButton>
-
-              <button
-                type="button"
-                onClick={() => nav("/app/pos/drawer")}
-                className={primaryBtn()}
-              >
-                Open drawer page
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-3">
-            {drawerLoading
-              ? statusPill("neutral", "Checking status")
-              : drawerOpen
-              ? statusPill("success", "Drawer open")
-              : statusPill("danger", "Drawer closed")}
-          </div>
-
-          {mustOpenDrawerForCash ? (
-            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300">
-              Cash drawer is closed. Open it first to complete CASH sales.
-            </div>
-          ) : null}
         </section>
-      ) : null}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <section className={cx(shell(), "p-4 lg:col-span-2")}>
-          <div className="flex items-center justify-between gap-3">
-            <SectionHeading
-              title="Products"
-              subtitle="Search inventory or use quick picks to build the sale."
-            />
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <StepCard
+            number="1"
+            title="Choose sale type"
+            text="Cash for immediate payment. Credit if customer will pay later."
+            active={activeStep === 1}
+          />
+          <StepCard
+            number="2"
+            title="Choose customer"
+            text="Walk-in for simple cash sale. Pick or create customer for tracked selling."
+            active={activeStep === 2}
+          />
+          <StepCard
+            number="3"
+            title="Add products"
+            text="Search by name, SKU, or serial. You can also tap quick picks below."
+            active={activeStep === 3}
+          />
+          <StepCard
+            number="4"
+            title="Review and finish"
+            text="Adjust quantities in cart, confirm total, then finalize the sale."
+            active={activeStep === 4}
+          />
+        </section>
+      </section>
 
-            <div className="w-80 max-w-full">
-              <input
-                className={inputClass()}
-                placeholder="Search name / SKU / serial... (Enter adds first result)"
-                value={productQuery}
-                onChange={(e) => setProductQuery(e.target.value)}
-                onKeyDown={onProductKeyDown}
-              />
-
-              {!showQuickPicks && searching ? (
-                <div className="mt-2">
-                  <InlineSpinner label="Searching..." />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_420px]">
+        <div className="space-y-5">
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className={cx("text-lg font-bold", strongText())}>Sale type</div>
+                <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+                  Start here before doing anything else.
                 </div>
-              ) : null}
-            </div>
-          </div>
+              </div>
 
-          {showQuickPicks ? (
-            quickLoading ? (
-              <QuickPicksSkeleton />
-            ) : (
-              <>
-                <div className={cx("mt-4 text-sm font-medium", strongText())}>{quickTitle}</div>
-
-                {quickList.length === 0 ? (
-                  <EmptyState text="No products." />
-                ) : (
-                  <div className="mt-3 divide-y divide-stone-200 overflow-hidden rounded-xl border border-stone-200 dark:divide-[rgb(var(--border))] dark:border-[rgb(var(--border))]">
-                    {quickList.map((p) => (
-                      <button
-                        type="button"
-                        key={p.id}
-                        onClick={() => addToCart(p)}
-                        disabled={Number(p.stockQty || 0) <= 0}
-                        className={cx(
-                          "flex w-full items-center justify-between gap-3 p-4 text-left transition",
-                          Number(p.stockQty || 0) <= 0
-                            ? "cursor-not-allowed opacity-60"
-                            : "hover:bg-stone-50 dark:hover:bg-[rgb(var(--bg-muted))]"
-                        )}
-                      >
-                        <div>
-                          <div className={cx("text-sm font-medium", strongText())}>{p.name}</div>
-                          <div className={cx("mt-1 text-xs", mutedText())}>
-                            Stock: <span className="font-medium">{p.stockQty}</span>
-                            {p.soldQty != null ? (
-                              <>
-                                {" • "}Sold (7d): <span className="font-medium">{p.soldQty}</span>
-                              </>
-                            ) : null}
-                          </div>
-                        </div>
-
-                        <div className={cx("text-sm font-semibold", strongText())}>
-                          {formatMoney(p.sellPrice)}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )
-          ) : productResults.length === 0 ? (
-            <EmptyState text="No results." />
-          ) : (
-            <div className="mt-4 divide-y divide-stone-200 overflow-hidden rounded-xl border border-stone-200 dark:divide-[rgb(var(--border))] dark:border-[rgb(var(--border))]">
-              {productResults.map((p) => (
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  key={p.id}
-                  onClick={() => addToCart(p)}
-                  disabled={Number(p.stockQty || 0) <= 0}
-                  className={cx(
-                    "flex w-full items-center justify-between gap-3 p-4 text-left transition",
-                    Number(p.stockQty || 0) <= 0
-                      ? "cursor-not-allowed opacity-60"
-                      : "hover:bg-stone-50 dark:hover:bg-[rgb(var(--bg-muted))]"
-                  )}
+                  onClick={() => setSaleType("CASH")}
+                  className={modeBtn(saleType === "CASH", "success")}
                 >
-                  <div>
-                    <div className={cx("text-sm font-medium", strongText())}>{p.name}</div>
-                    <div className={cx("mt-1 text-xs", mutedText())}>
-                      {p.sku ? `SKU: ${p.sku} • ` : ""}
-                      {p.serial ? `Serial: ${p.serial} • ` : ""}
-                      Stock: <span className="font-medium">{p.stockQty}</span>
-                    </div>
-                  </div>
-
-                  <div className={cx("text-sm font-semibold", strongText())}>
-                    {formatMoney(p.sellPrice)}
-                  </div>
+                  Cash
                 </button>
-              ))}
-            </div>
-          )}
-        </section>
 
-        <section className={cx(shell(), "p-4")}>
-          <div className="flex items-center justify-between gap-3">
-            <SectionHeading
-              title="Cart"
-              subtitle="Review quantities and complete the sale."
-            />
-
-            <button
-              type="button"
-              onClick={clearCart}
-              className="text-sm text-stone-600 transition hover:text-stone-900 disabled:opacity-50 dark:text-[rgb(var(--text-muted))] dark:hover:text-[rgb(var(--text))]"
-              disabled={!cart.length}
-            >
-              Clear
-            </button>
-          </div>
-
-          {!cart.length ? (
-            <EmptyState text="No items in cart yet." />
-          ) : (
-            <div className="mt-4 space-y-3">
-              {cart.map((i) => (
-                <div
-                  key={i.productId}
-                  className="rounded-xl border border-stone-200 bg-stone-50 p-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]"
+                <button
+                  type="button"
+                  onClick={() => setSaleType("CREDIT")}
+                  className={modeBtn(saleType === "CREDIT", "warning")}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className={cx("text-sm font-medium", strongText())}>{i.name}</div>
-                      <div className={cx("mt-1 text-xs", mutedText())}>{formatMoney(i.price)}</div>
-                      <div className={cx("mt-1 text-[11px]", softText())}>Stock: {i.stockQty}</div>
-                    </div>
+                  Credit
+                </button>
+              </div>
+            </div>
 
-                    <button
-                      type="button"
-                      onClick={() => removeItem(i.productId)}
-                      className="text-xs text-rose-700 transition hover:underline dark:text-rose-300"
-                    >
-                      Remove
-                    </button>
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className={cx(softPanel(), "p-4")}>
+                <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                  Current mode
+                </div>
+                <div className="mt-3">
+                  {saleType === "CREDIT" ? (
+                    <StatusBadge kind="warning">Credit sale</StatusBadge>
+                  ) : (
+                    <StatusBadge kind="success">Cash sale</StatusBadge>
+                  )}
+                </div>
+              </div>
+
+              {saleType === "CREDIT" ? (
+                <>
+                  <div>
+                    <label className={cx("text-sm font-medium", strongText())}>Due date</label>
+                    <input
+                      type="date"
+                      className={cx(inputClass(), "mt-2")}
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                    />
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => dec(i.productId)}
-                        className="h-9 w-9 rounded-xl border border-stone-300 bg-white text-sm transition hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))] dark:hover:bg-[rgb(var(--bg-muted))]"
-                      >
-                        −
-                      </button>
+                  <div>
+                    <label className={cx("text-sm font-medium", strongText())}>Deposit (optional)</label>
+                    <input
+                      inputMode="numeric"
+                      className={cx(inputClass(), "mt-2")}
+                      value={amountPaid}
+                      onChange={(e) => setAmountPaid(normalizeDigits(e.target.value))}
+                      placeholder="0"
+                    />
+                  </div>
 
-                      <div className={cx("w-8 text-center text-sm font-semibold", strongText())}>
-                        {i.quantity}
-                      </div>
+                  <div className="md:col-span-3">
+                    <label className={cx("text-sm font-medium", strongText())}>Deposit method</label>
+                    <select
+                      className={cx(inputClass(), "mt-2")}
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                    >
+                      <option value="CASH">Cash</option>
+                      <option value="MOMO">MoMo</option>
+                      <option value="BANK">Bank</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </section>
 
-                      <button
-                        type="button"
-                        onClick={() => inc(i.productId)}
-                        className="h-9 w-9 rounded-xl border border-stone-300 bg-white text-sm transition hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))] dark:hover:bg-[rgb(var(--bg-muted))]"
-                      >
-                        +
-                      </button>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className={cx("text-lg font-bold", strongText())}>Customer</div>
+                <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+                  For cash sales, walk-in is usually enough. For credit sales, customer is required.
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomerMode("WALKIN");
+                    resetCustomerSelection();
+                  }}
+                  className={modeBtn(customerMode === "WALKIN")}
+                >
+                  Walk-in
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomerMode("PICK");
+                    resetCustomerForm();
+                  }}
+                  className={modeBtn(customerMode === "PICK")}
+                >
+                  Pick existing
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomerMode("NEW");
+                    resetCustomerSelection();
+                  }}
+                  className={modeBtn(customerMode === "NEW")}
+                >
+                  New customer
+                </button>
+              </div>
+            </div>
+
+            {saleType === "CREDIT" && customerMode === "WALKIN" ? (
+              <div className="mt-4 rounded-[22px] bg-[rgba(219,80,74,0.10)] px-4 py-3 text-sm text-[var(--color-danger)]">
+                Credit sale cannot be completed as walk-in. Pick an existing customer or create a new one.
+              </div>
+            ) : null}
+
+            {customerMode === "WALKIN" ? (
+              <div className={cx(softPanel(), "mt-5 p-4")}>
+                <div className={cx("text-sm font-bold", strongText())}>Walk-in customer selected</div>
+                <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+                  Use this for quick cash sales when you do not need a saved customer record.
+                </div>
+              </div>
+            ) : null}
+
+            {customerMode === "PICK" ? (
+              <div className="mt-5">
+                <label className={cx("text-sm font-medium", strongText())}>
+                  Search customer by name, phone, email, TIN, or ID
+                </label>
+
+                <input
+                  className={cx(inputClass(), "mt-2")}
+                  placeholder="Search customer..."
+                  value={customerQuery}
+                  onChange={(e) => setCustomerQuery(e.target.value)}
+                />
+
+                <div className="mt-4">
+                  {customersLoading ? (
+                    <CustomerSkeleton />
+                  ) : filteredCustomers.length === 0 ? (
+                    <EmptyState title="No matching customers" text="Try a different name, phone, or email." />
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      {filteredCustomers.map((c) => (
+                        <CustomerCard
+                          key={c.id}
+                          customer={c}
+                          active={selectedCustomerId === c.id}
+                          onClick={() => setSelectedCustomerId(c.id)}
+                        />
+                      ))}
                     </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
 
-                    <div className={cx("text-sm font-semibold", strongText())}>
-                      {formatMoney(i.price * i.quantity)}
-                    </div>
+            {customerMode === "NEW" ? (
+              <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className={cx("text-sm font-medium", strongText())}>Full name</label>
+                  <input
+                    className={cx(inputClass(), "mt-2")}
+                    value={customerForm.name}
+                    onChange={(e) => setCustomerField("name", e.target.value)}
+                    placeholder="Customer name"
+                  />
+                </div>
+
+                <div>
+                  <label className={cx("text-sm font-medium", strongText())}>Phone</label>
+                  <input
+                    className={cx(inputClass(), "mt-2")}
+                    value={customerForm.phone}
+                    onChange={(e) => setCustomerField("phone", e.target.value)}
+                    placeholder="Phone number"
+                  />
+                </div>
+
+                <div>
+                  <label className={cx("text-sm font-medium", strongText())}>Email</label>
+                  <input
+                    className={cx(inputClass(), "mt-2")}
+                    value={customerForm.email}
+                    onChange={(e) => setCustomerField("email", e.target.value)}
+                    placeholder="Optional"
+                  />
+                </div>
+
+                <div>
+                  <label className={cx("text-sm font-medium", strongText())}>Address</label>
+                  <input
+                    className={cx(inputClass(), "mt-2")}
+                    value={customerForm.address}
+                    onChange={(e) => setCustomerField("address", e.target.value)}
+                    placeholder="Optional"
+                  />
+                </div>
+
+                <div>
+                  <label className={cx("text-sm font-medium", strongText())}>TIN number</label>
+                  <input
+                    className={cx(inputClass(), "mt-2")}
+                    value={customerForm.tinNumber}
+                    onChange={(e) => setCustomerField("tinNumber", e.target.value)}
+                    placeholder="Optional"
+                  />
+                </div>
+
+                <div>
+                  <label className={cx("text-sm font-medium", strongText())}>ID number</label>
+                  <input
+                    className={cx(inputClass(), "mt-2")}
+                    value={customerForm.idNumber}
+                    onChange={(e) => setCustomerField("idNumber", e.target.value)}
+                    placeholder="Optional"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className={cx("text-sm font-medium", strongText())}>Notes</label>
+                  <textarea
+                    className={cx(textareaClass(), "mt-2")}
+                    value={customerForm.notes}
+                    onChange={(e) => setCustomerField("notes", e.target.value)}
+                    placeholder="Optional customer notes"
+                  />
+                </div>
+              </div>
+            ) : null}
+          </section>
+
+          {saleType === "CASH" ? (
+            <section className={cx(pageCard(), "p-5 sm:p-6")}>
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className={cx("text-lg font-bold", strongText())}>Cash drawer</div>
+                  <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+                    This matters only for cash sales.
                   </div>
                 </div>
-              ))}
+
+                <div className="flex flex-wrap gap-2">
+                  <AsyncButton
+                    loading={drawerRefreshBusy}
+                    onClick={() => loadDrawerStatus({ silent: false })}
+                    className={secondaryBtn()}
+                  >
+                    Refresh drawer
+                  </AsyncButton>
+
+                  <button
+                    type="button"
+                    onClick={() => nav("/app/pos/drawer")}
+                    className={primaryBtn()}
+                  >
+                    Open drawer page
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                {drawerLoading ? (
+                  <StatusBadge>Checking status</StatusBadge>
+                ) : drawerOpen ? (
+                  <StatusBadge kind="success">Drawer open</StatusBadge>
+                ) : (
+                  <StatusBadge kind="danger">Drawer closed</StatusBadge>
+                )}
+              </div>
+
+              {mustOpenDrawerForCash ? (
+                <div className="mt-4 rounded-[22px] bg-[rgba(219,80,74,0.10)] px-4 py-3 text-sm text-[var(--color-danger)]">
+                  Cash drawer is closed. Open it first to complete CASH sales.
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-2xl">
+                <div className={cx("text-lg font-bold", strongText())}>Products</div>
+                <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+                  Search a product and press Enter to add the first result, or tap one of the quick picks below.
+                </div>
+              </div>
+
+              <div className="w-full max-w-md">
+                <input
+                  className={inputClass()}
+                  placeholder="Search by name, SKU, or serial..."
+                  value={productQuery}
+                  onChange={(e) => setProductQuery(e.target.value)}
+                  onKeyDown={onProductKeyDown}
+                />
+              </div>
             </div>
-          )}
 
-          <div className="mt-5 border-t border-stone-200 pt-4 dark:border-[rgb(var(--border))]">
-            <div className="flex items-center justify-between">
-              <div className={cx("text-sm", mutedText())}>Total</div>
-              <div className={cx("text-xl font-semibold", strongText())}>{formatMoney(total)}</div>
-            </div>
+            {!showQuickPicks && searching ? (
+              <div className="mt-4">
+                <InlineSpinner label="Searching products..." />
+              </div>
+            ) : null}
 
-            <AsyncButton
-              loading={loading}
-              onClick={completeSale}
-              disabled={!cart.length || (saleType === "CASH" && mustOpenDrawerForCash)}
-              className={cx(
-                "mt-4 w-full rounded-xl px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60",
-                saleType === "CREDIT"
-                  ? "bg-amber-600 hover:bg-amber-700"
-                  : "bg-emerald-600 hover:bg-emerald-700"
-              )}
-            >
-              {saleType === "CREDIT" ? "Finalize Credit Sale" : "Finalize Cash Sale"}
-            </AsyncButton>
+            {showQuickPicks ? (
+              quickLoading ? (
+                <QuickPicksSkeleton />
+              ) : (
+                <div className="mt-5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className={cx("text-sm font-bold", strongText())}>{quickTitle}</div>
+                    <StatusBadge kind="success">Tap any product to add it</StatusBadge>
+                  </div>
 
-            {saleType === "CASH" && mustOpenDrawerForCash ? (
+                  {quickList.length === 0 ? (
+                    <div className="mt-4">
+                      <EmptyState title="No quick picks yet" text="Products will appear here once the system has recent selling activity or latest items to suggest." />
+                    </div>
+                  ) : (
+                    <div className="mt-4 grid grid-cols-1 gap-3">
+                      {quickList.map((p) => (
+                        <ProductRow key={p.id} product={p} onAdd={addToCart} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            ) : productResults.length === 0 ? (
+              <div className="mt-5">
+                <EmptyState title="No products found" text="Try another name, SKU, or serial." />
+              </div>
+            ) : (
+              <div className="mt-5 grid grid-cols-1 gap-3">
+                {productResults.map((p) => (
+                  <ProductRow key={p.id} product={p} onAdd={addToCart} />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        <aside className="space-y-5">
+          <section className={cx(pageCard(), "sticky top-5 p-5 sm:p-6")}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className={cx("text-lg font-bold", strongText())}>Cart</div>
+                <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+                  Every product you add appears here. Adjust quantity, review total, then finalize.
+                </div>
+              </div>
+
               <button
                 type="button"
-                onClick={() => nav("/app/pos/drawer")}
-                className={cx(secondaryBtn(), "mt-2 w-full")}
+                onClick={clearCart}
+                className="text-xs font-semibold text-[var(--color-text-muted)] transition hover:opacity-80 disabled:opacity-50"
+                disabled={!cart.length}
               >
-                Go open the cash drawer
+                Clear
               </button>
-            ) : null}
-          </div>
-        </section>
+            </div>
+
+            {!cart.length ? (
+              <div className="mt-5">
+                <EmptyState
+                  title="No items in cart yet"
+                  text="Start by tapping a product from the left side."
+                />
+              </div>
+            ) : (
+              <div className="mt-5 space-y-3">
+                {cart.map((item) => (
+                  <CartItemCard
+                    key={item.productId}
+                    item={item}
+                    onDec={dec}
+                    onInc={inc}
+                    onRemove={removeItem}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className="mt-5 border-t border-[var(--color-border)] pt-5">
+              <div className="flex items-center justify-between">
+                <div className={cx("text-sm", mutedText())}>Total</div>
+                <div className={cx("text-[1.8rem] font-black tracking-tight", strongText())}>
+                  {formatMoney(total)}
+                </div>
+              </div>
+
+              <AsyncButton
+                loading={loading}
+                onClick={completeSale}
+                disabled={!cart.length || (saleType === "CASH" && mustOpenDrawerForCash)}
+                className={cx(
+                  "mt-4 w-full rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:opacity-60",
+                  saleType === "CREDIT" ? "bg-[#d9a700] hover:opacity-95" : "bg-[var(--color-primary)] hover:opacity-95"
+                )}
+              >
+                {saleType === "CREDIT" ? "Finalize Credit Sale" : "Finalize Cash Sale"}
+              </AsyncButton>
+
+              {saleType === "CASH" && mustOpenDrawerForCash ? (
+                <button
+                  type="button"
+                  onClick={() => nav("/app/pos/drawer")}
+                  className={cx(secondaryBtn(), "mt-2 w-full")}
+                >
+                  Go open the cash drawer
+                </button>
+              ) : null}
+            </div>
+          </section>
+        </aside>
       </div>
     </div>
   );
-} 
+}

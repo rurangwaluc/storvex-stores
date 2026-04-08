@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import AsyncButton from "../../components/ui/AsyncButton";
-import TableSkeleton from "../../components/ui/TableSkeleton";
 import {
   adjustStock,
   downloadReorderPdf,
@@ -16,124 +15,133 @@ function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
-const formatMoney = (n) => `RWF ${Number(n || 0).toLocaleString()}`;
+const formatMoney = (n) => `Rwf ${Number(n || 0).toLocaleString("en-US")}`;
+const PAGE_SIZE = 10;
 
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function shell() {
-  return "rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
-function panel() {
-  return "rounded-[24px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]";
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
 }
 
 function inputClass() {
-  return "h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function textareaClass() {
-  return "min-h-[104px] w-full rounded-2xl border border-stone-300 bg-white px-3.5 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
+  return "app-input";
 }
 
 function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function primaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-stone-950 px-4 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function dangerBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-rose-600 px-4 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-danger)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function warningBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-amber-600 px-4 text-sm font-medium text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[#d9a700] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function successBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-emerald-600 px-4 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[#16a34a] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function statusBadge(kind = "neutral", children) {
+function StatusBadge({ kind = "neutral", children }) {
   const cls =
     kind === "danger"
-      ? "badge-danger"
+      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
       : kind === "warning"
-      ? "badge-warning"
+      ? "bg-[#fff1c9] text-[#b88900]"
       : kind === "success"
-      ? "badge-success"
-      : "badge-neutral";
+      ? "bg-[#dcfce7] text-[#15803d]"
+      : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
 
-  return <span className={cls}>{children}</span>;
+  return (
+    <span className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", cls)}>
+      {children}
+    </span>
+  );
 }
 
 function SectionHeading({ eyebrow, title, subtitle }) {
   return (
     <div>
       {eyebrow ? (
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
           {eyebrow}
         </div>
       ) : null}
-      <h2 className={cx("mt-2 text-xl font-semibold tracking-tight", strongText())}>{title}</h2>
-      {subtitle ? <p className={cx("mt-2 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
+      <h2 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
+        {title}
+      </h2>
+      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
     </div>
   );
 }
 
 function MetricCard({ label, value, note, tone = "neutral" }) {
-  const accent =
+  const iconTone =
     tone === "danger"
-      ? "bg-rose-500"
+      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
       : tone === "warning"
-      ? "bg-amber-500"
+      ? "bg-[#fff1c9] text-[#b88900]"
       : tone === "success"
-      ? "bg-emerald-500"
-      : "bg-stone-900 dark:bg-[rgb(var(--text))]";
+      ? "bg-[#dcfce7] text-[#15803d]"
+      : "bg-[#dff1ff] text-[#4aa8ff]";
 
   return (
-    <div className={cx(shell(), "relative overflow-hidden p-5")}>
-      <div className={cx("absolute left-0 top-0 h-full w-1.5", accent)} />
-      <div className="pl-2">
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-          {label}
+    <article className={cx(pageCard(), "p-5 sm:p-6")}>
+      <div className="flex items-start gap-4 sm:gap-5">
+        <div className={cx("flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] shadow-[var(--shadow-soft)]", iconTone)}>
+          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.9">
+            <path d="M4 16l5-5 4 4 7-8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M16 7h4v4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
-        <div className={cx("mt-3 text-3xl font-semibold", strongText())}>{value}</div>
-        {note ? <div className={cx("mt-2 text-sm", mutedText())}>{note}</div> : null}
+
+        <div className="min-w-0 flex-1">
+          <div className={cx("text-sm font-semibold", strongText())}>{label}</div>
+          <div className={cx("mt-2 text-[1.7rem] font-black leading-tight tracking-[-0.02em]", strongText())}>
+            {value}
+          </div>
+          {note ? <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div> : null}
+        </div>
       </div>
-    </div>
+    </article>
   );
 }
 
 function TabButton({ active, tone = "neutral", children, onClick }) {
   const activeCls =
     tone === "danger"
-      ? "border-rose-600 bg-rose-600 text-white hover:bg-rose-700"
+      ? "bg-[var(--color-danger)] text-white"
       : tone === "warning"
-      ? "border-amber-600 bg-amber-600 text-white hover:bg-amber-700"
-      : "border-stone-950 bg-stone-950 text-white hover:bg-stone-800 dark:border-[rgb(var(--text))] dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))]";
+      ? "bg-[#d9a700] text-white"
+      : "bg-[var(--color-primary)] text-white";
 
   return (
     <button
       type="button"
       onClick={onClick}
       className={cx(
-        "inline-flex h-10 items-center justify-center rounded-2xl border px-4 text-sm font-medium transition",
-        active
-          ? activeCls
-          : "border-stone-300 bg-white text-stone-800 hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]"
+        "inline-flex h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold transition",
+        active ? activeCls : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
       )}
     >
       {children}
@@ -145,50 +153,32 @@ function EmptyState({ title, text }) {
   return (
     <div className="flex min-h-[280px] items-center justify-center">
       <div className="max-w-md text-center">
-        <div className={cx("text-xl font-semibold", strongText())}>{title}</div>
+        <div className={cx("text-xl font-bold", strongText())}>{title}</div>
         <div className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</div>
       </div>
     </div>
   );
 }
 
-function AdjustmentTypeCard({
-  active,
-  tone = "neutral",
-  title,
-  subtitle,
-  onClick,
-}) {
+function AdjustmentTypeCard({ active, tone = "neutral", title, subtitle, onClick }) {
   const activeCls =
     tone === "success"
-      ? "border-emerald-500 bg-emerald-50 shadow-[0_0_0_1px_rgba(16,185,129,0.12)] dark:bg-emerald-950/20 dark:border-emerald-700"
+      ? "bg-[#dcfce7] text-[#15803d]"
       : tone === "danger"
-      ? "border-rose-500 bg-rose-50 shadow-[0_0_0_1px_rgba(244,63,94,0.12)] dark:bg-rose-950/20 dark:border-rose-700"
-      : "border-amber-500 bg-amber-50 shadow-[0_0_0_1px_rgba(245,158,11,0.12)] dark:bg-amber-950/20 dark:border-amber-700";
-
-  const stripe =
-    tone === "success"
-      ? "bg-emerald-500"
-      : tone === "danger"
-      ? "bg-rose-500"
-      : "bg-amber-500";
+      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
+      : "bg-[#fff1c9] text-[#b88900]";
 
   return (
     <button
       type="button"
       onClick={onClick}
       className={cx(
-        "relative overflow-hidden rounded-[24px] border p-4 text-left transition-all duration-200",
-        active
-          ? activeCls
-          : "border-stone-200 bg-white hover:-translate-y-0.5 hover:border-stone-300 hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:hover:bg-[rgb(var(--bg-muted))]"
+        "rounded-[22px] p-4 text-left transition",
+        active ? activeCls : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
       )}
     >
-      <div className={cx("absolute left-0 top-0 h-full w-1.5", stripe)} />
-      <div className="pl-2">
-        <div className={cx("text-sm font-semibold", strongText())}>{title}</div>
-        <div className={cx("mt-2 text-sm leading-6", mutedText())}>{subtitle}</div>
-      </div>
+      <div className="text-sm font-semibold">{title}</div>
+      <div className={cx("mt-2 text-sm leading-6", active ? "text-current/80" : mutedText())}>{subtitle}</div>
     </button>
   );
 }
@@ -196,19 +186,17 @@ function AdjustmentTypeCard({
 function InfoTile({ label, value, tone = "neutral" }) {
   const toneCls =
     tone === "success"
-      ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/20"
+      ? "bg-[#dcfce7]"
       : tone === "warning"
-      ? "border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20"
+      ? "bg-[#fff1c9]"
       : tone === "danger"
-      ? "border-rose-200 bg-rose-50 dark:border-rose-900/40 dark:bg-rose-950/20"
-      : "border-stone-200 bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]";
+      ? "bg-[rgba(219,80,74,0.12)]"
+      : "bg-[var(--color-surface-2)]";
 
   return (
-    <div className={cx("rounded-[22px] border p-4", toneCls)}>
-      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-        {label}
-      </div>
-      <div className={cx("mt-3 text-2xl font-semibold", strongText())}>{value}</div>
+    <div className={cx("rounded-[22px] p-4 shadow-[var(--shadow-soft)]", toneCls)}>
+      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>{label}</div>
+      <div className={cx("mt-3 text-2xl font-black tracking-tight", strongText())}>{value}</div>
     </div>
   );
 }
@@ -232,6 +220,38 @@ function lossReasonOptions() {
     { value: "DEFECTIVE", label: "Defective" },
     { value: "OTHER", label: "Other" },
   ];
+}
+
+function SkeletonBlock({ className = "" }) {
+  return <div className={cx("animate-pulse rounded-[20px] bg-[var(--color-surface-2)]", className)} />;
+}
+
+function ReorderListSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className={cx(pageCard(), "p-4 sm:p-5")}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1 space-y-3">
+              <SkeletonBlock className="h-5 w-48" />
+              <SkeletonBlock className="h-4 w-28" />
+            </div>
+            <SkeletonBlock className="h-8 w-16 rounded-full" />
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <SkeletonBlock className="h-20 w-full" />
+            <SkeletonBlock className="h-20 w-full" />
+            <SkeletonBlock className="h-20 w-full" />
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <SkeletonBlock className="h-11 w-36 rounded-2xl" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function StockAdjustModal({
@@ -261,51 +281,36 @@ function StockAdjustModal({
   const isCorrection = stockType === "CORRECTION";
 
   const submitClass = isRestock ? successBtn() : isLoss ? dangerBtn() : warningBtn();
-
-  const saveLabel = isRestock
-    ? "Save restock"
-    : isLoss
-    ? "Record loss"
-    : "Save correction";
+  const saveLabel = isRestock ? "Save restock" : isLoss ? "Record loss" : "Save correction";
 
   return (
     <div className="fixed inset-0 z-[100]">
-      <div
-        className="absolute inset-0 bg-stone-950/60 backdrop-blur-[3px]"
-        onClick={stockBusy ? undefined : onClose}
-      />
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-[3px]" onClick={stockBusy ? undefined : onClose} />
 
       <div className="absolute inset-0 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-3 sm:p-5">
-          <div className={cx(shell(), "w-full max-w-6xl overflow-hidden")}>
-            <div className="border-b border-stone-200 px-5 py-5 dark:border-[rgb(var(--border))] md:px-6">
+          <div className={cx(pageCard(), "w-full max-w-5xl overflow-hidden")}>
+            <div className="border-b border-[var(--color-border)] px-5 py-5 md:px-6">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="max-w-3xl">
-                  <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+                  <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
                     Inventory movement
                   </div>
-                  <h3 className={cx("mt-2 text-2xl font-semibold tracking-tight", strongText())}>
-                    Adjust stock
-                  </h3>
+                  <h3 className={cx("mt-3 text-2xl font-black tracking-tight", strongText())}>Adjust stock</h3>
                   <p className={cx("mt-2 text-sm leading-6", mutedText())}>
                     Record a controlled stock movement with a clear reason, live impact preview, and audit-friendly notes.
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={onClose}
-                  disabled={stockBusy}
-                  className={secondaryBtn()}
-                >
+                <button type="button" onClick={onClose} disabled={stockBusy} className={secondaryBtn()}>
                   Close
                 </button>
               </div>
             </div>
 
-            <div className="grid gap-5 p-5 md:p-6 xl:grid-cols-[1.15fr_0.85fr]">
-              <div className="space-y-5">
-                <div className={cx(panel(), "p-5")}>
+            <div className="grid gap-5 p-5 md:p-6 xl:grid-cols-[1.18fr_0.82fr]">
+              <div className="space-y-5 min-w-0">
+                <div className={cx(softPanel(), "p-5")}>
                   <div className="grid gap-4 md:grid-cols-3">
                     <AdjustmentTypeCard
                       active={isRestock}
@@ -347,7 +352,7 @@ function StockAdjustModal({
                   </div>
                 </div>
 
-                <div className={cx(panel(), "p-5")}>
+                <div className={cx(pageCard(), "p-5")}>
                   <div className="grid gap-5 lg:grid-cols-2">
                     <div>
                       <label className={cx("text-sm font-medium", strongText())}>
@@ -358,29 +363,19 @@ function StockAdjustModal({
                         min={isCorrection ? "0" : "1"}
                         value={isCorrection ? stockNewQty : stockQty}
                         onChange={(e) =>
-                          isCorrection
-                            ? setStockNewQty(e.target.value)
-                            : setStockQty(e.target.value)
+                          isCorrection ? setStockNewQty(e.target.value) : setStockQty(e.target.value)
                         }
                         className={cx(inputClass(), "mt-2")}
-                        placeholder={
-                          isCorrection
-                            ? "Enter the real counted quantity"
-                            : "How many units are moving?"
-                        }
+                        placeholder={isCorrection ? "Enter the real counted quantity" : "How many units are moving?"}
                       />
                       <p className={cx("mt-2 text-xs leading-5", softText())}>
-                        {isCorrection
-                          ? "This sets the final stock quantity directly."
-                          : "Enter the number of units to add or remove."}
+                        {isCorrection ? "This sets the final stock quantity directly." : "Enter the number of units to add or remove."}
                       </p>
                     </div>
 
                     {isLoss ? (
                       <div>
-                        <label className={cx("text-sm font-medium", strongText())}>
-                          Loss reason
-                        </label>
+                        <label className={cx("text-sm font-medium", strongText())}>Loss reason</label>
                         <select
                           value={stockReason}
                           onChange={(e) => setStockReason(e.target.value)}
@@ -399,18 +394,12 @@ function StockAdjustModal({
                       </div>
                     ) : (
                       <div>
-                        <label className={cx("text-sm font-medium", strongText())}>
-                          Movement summary
-                        </label>
+                        <label className={cx("text-sm font-medium", strongText())}>Movement summary</label>
                         <input
                           value={stockNote}
                           onChange={(e) => setStockNote(e.target.value)}
                           className={cx(inputClass(), "mt-2")}
-                          placeholder={
-                            isRestock
-                              ? "Example: supplier delivery received"
-                              : "Example: physical count correction"
-                          }
+                          placeholder={isRestock ? "Example: supplier delivery received" : "Example: physical count correction"}
                         />
                         <p className={cx("mt-2 text-xs leading-5", softText())}>
                           Keep it short and operationally useful.
@@ -425,7 +414,7 @@ function StockAdjustModal({
                       <textarea
                         value={stockNote}
                         onChange={(e) => setStockNote(e.target.value)}
-                        className={cx(textareaClass(), "mt-2")}
+                        className="mt-2 min-h-[110px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)]"
                         placeholder={
                           isLoss
                             ? "Describe what happened, when it was discovered, and any accountability details."
@@ -434,49 +423,36 @@ function StockAdjustModal({
                             : "Optional explanation for the counted correction."
                         }
                       />
-                      <p className={cx("mt-2 text-xs leading-5", softText())}>
-                        This note should make the movement understandable later without asking follow-up questions.
-                      </p>
                     </div>
                   </div>
                 </div>
 
-                <div className={cx(panel(), "p-5")}>
+                <div className={cx(pageCard(), "p-5")}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <div className={cx("text-base font-semibold", strongText())}>Recent changes</div>
-                      <div className={cx("mt-1 text-sm", mutedText())}>
-                        Latest movements for this product.
-                      </div>
+                      <div className={cx("text-base font-bold", strongText())}>Recent changes</div>
+                      <div className={cx("mt-1 text-sm", mutedText())}>Latest movements for this product.</div>
                     </div>
-
-                    {stockHistoryLoading ? (
-                      <div className={cx("text-sm", mutedText())}>Loading…</div>
-                    ) : null}
+                    {stockHistoryLoading ? <div className={cx("text-sm", mutedText())}>Loading…</div> : null}
                   </div>
 
                   {stockHistoryLoading ? (
-                    <div className="mt-4 overflow-hidden rounded-[20px] border border-stone-200 dark:border-[rgb(var(--border))]">
-                      <table className="w-full">
-                        <tbody>
-                          <TableSkeleton rows={4} cols={4} />
-                        </tbody>
-                      </table>
+                    <div className="mt-4 grid gap-2">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <SkeletonBlock key={i} className="h-20 w-full" />
+                      ))}
                     </div>
                   ) : stockHistory.length === 0 ? (
-                    <div className="mt-4 rounded-[20px] border border-dashed border-stone-300 px-4 py-8 text-center text-sm text-stone-600 dark:border-[rgb(var(--border))] dark:text-[rgb(var(--text-muted))]">
+                    <div className="mt-4 rounded-[20px] border border-dashed border-[var(--color-border)] px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
                       No stock history yet for this product.
                     </div>
                   ) : (
                     <div className="mt-4 space-y-2">
                       {stockHistory.slice(0, 6).map((h) => (
-                        <div
-                          key={h.id}
-                          className={cx(panel(), "p-3")}
-                        >
+                        <div key={h.id} className={cx(softPanel(), "p-4")}>
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                              <div className={cx("text-sm font-medium", strongText())}>
+                            <div className="min-w-0">
+                              <div className={cx("text-sm font-semibold", strongText())}>
                                 {h.type} • {h.beforeQty} → {h.afterQty}
                               </div>
                               <div className={cx("mt-1 text-xs", mutedText())}>
@@ -485,17 +461,13 @@ function StockAdjustModal({
                             </div>
 
                             <div className="flex flex-wrap gap-2">
-                              {h.type === "RESTOCK" ? statusBadge("success", "Restock") : null}
-                              {h.type === "LOSS" ? statusBadge("danger", "Loss") : null}
-                              {h.type === "CORRECTION" ? statusBadge("warning", "Correction") : null}
+                              {h.type === "RESTOCK" ? <StatusBadge kind="success">Restock</StatusBadge> : null}
+                              {h.type === "LOSS" ? <StatusBadge kind="danger">Loss</StatusBadge> : null}
+                              {h.type === "CORRECTION" ? <StatusBadge kind="warning">Correction</StatusBadge> : null}
                             </div>
                           </div>
 
-                          {h.note ? (
-                            <div className={cx("mt-2 text-xs leading-5", mutedText())}>
-                              Note: {h.note}
-                            </div>
-                          ) : null}
+                          {h.note ? <div className={cx("mt-2 break-words text-xs leading-5", mutedText())}>Note: {h.note}</div> : null}
                         </div>
                       ))}
                     </div>
@@ -503,53 +475,35 @@ function StockAdjustModal({
                 </div>
               </div>
 
-              <aside className="space-y-5">
-                <div className={cx(panel(), "p-5")}>
+              <aside className="space-y-5 min-w-0">
+                <div className={cx(pageCard(), "p-5")}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className={cx("text-lg font-semibold", strongText())}>{product.name}</div>
+                      <div className={cx("truncate text-lg font-bold", strongText())}>{product.name}</div>
                       <div className={cx("mt-1 text-sm", mutedText())}>{product.brand || "No brand set"}</div>
                     </div>
 
                     <div className="shrink-0">
-                      {product.stockQty <= 0
-                        ? statusBadge("danger", "Out")
-                        : statusBadge("success", "Tracked")}
+                      {product.stockQty <= 0 ? <StatusBadge kind="danger">Out</StatusBadge> : <StatusBadge kind="success">Tracked</StatusBadge>}
                     </div>
                   </div>
 
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-5 grid gap-3">
                     <InfoTile label="Current stock" value={Number(product.stockQty || 0)} />
                     <InfoTile label="Sell price" value={formatMoney(product.sellPrice)} />
                   </div>
                 </div>
 
-                <div className={cx(panel(), "p-5")}>
-                  <div className={cx("text-base font-semibold", strongText())}>Live preview</div>
-                  <div className={cx("mt-1 text-sm", mutedText())}>
-                    Review the exact stock result before saving this movement.
-                  </div>
+                <div className={cx(pageCard(), "p-5")}>
+                  <div className={cx("text-base font-bold", strongText())}>Live preview</div>
+                  <div className={cx("mt-1 text-sm", mutedText())}>Review the exact stock result before saving this movement.</div>
 
-                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="mt-5 grid gap-3">
                     <InfoTile label="Before" value={Number(product.stockQty || 0)} />
                     <InfoTile
                       label="Change"
-                      value={
-                        preview
-                          ? preview.delta > 0
-                            ? `+${preview.delta}`
-                            : String(preview.delta)
-                          : "—"
-                      }
-                      tone={
-                        !preview
-                          ? "neutral"
-                          : preview.delta > 0
-                          ? "success"
-                          : preview.delta < 0
-                          ? "danger"
-                          : "warning"
-                      }
+                      value={preview ? (preview.delta > 0 ? `+${preview.delta}` : String(preview.delta)) : "—"}
+                      tone={!preview ? "neutral" : preview.delta > 0 ? "success" : preview.delta < 0 ? "danger" : "warning"}
                     />
                     <InfoTile
                       label="After"
@@ -559,45 +513,29 @@ function StockAdjustModal({
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {!preview ? statusBadge("neutral", "Enter values") : null}
-                    {isLoss && stockReason ? statusBadge("danger", reasonLabel(stockReason)) : null}
-                    {isCorrection ? statusBadge("warning", "Count-based set") : null}
-                    {isRestock ? statusBadge("success", "Inbound units") : null}
+                    {!preview ? <StatusBadge>Enter values</StatusBadge> : null}
+                    {isLoss && stockReason ? <StatusBadge kind="danger">{reasonLabel(stockReason)}</StatusBadge> : null}
+                    {isCorrection ? <StatusBadge kind="warning">Count-based set</StatusBadge> : null}
+                    {isRestock ? <StatusBadge kind="success">Inbound units</StatusBadge> : null}
                   </div>
                 </div>
 
-                <div className={cx(panel(), "p-5")}>
-                  <div className={cx("text-base font-semibold", strongText())}>Discipline</div>
+                <div className={cx(pageCard(), "p-5")}>
+                  <div className={cx("text-base font-bold", strongText())}>Discipline</div>
                   <div className={cx("mt-3 space-y-3 text-sm leading-6", mutedText())}>
-                    <div>
-                      Use <span className={cx("font-semibold", strongText())}>RESTOCK</span> for incoming units.
-                    </div>
-                    <div>
-                      Use <span className={cx("font-semibold", strongText())}>LOSS</span> for stolen, damaged, expired, defective, or missing units.
-                    </div>
-                    <div>
-                      Use <span className={cx("font-semibold", strongText())}>CORRECTION</span> only after a real physical count.
-                    </div>
+                    <div>Use <span className={cx("font-semibold", strongText())}>RESTOCK</span> for incoming units.</div>
+                    <div>Use <span className={cx("font-semibold", strongText())}>LOSS</span> for stolen, damaged, expired, defective, or missing units.</div>
+                    <div>Use <span className={cx("font-semibold", strongText())}>CORRECTION</span> only after a real physical count.</div>
                   </div>
                 </div>
 
-                <div className={cx(panel(), "p-5")}>
+                <div className={cx(pageCard(), "p-5")}>
                   <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      disabled={stockBusy}
-                      className={secondaryBtn()}
-                    >
+                    <button type="button" onClick={onClose} disabled={stockBusy} className={secondaryBtn()}>
                       Cancel
                     </button>
 
-                    <AsyncButton
-                      loading={stockBusy}
-                      onClick={onSubmit}
-                      disabled={!preview}
-                      className={submitClass}
-                    >
+                    <AsyncButton loading={stockBusy} onClick={onSubmit} disabled={!preview} className={submitClass}>
                       {saveLabel}
                     </AsyncButton>
                   </div>
@@ -606,6 +544,47 @@ function StockAdjustModal({
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ReorderProductCard({ product, onAdjust, tab }) {
+  return (
+    <div className={cx(pageCard(), "p-4 sm:p-5")}>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className={cx("truncate text-lg font-bold", strongText())}>{product.name}</div>
+          <div className={cx("mt-1 text-sm", mutedText())}>{product.category || "—"}</div>
+          {product.serial ? <div className={cx("mt-1 break-all text-xs", mutedText())}>Serial: {product.serial}</div> : null}
+        </div>
+
+        <div className="shrink-0">
+          {tab === "OUT" ? <StatusBadge kind="danger">Out of stock</StatusBadge> : <StatusBadge kind="warning">Low stock</StatusBadge>}
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className={cx(softPanel(), "p-4")}>
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>Current stock</div>
+          <div className={cx("mt-2 text-2xl font-black", strongText())}>{product.stockQty}</div>
+        </div>
+
+        <div className={cx(softPanel(), "p-4")}>
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>Sell price</div>
+          <div className={cx("mt-2 text-base font-bold", strongText())}>{formatMoney(product.sellPrice)}</div>
+        </div>
+
+        <div className={cx(softPanel(), "p-4")}>
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>Brand</div>
+          <div className={cx("mt-2 text-base font-bold", strongText())}>{product.brand || "—"}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <button type="button" onClick={() => onAdjust(product)} className={primaryBtn()}>
+          Adjust stock
+        </button>
       </div>
     </div>
   );
@@ -620,6 +599,8 @@ export default function Reorder() {
   const [lowRows, setLowRows] = useState([]);
   const [tab, setTab] = useState("OUT");
   const [downloading, setDownloading] = useState(false);
+
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const [stockOpen, setStockOpen] = useState(false);
   const [stockProduct, setStockProduct] = useState(null);
@@ -665,6 +646,10 @@ export default function Reorder() {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
   }, [threshold]);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [tab, threshold, outRows.length, lowRows.length]);
 
   async function handleDownloadPdf() {
     if (downloading) return;
@@ -724,7 +709,6 @@ export default function Reorder() {
 
   function calcPreview() {
     const current = Number(stockProduct?.stockQty || 0);
-
     if (!stockProduct) return null;
 
     if (stockType === "CORRECTION") {
@@ -732,11 +716,7 @@ export default function Reorder() {
       if (!Number.isFinite(n) || n < 0) return null;
 
       const after = Math.floor(n);
-      return {
-        before: current,
-        after,
-        delta: after - current,
-      };
+      return { before: current, after, delta: after - current };
     }
 
     const qty = Number(stockQty);
@@ -745,22 +725,13 @@ export default function Reorder() {
     const normalizedQty = Math.floor(qty);
 
     if (stockType === "RESTOCK") {
-      return {
-        before: current,
-        after: current + normalizedQty,
-        delta: normalizedQty,
-      };
+      return { before: current, after: current + normalizedQty, delta: normalizedQty };
     }
 
     if (stockType === "LOSS") {
       const after = current - normalizedQty;
       if (after < 0) return null;
-
-      return {
-        before: current,
-        after,
-        delta: -normalizedQty,
-      };
+      return { before: current, after, delta: -normalizedQty };
     }
 
     return null;
@@ -794,16 +765,8 @@ export default function Reorder() {
 
       const payload =
         stockType === "CORRECTION"
-          ? {
-              type: "CORRECTION",
-              newStockQty: preview.after,
-              note: composedNote,
-            }
-          : {
-              type: stockType,
-              quantity: Math.abs(preview.delta),
-              note: composedNote,
-            };
+          ? { type: "CORRECTION", newStockQty: preview.after, note: composedNote }
+          : { type: stockType, quantity: Math.abs(preview.delta), note: composedNote };
 
       await adjustStock(stockProduct.id, payload);
 
@@ -821,33 +784,20 @@ export default function Reorder() {
 
   const rows = tab === "OUT" ? outRows : lowRows;
   const preview = calcPreview();
+  const visibleRows = rows.slice(0, visibleCount);
+  const hasMore = visibleCount < rows.length;
 
   const summaryCards = useMemo(
     () => [
-      {
-        label: "Out of stock",
-        value: outRows.length,
-        note: "Immediate replenishment needed",
-        tone: "danger",
-      },
-      {
-        label: "Low stock",
-        value: lowRows.length,
-        note: "At risk of missed sales",
-        tone: "warning",
-      },
-      {
-        label: "Threshold",
-        value: threshold,
-        note: "Default low-stock trigger",
-        tone: "neutral",
-      },
+      { label: "Out of stock", value: outRows.length, note: "Immediate replenishment needed", tone: "danger" },
+      { label: "Low stock", value: lowRows.length, note: "At risk of missed sales", tone: "warning" },
+      { label: "Threshold", value: threshold, note: "Default low-stock trigger", tone: "neutral" },
     ],
     [outRows.length, lowRows.length, threshold]
   );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <StockAdjustModal
         open={stockOpen}
         product={stockProduct}
@@ -869,70 +819,47 @@ export default function Reorder() {
         onSubmit={submitStock}
       />
 
-      <section className={cx(shell(), "overflow-hidden")}>
-        <div className="border-b border-stone-200 px-5 py-5 dark:border-[rgb(var(--border))]">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
-              <SectionHeading
-                eyebrow="Inventory"
-                title="Reorder command center"
-                subtitle="Act on stock risk before it becomes lost revenue. Review stock-outs, low-stock items, and launch controlled adjustments with full accountability."
-              />
-            </div>
+      <section className="space-y-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-3xl">
+            <SectionHeading
+              eyebrow="Inventory"
+              title="Reorder command center"
+              subtitle="Act on stock risk before it becomes lost revenue. Review stock-outs, low-stock items, and launch controlled adjustments with full accountability."
+            />
+          </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => nav("/app/inventory")}
-                className={secondaryBtn()}
-              >
-                Back to inventory
-              </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => nav("/app/inventory")} className={secondaryBtn()}>
+              Back to inventory
+            </button>
 
-              <button
-                type="button"
-                onClick={load}
-                className={secondaryBtn()}
-              >
-                Refresh
-              </button>
+            <button type="button" onClick={load} className={secondaryBtn()}>
+              Refresh
+            </button>
 
-              <button
-                type="button"
-                onClick={handleDownloadPdf}
-                disabled={downloading}
-                className={primaryBtn()}
-              >
-                {downloading ? "Downloading..." : "Download PDF"}
-              </button>
-            </div>
+            <button type="button" onClick={handleDownloadPdf} disabled={downloading} className={primaryBtn()}>
+              {downloading ? "Downloading..." : "Download PDF"}
+            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-3">
+        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {summaryCards.map((card) => (
-            <MetricCard
-              key={card.label}
-              label={card.label}
-              value={card.value}
-              note={card.note}
-              tone={card.tone}
-            />
+            <MetricCard key={card.label} label={card.label} value={card.value} note={card.note} tone={card.tone} />
           ))}
-        </div>
+        </section>
       </section>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
-        <aside className={cx(shell(), "p-5")}>
-          <div className={cx("text-base font-semibold", strongText())}>Filters & focus</div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
+        <aside className={cx(pageCard(), "p-5 sm:p-6")}>
+          <div className={cx("text-base font-bold", strongText())}>Filters & focus</div>
           <div className={cx("mt-2 text-sm leading-6", mutedText())}>
             Tighten what counts as low stock and switch between urgent risk buckets.
           </div>
 
           <div className="mt-5">
-            <label className={cx("text-sm font-medium", strongText())}>
-              Default low-stock threshold
-            </label>
+            <label className={cx("text-sm font-medium", strongText())}>Default low-stock threshold</label>
             <input
               type="number"
               min="0"
@@ -943,92 +870,64 @@ export default function Reorder() {
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
-            <TabButton
-              active={tab === "OUT"}
-              tone="danger"
-              onClick={() => setTab("OUT")}
-            >
+            <TabButton active={tab === "OUT"} tone="danger" onClick={() => setTab("OUT")}>
               Out of stock
             </TabButton>
 
-            <TabButton
-              active={tab === "LOW"}
-              tone="warning"
-              onClick={() => setTab("LOW")}
-            >
+            <TabButton active={tab === "LOW"} tone="warning" onClick={() => setTab("LOW")}>
               Low stock
             </TabButton>
           </div>
 
           <div className="mt-5 space-y-3">
-            <div className={cx(panel(), "p-4")}>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+            <div className={cx(softPanel(), "p-4")}>
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
                 Current view
               </div>
               <div className={cx("mt-3 text-sm leading-6", strongText())}>
-                {tab === "OUT"
-                  ? "Products already unavailable for sale."
-                  : "Products still selling, but approaching risk."}
+                {tab === "OUT" ? "Products already unavailable for sale." : "Products still selling, but approaching risk."}
               </div>
             </div>
 
-            <div className={cx(panel(), "p-4")}>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+            <div className={cx(softPanel(), "p-4")}>
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
                 Adjustment discipline
               </div>
               <div className={cx("mt-3 space-y-3 text-sm leading-6", mutedText())}>
-                <div>
-                  Use <span className={cx("font-semibold", strongText())}>RESTOCK</span> for incoming units.
-                </div>
-                <div>
-                  Use <span className={cx("font-semibold", strongText())}>LOSS</span> for stolen or damaged items.
-                </div>
-                <div>
-                  Use <span className={cx("font-semibold", strongText())}>CORRECTION</span> only for count fixes.
-                </div>
+                <div>Use <span className={cx("font-semibold", strongText())}>RESTOCK</span> for incoming units.</div>
+                <div>Use <span className={cx("font-semibold", strongText())}>LOSS</span> for stolen or damaged items.</div>
+                <div>Use <span className={cx("font-semibold", strongText())}>CORRECTION</span> only for count fixes.</div>
               </div>
             </div>
           </div>
         </aside>
 
-        <section className={cx(shell(), "overflow-hidden")}>
-          <div className="border-b border-stone-200 px-5 py-5 dark:border-[rgb(var(--border))]">
+        <section className={cx(pageCard(), "overflow-hidden")}>
+          <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className={cx("text-xl font-semibold", strongText())}>
+                <div className={cx("text-xl font-bold", strongText())}>
                   {tab === "OUT" ? "Out-of-stock items" : "Low-stock items"}
                 </div>
                 <div className={cx("mt-2 text-sm leading-6", mutedText())}>
                   {tab === "OUT"
                     ? "These products are already unavailable and need immediate replenishment."
-                    : `These products are below their low-stock threshold and should be reviewed before revenue is lost.`}
+                    : "These products are below their low-stock threshold and should be reviewed before revenue is lost."}
                 </div>
               </div>
 
               <div className="shrink-0">
-                {tab === "OUT"
-                  ? statusBadge("danger", `${rows.length} items`)
-                  : statusBadge("warning", `${rows.length} items`)}
+                {tab === "OUT" ? <StatusBadge kind="danger">{rows.length} items</StatusBadge> : <StatusBadge kind="warning">{rows.length} items</StatusBadge>}
               </div>
             </div>
           </div>
 
-          <div className="p-5">
+          <div className="p-5 sm:p-6">
             {loading ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <tbody>
-                    <TableSkeleton rows={8} cols={5} />
-                  </tbody>
-                </table>
-              </div>
+              <ReorderListSkeleton />
             ) : rows.length === 0 ? (
               <EmptyState
-                title={
-                  tab === "OUT"
-                    ? "No products are out of stock"
-                    : "No products are currently low stock"
-                }
+                title={tab === "OUT" ? "No products are out of stock" : "No products are currently low stock"}
                 text={
                   tab === "OUT"
                     ? "Good. Nothing is fully unavailable right now."
@@ -1036,71 +935,27 @@ export default function Reorder() {
                 }
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[860px]">
-                  <thead className="border-b border-stone-200 bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))]">
-                    <tr>
-                      <th className={cx("px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                        Product
-                      </th>
-                      <th className={cx("px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                        Category
-                      </th>
-                      <th className={cx("px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                        Stock
-                      </th>
-                      <th className={cx("px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                        Sell
-                      </th>
-                      <th className={cx("px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
+              <>
+                <div className="grid grid-cols-1 gap-3">
+                  {visibleRows.map((p) => (
+                    <ReorderProductCard key={p.id} product={p} onAdjust={openStockModal} tab={tab} />
+                  ))}
+                </div>
 
-                  <tbody>
-                    {rows.map((p) => (
-                      <tr
-                        key={p.id}
-                        className="border-b border-stone-200 last:border-b-0 dark:border-[rgb(var(--border))]"
-                      >
-                        <td className="px-4 py-4">
-                          <div className={cx("text-sm font-medium", strongText())}>{p.name}</div>
-                          {p.serial ? (
-                            <div className={cx("mt-1 text-xs", mutedText())}>Serial: {p.serial}</div>
-                          ) : null}
-                        </td>
-
-                        <td className={cx("px-4 py-4 text-sm", mutedText())}>
-                          {p.category || "—"}
-                        </td>
-
-                        <td className="px-4 py-4 text-center">
-                          <div className={cx("text-lg font-semibold", strongText())}>{p.stockQty}</div>
-                        </td>
-
-                        <td className={cx("px-4 py-4 text-right text-sm font-medium", strongText())}>
-                          {formatMoney(p.sellPrice)}
-                        </td>
-
-                        <td className="px-4 py-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => openStockModal(p)}
-                            className={primaryBtn()}
-                          >
-                            Adjust stock
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <p className={cx("mt-4 text-xs leading-5", mutedText())}>
-                  Use stock adjustments when items arrive, are damaged, are stolen, expire, or physical count differs.
-                </p>
-              </div>
+                <div className="mt-5 flex justify-center">
+                  {hasMore ? (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                      className={secondaryBtn()}
+                    >
+                      Load 10 more
+                    </button>
+                  ) : (
+                    <div className={cx("text-sm", mutedText())}>All matching items loaded</div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </section>

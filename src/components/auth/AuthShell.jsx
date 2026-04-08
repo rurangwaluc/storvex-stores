@@ -1,7 +1,12 @@
-import React from "react";
+import PublicLayout from "../layout/PublicLayout";
+import { cn } from "../../lib/cn";
 
-function cx(...xs) {
-  return xs.filter(Boolean).join(" ");
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M5 12l4 4 10-10" />
+    </svg>
+  );
 }
 
 export default function AuthShell({
@@ -11,53 +16,67 @@ export default function AuthShell({
   sideTitle,
   sideBody,
   sideItems = [],
-  footer = null,
+  footer,
   children,
   compact = false,
+  singleColumn = false,
+  contentWidth = "max-w-xl",
 }) {
+  const hasSide =
+    !singleColumn && (Boolean(sideTitle) || Boolean(sideBody) || (sideItems?.length || 0) > 0);
+
   return (
-    <div className="min-h-screen bg-[rgb(var(--bg))] text-[rgb(var(--text))]">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col lg:flex-row">
-        <aside className="relative overflow-hidden border-b border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] lg:w-[46%] lg:border-b-0 lg:border-r">
-          <div className="absolute inset-0">
-            <div className="absolute inset-x-0 top-0 h-72 bg-gradient-to-br from-stone-950/8 via-transparent to-transparent dark:from-white/5" />
-            <div className="absolute -left-24 top-20 h-72 w-72 rounded-full bg-stone-950/6 blur-3xl dark:bg-white/5" />
-            <div className="absolute bottom-0 right-0 h-80 w-80 translate-x-1/4 translate-y-1/4 rounded-full bg-stone-950/6 blur-3xl dark:bg-white/5" />
-          </div>
-
-          <div className="relative flex h-full flex-col justify-between px-5 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
+    <PublicLayout>
+      <section
+        className={cn(
+          "mx-auto min-h-[calc(100vh-73px)] w-full px-4 py-8 sm:px-6 lg:px-8",
+          hasSide
+            ? compact
+              ? "grid max-w-7xl items-center gap-8 lg:grid-cols-[1fr_1fr]"
+              : "grid max-w-7xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]"
+            : "flex items-start justify-center",
+        )}
+      >
+        {hasSide ? (
+          <div className="hidden lg:block">
             <div className="max-w-xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[rgb(var(--border))] bg-[rgb(var(--bg))] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-soft))] shadow-sm">
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-                Storvex
-              </div>
+              {eyebrow ? (
+                <div className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-[var(--color-primary)]">
+                  {eyebrow}
+                </div>
+              ) : null}
 
-              <h2 className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl">
-                {sideTitle || "Premium store operations"}
-              </h2>
+              <h1 className="mt-6 text-5xl font-black tracking-tight text-[var(--color-text)]">
+                {sideTitle || title}
+              </h1>
 
-              <p className="mt-4 max-w-xl text-sm leading-7 text-[rgb(var(--text-muted))] sm:text-[15px]">
-                {sideBody ||
-                  "Calm, professional onboarding that makes the system feel valuable before the owner even enters the dashboard."}
-              </p>
+              {sideBody ? (
+                <p className="mt-5 text-base leading-8 text-[var(--color-text-muted)]">
+                  {sideBody}
+                </p>
+              ) : subtitle ? (
+                <p className="mt-5 text-base leading-8 text-[var(--color-text-muted)]">
+                  {subtitle}
+                </p>
+              ) : null}
 
               {sideItems?.length ? (
                 <div className="mt-8 grid gap-4">
-                  {sideItems.map((item, index) => (
+                  {sideItems.map((item) => (
                     <div
-                      key={`${item?.title || "item"}-${index}`}
-                      className="rounded-3xl border border-[rgb(var(--border))] bg-[rgb(var(--bg))] p-4 shadow-sm"
+                      key={item.title}
+                      className="rounded-[24px] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[var(--shadow-card)]"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-stone-950 text-sm font-semibold text-white dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg))]">
-                          {index + 1}
+                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                          <CheckIcon />
                         </div>
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold text-[rgb(var(--text))]">
-                            {item?.title}
+                        <div>
+                          <div className="text-sm font-bold text-[var(--color-text)]">
+                            {item.title}
                           </div>
-                          <div className="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))]">
-                            {item?.body}
+                          <div className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">
+                            {item.body}
                           </div>
                         </div>
                       </div>
@@ -66,46 +85,33 @@ export default function AuthShell({
                 </div>
               ) : null}
             </div>
-
-            <div className="mt-10 hidden text-xs text-[rgb(var(--text-soft))] lg:block">
-              Built for real stores, real staff, and real accountability.
-            </div>
           </div>
-        </aside>
+        ) : null}
 
-        <main className="flex flex-1 items-center justify-center px-4 py-8 sm:px-6 lg:px-10 lg:py-12">
-          <div
-            className={cx(
-              "w-full rounded-[32px] border border-[rgb(var(--border))] bg-[rgb(var(--bg-elevated))] shadow-[0_20px_80px_rgba(15,23,42,0.08)]",
-              compact ? "max-w-2xl" : "max-w-3xl"
-            )}
-          >
-            <div className="border-b border-[rgb(var(--border))] px-5 py-5 sm:px-8 sm:py-7">
-              {eyebrow ? (
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-soft))]">
-                  {eyebrow}
-                </div>
-              ) : null}
-
-              <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
-
-              {subtitle ? (
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-[rgb(var(--text-muted))] sm:text-[15px]">
-                  {subtitle}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="px-5 py-5 sm:px-8 sm:py-7">{children}</div>
-
-            {footer ? (
-              <div className="border-t border-[rgb(var(--border))] px-5 py-4 sm:px-8">
-                {footer}
+        <div className={cn("mx-auto w-full", contentWidth)}>
+          <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[var(--shadow-card)] backdrop-blur sm:p-6 xl:p-8">
+            {eyebrow ? (
+              <div className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--color-primary)]">
+                {eyebrow}
               </div>
             ) : null}
+
+            <h2 className="mt-3 text-2xl font-black tracking-tight text-[var(--color-text)] md:text-3xl">
+              {title}
+            </h2>
+
+            {subtitle ? (
+              <p className="mt-3 text-sm leading-7 text-[var(--color-text-muted)]">
+                {subtitle}
+              </p>
+            ) : null}
+
+            <div className="mt-5">{children}</div>
+
+            {footer ? <div className="mt-5">{footer}</div> : null}
           </div>
-        </main>
-      </div>
-    </div>
+        </div>
+      </section>
+    </PublicLayout>
   );
 }

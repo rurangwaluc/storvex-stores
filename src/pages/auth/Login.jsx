@@ -104,11 +104,11 @@ export default function Login() {
         },
       ]}
       footer={
-        <div className="text-sm text-[rgb(var(--text-muted))]">
+        <div className="text-sm text-[var(--color-text-muted)]">
           New store?{" "}
           <Link
             to="/signup"
-            className="font-medium text-[rgb(var(--text))] underline-offset-4 hover:underline"
+            className="font-medium text-[var(--color-text)] underline-offset-4 hover:underline"
           >
             Create account
           </Link>
@@ -117,7 +117,7 @@ export default function Login() {
     >
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-[rgb(var(--text))]">
+          <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
             Email
           </label>
           <input
@@ -140,7 +140,7 @@ export default function Login() {
           placeholder="Enter your password"
         />
 
-        <AsyncButton type="submit" loading={loading} className="w-full">
+        <AsyncButton type="submit" loading={loading} loadingText="Logging in..." className="w-full">
           Log in
         </AsyncButton>
       </form>

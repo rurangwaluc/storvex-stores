@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
+import AsyncButton from "../../components/ui/AsyncButton";
+import FormPageSkeleton from "../../components/ui/FormPageSkeleton";
 import { getProductById, updateProduct } from "../../services/inventoryApi";
 import { handleSubscriptionBlockedError } from "../../utils/subscriptionError";
-import FormPageSkeleton from "../../components/ui/FormPageSkeleton";
 
 const CATEGORY_OPTIONS = [
   "Phones",
@@ -72,47 +73,47 @@ function cx(...xs) {
 }
 
 function formatMoney(n) {
-  return `RWF ${Number(n || 0).toLocaleString()}`;
+  return `Rwf ${Number(n || 0).toLocaleString("en-US")}`;
 }
 
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function shell() {
-  return "rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
-function sectionCard() {
-  return "rounded-[24px] border border-stone-200 bg-stone-50/80 p-5 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]";
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
 }
 
 function inputClass() {
-  return "mt-2 h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "app-input";
 }
 
 function primaryBtn() {
-  return "inline-flex h-10 min-w-[150px] items-center justify-center rounded-2xl bg-stone-950 px-4 text-sm font-medium text-white transition hover:bg-stone-800 disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
+  return "inline-flex h-11 min-w-[160px] items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60";
 }
 
-function checkboxCardClass(active) {
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:opacity-60";
+}
+
+function chipCardClass(active) {
   return cx(
-    "rounded-2xl border p-4 text-left transition",
+    "rounded-[22px] p-4 text-left transition",
     active
-      ? "border-stone-900 bg-stone-950 text-white dark:border-[rgb(var(--text))] dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))]"
-      : "border-stone-200 bg-white hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))] dark:hover:bg-[rgb(var(--bg-muted))]"
+      ? "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
+      : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
   );
 }
 
@@ -123,15 +124,15 @@ function SummaryStat({ label, value, tone = "neutral" }) {
       : tone === "warning"
       ? "text-amber-600 dark:text-amber-300"
       : tone === "danger"
-      ? "text-red-600 dark:text-red-300"
+      ? "text-[var(--color-danger)]"
       : strongText();
 
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
-      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.14em]", softText())}>
+    <div className="rounded-[22px] bg-[var(--color-surface-2)] p-4 shadow-[var(--shadow-soft)]">
+      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
         {label}
       </div>
-      <div className={cx("mt-1 text-lg font-semibold", toneClass)}>{value}</div>
+      <div className={cx("mt-2 text-xl font-black tracking-tight", toneClass)}>{value}</div>
     </div>
   );
 }
@@ -140,12 +141,12 @@ function SectionHeading({ eyebrow, title, text }) {
   return (
     <div>
       {eyebrow ? (
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
           {eyebrow}
         </div>
       ) : null}
-      <h2 className={cx("mt-1 text-lg font-semibold", strongText())}>{title}</h2>
-      {text ? <p className={cx("mt-1 text-sm leading-6", mutedText())}>{text}</p> : null}
+      <h2 className={cx("mt-3 text-[1.5rem] font-black tracking-tight", strongText())}>{title}</h2>
+      {text ? <p className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</p> : null}
     </div>
   );
 }
@@ -153,22 +154,27 @@ function SectionHeading({ eyebrow, title, text }) {
 function StatusPill({ text, tone = "neutral" }) {
   const cls =
     tone === "success"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300"
+      ? "bg-[#dcfce7] text-[#15803d]"
       : tone === "warning"
-      ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300"
+      ? "bg-[#fff1c9] text-[#b88900]"
       : tone === "danger"
-      ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300"
-      : "border-stone-200 bg-stone-100 text-stone-700 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))] dark:text-[rgb(var(--text-muted))]";
+      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
+      : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
 
   return (
-    <span
-      className={cx(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
-        cls
-      )}
-    >
+    <span className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", cls)}>
       {text}
     </span>
+  );
+}
+
+function FormField({ label, children, hint = "" }) {
+  return (
+    <div>
+      <label className={cx("text-sm font-medium", strongText())}>{label}</label>
+      <div className="mt-2">{children}</div>
+      {hint ? <p className={cx("mt-2 text-xs leading-5", softText())}>{hint}</p> : null}
+    </div>
   );
 }
 
@@ -198,19 +204,16 @@ export default function InventoryEdit() {
 
   const category = useMemo(() => normCategory(form.category), [form.category]);
   const isAccessories = category === "Accessories";
-  const isOtherAccessoryType =
-    isAccessories && String(form.subcategory || "").trim() === "Other";
+  const isOtherAccessoryType = isAccessories && String(form.subcategory || "").trim() === "Other";
 
   const buyPrice = Number(form.costPrice || 0);
   const sellPrice = Number(form.sellPrice || 0);
   const currentStock = Number(productMeta?.stockQty || 0);
-  const minStockLevel =
-    form.minStockLevel === "" ? null : Number(form.minStockLevel || 0);
+  const minStockLevel = form.minStockLevel === "" ? null : Number(form.minStockLevel || 0);
 
   const projectedMargin = Number.isFinite(sellPrice - buyPrice) ? sellPrice - buyPrice : 0;
   const estimatedStockCost = Number.isFinite(currentStock * buyPrice) ? currentStock * buyPrice : 0;
-  const estimatedStockRetail =
-    Number.isFinite(currentStock * sellPrice) ? currentStock * sellPrice : 0;
+  const estimatedStockRetail = Number.isFinite(currentStock * sellPrice) ? currentStock * sellPrice : 0;
 
   const stockTone =
     currentStock <= 0
@@ -399,52 +402,26 @@ export default function InventoryEdit() {
 
   if (error && !form?.name) {
     return (
-      <div className="rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
+      <div className="rounded-[22px] bg-[rgba(219,80,74,0.10)] px-5 py-4 text-sm text-[var(--color-danger)]">
         {error}
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
-      <section className={cx(shell(), "overflow-hidden")}>
-        <div className="border-b border-stone-200 px-5 py-5 dark:border-[rgb(var(--border))]">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
-              <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                Inventory
-              </div>
-              <h1 className={cx("mt-2 text-3xl font-semibold tracking-tight", strongText())}>
-                Edit product
-              </h1>
-              <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                Update catalog structure, pricing, category placement, and product tracking while
-                keeping stock control disciplined through stock-adjustment workflows.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => navigate("/app/inventory")}
-                className={secondaryBtn()}
-                disabled={saving}
-              >
-                Back to inventory
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/app/inventory/stock-history")}
-                className={secondaryBtn()}
-                disabled={saving}
-              >
-                Stock history
-              </button>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <section className="space-y-5">
+        <div>
+          <h1 className={cx("text-4xl font-black tracking-tight sm:text-5xl", strongText())}>
+            Edit product
+          </h1>
+          <p className={cx("mt-3 max-w-3xl text-sm leading-6", mutedText())}>
+            Update catalog structure, pricing, category placement, and product tracking while
+            keeping stock control disciplined through stock-adjustment workflows.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 lg:grid-cols-2">
           <SummaryStat label="Current stock" value={currentStock} tone={stockTone} />
           <SummaryStat
             label="Unit margin"
@@ -457,68 +434,80 @@ export default function InventoryEdit() {
             value={formatMoney(estimatedStockRetail)}
             tone={stockTone}
           />
-        </div>
+        </section>
       </section>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <form onSubmit={submit} className="space-y-5">
           {error ? (
-            <div className="rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
+            <div className="rounded-[22px] bg-[rgba(219,80,74,0.10)] px-4 py-3 text-sm text-[var(--color-danger)]">
               {error}
             </div>
           ) : null}
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Identity"
               title="Product identity"
               text="Refine the exact way this product should be recognized across search, inventory, and selling flows."
             />
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className={cx("text-sm font-medium", strongText())}>Product name</label>
-                <input
-                  className={inputClass()}
-                  value={form.name}
-                  onChange={(e) => setField("name", e.target.value)}
-                  required
-                  disabled={saving}
-                />
+                <FormField
+                  label="Product name"
+                  hint="Keep the product name clean and exactly how staff should identify it."
+                >
+                  <input
+                    className={inputClass()}
+                    value={form.name}
+                    onChange={(e) => setField("name", e.target.value)}
+                    required
+                    disabled={saving}
+                  />
+                </FormField>
               </div>
 
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Item code / SKU</label>
+              <FormField
+                label="Item code / SKU"
+                hint="Useful for search, reporting, and product discipline."
+              >
                 <input
                   className={inputClass()}
                   value={form.sku}
                   onChange={(e) => setField("sku", e.target.value)}
                   disabled={saving}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Brand</label>
+              <FormField
+                label="Brand"
+                hint="Use the commercial brand consistently across inventory."
+              >
                 <input
                   className={inputClass()}
                   value={form.brand}
                   onChange={(e) => setField("brand", e.target.value)}
                   disabled={saving}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Barcode</label>
+              <FormField
+                label="Barcode"
+                hint="Helpful for quick lookup and scanner-based workflows."
+              >
                 <input
                   className={inputClass()}
                   value={form.barcode}
                   onChange={(e) => setField("barcode", e.target.value)}
                   disabled={saving}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Category</label>
+              <FormField
+                label="Category"
+                hint="Use the category your team expects this product to sit under."
+              >
                 <select
                   className={inputClass()}
                   value={category}
@@ -532,14 +521,14 @@ export default function InventoryEdit() {
                     </option>
                   ))}
                 </select>
-              </div>
+              </FormField>
 
               {isAccessories ? (
                 <>
-                  <div>
-                    <label className={cx("text-sm font-medium", strongText())}>
-                      Accessory type
-                    </label>
+                  <FormField
+                    label="Accessory type"
+                    hint="This keeps accessory inventory structured and easier to filter."
+                  >
                     <select
                       className={inputClass()}
                       value={form.subcategory}
@@ -553,42 +542,42 @@ export default function InventoryEdit() {
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </FormField>
 
                   {isOtherAccessoryType ? (
-                    <div>
-                      <label className={cx("text-sm font-medium", strongText())}>
-                        Custom accessory type
-                      </label>
+                    <FormField
+                      label="Custom accessory type"
+                      hint="Only fill this when no standard accessory option fits."
+                    >
                       <input
                         className={inputClass()}
                         value={form.subcategoryOther}
                         onChange={(e) => setField("subcategoryOther", e.target.value)}
                         disabled={saving}
                       />
-                    </div>
+                    </FormField>
                   ) : null}
                 </>
               ) : null}
             </div>
           </section>
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Tracking"
               title="Tracking rules"
               text="Control whether this product should remain bulk-managed or uniquely tracked by serial / IMEI."
             />
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
               <button
                 type="button"
                 onClick={() => onToggleSerial(false)}
-                className={checkboxCardClass(!hasSerial)}
+                className={chipCardClass(!hasSerial)}
                 disabled={saving}
               >
                 <div className="text-sm font-semibold">No serial tracking</div>
-                <div className={cx("mt-1 text-sm", !hasSerial ? "text-white/80" : mutedText())}>
+                <div className={cx("mt-2 text-sm leading-6", !hasSerial ? "text-white/80" : mutedText())}>
                   Best for bulk stock and non-unique units.
                 </div>
               </button>
@@ -596,39 +585,39 @@ export default function InventoryEdit() {
               <button
                 type="button"
                 onClick={() => onToggleSerial(true)}
-                className={checkboxCardClass(hasSerial)}
+                className={chipCardClass(hasSerial)}
                 disabled={saving}
               >
                 <div className="text-sm font-semibold">Track by serial / IMEI</div>
-                <div className={cx("mt-1 text-sm", hasSerial ? "text-white/80" : mutedText())}>
+                <div className={cx("mt-2 text-sm leading-6", hasSerial ? "text-white/80" : mutedText())}>
                   Best for high-control electronics with unique identity.
                 </div>
               </button>
 
               {hasSerial ? (
                 <div className="md:col-span-2">
-                  <label className={cx("text-sm font-medium", strongText())}>Serial / IMEI</label>
-                  <input
-                    className={inputClass()}
-                    value={form.serial}
-                    onChange={(e) => setField("serial", e.target.value)}
-                    disabled={saving}
-                  />
+                  <FormField label="Serial / IMEI" hint="Required when unique tracking is enabled.">
+                    <input
+                      className={inputClass()}
+                      value={form.serial}
+                      onChange={(e) => setField("serial", e.target.value)}
+                      disabled={saving}
+                    />
+                  </FormField>
                 </div>
               ) : null}
             </div>
           </section>
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Pricing"
               title="Pricing setup"
               text="Refine buy and sell prices without touching stock quantities directly."
             />
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Buy price</label>
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField label="Buy price" hint="Your current acquisition cost per unit.">
                 <input
                   type="number"
                   min="0"
@@ -638,10 +627,9 @@ export default function InventoryEdit() {
                   required
                   disabled={saving}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Sell price</label>
+              <FormField label="Sell price" hint="The retail price used by the store when selling.">
                 <input
                   type="number"
                   min="0"
@@ -651,22 +639,22 @@ export default function InventoryEdit() {
                   required
                   disabled={saving}
                 />
-              </div>
+              </FormField>
             </div>
           </section>
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Stock policy"
               title="Minimum stock rule"
               text="Keep the threshold realistic so the system flags replenishment risk early."
             />
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>
-                  Minimum stock level
-                </label>
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField
+                label="Minimum stock level"
+                hint="Use a realistic threshold for this item’s replenishment pressure."
+              >
                 <input
                   type="number"
                   min="0"
@@ -675,26 +663,23 @@ export default function InventoryEdit() {
                   onChange={(e) => setField("minStockLevel", e.target.value)}
                   disabled={saving}
                 />
-              </div>
+              </FormField>
 
-              <div className={sectionCard()}>
+              <div className={cx(softPanel(), "p-5")}>
                 <div className={cx("text-sm font-semibold", strongText())}>Current stock rule</div>
                 <div className={cx("mt-2 text-sm leading-6", mutedText())}>
                   Quantity changes are intentionally blocked here. Use stock adjustment tools so
                   every movement stays logged and accountable.
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-4 flex flex-wrap gap-2">
                   <StatusPill text={stockLabel} tone={stockTone} />
-                  <StatusPill
-                    text={`Current stock ${currentStock}`}
-                    tone={stockTone}
-                  />
+                  <StatusPill text={`Current stock ${currentStock}`} tone={stockTone} />
                 </div>
               </div>
             </div>
           </section>
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
@@ -705,31 +690,24 @@ export default function InventoryEdit() {
                 Cancel
               </button>
 
-              <button type="submit" className={primaryBtn()} disabled={saving}>
-                {saving ? (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Updating...
-                  </span>
-                ) : (
-                  "Update product"
-                )}
-              </button>
+              <AsyncButton type="submit" loading={saving} className={primaryBtn()}>
+                Update product
+              </AsyncButton>
             </div>
           </section>
         </form>
 
         <aside className="space-y-5">
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Preview"
               title="Live product snapshot"
               text="A fast owner-level read of how this product currently sits inside the inventory system."
             />
 
-            <div className="mt-5 space-y-4">
-              <div className={sectionCard()}>
-                <div className={cx("text-base font-semibold", strongText())}>
+            <div className="mt-6 space-y-4">
+              <div className={cx(softPanel(), "p-5")}>
+                <div className={cx("text-lg font-bold", strongText())}>
                   {form.name || "Unnamed product"}
                 </div>
                 <div className={cx("mt-1 text-sm", mutedText())}>
@@ -747,24 +725,13 @@ export default function InventoryEdit() {
                       }
                     />
                   ) : null}
-                  {hasSerial ? (
-                    <StatusPill text="Serial tracked" tone="success" />
-                  ) : (
-                    <StatusPill text="Bulk tracked" />
-                  )}
+                  {hasSerial ? <StatusPill text="Serial tracked" tone="success" /> : <StatusPill text="Bulk tracked" />}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3">
-                <SummaryStat
-                  label="Current stock status"
-                  value={stockLabel}
-                  tone={stockTone}
-                />
-                <SummaryStat
-                  label="Stock cost value"
-                  value={formatMoney(estimatedStockCost)}
-                />
+                <SummaryStat label="Current stock status" value={stockLabel} tone={stockTone} />
+                <SummaryStat label="Stock cost value" value={formatMoney(estimatedStockCost)} />
                 <SummaryStat
                   label="Stock retail value"
                   value={formatMoney(estimatedStockRetail)}
@@ -779,20 +746,20 @@ export default function InventoryEdit() {
             </div>
           </section>
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Control"
               title="Stock discipline"
               text="This keeps catalog editing separated from physical stock movement."
             />
 
-            <div className="mt-4 space-y-3">
-              <div className={sectionCard()}>
+            <div className="mt-5 space-y-3">
+              <div className={cx(softPanel(), "p-5")}>
                 <div className={cx("text-sm font-semibold", strongText())}>Current stock</div>
-                <div className={cx("mt-2 text-3xl font-semibold", strongText())}>
+                <div className={cx("mt-2 text-3xl font-black tracking-tight", strongText())}>
                   {currentStock}
                 </div>
-                <div className={cx("mt-2 text-sm", mutedText())}>
+                <div className={cx("mt-2 text-sm leading-6", mutedText())}>
                   Use stock adjustment tools for restock, loss, theft, damage, and physical-count corrections.
                 </div>
               </div>

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
+import AsyncButton from "../../components/ui/AsyncButton";
 import { createProduct } from "../../services/inventoryApi";
 import { handleSubscriptionBlockedError } from "../../utils/subscriptionError";
 
@@ -71,48 +72,48 @@ function cx(...xs) {
 }
 
 function formatMoney(n) {
-  return `RWF ${Number(n || 0).toLocaleString()}`;
+  return `Rwf ${Number(n || 0).toLocaleString("en-US")}`;
 }
 
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function shell() {
-  return "rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
-function sectionCard() {
-  return "rounded-[24px] border border-stone-200 bg-stone-50/80 p-5 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]";
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
 }
 
 function inputClass() {
-  return "mt-2 h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function checkboxCardClass(active) {
-  return cx(
-    "rounded-2xl border p-4 transition",
-    active
-      ? "border-stone-900 bg-stone-950 text-white dark:border-[rgb(var(--text))] dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))]"
-      : "border-stone-200 bg-white hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))] dark:hover:bg-[rgb(var(--bg-muted))]"
-  );
-}
-
-function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "app-input";
 }
 
 function primaryBtn() {
-  return "inline-flex h-10 min-w-[150px] items-center justify-center rounded-2xl bg-stone-950 px-4 text-sm font-medium text-white transition hover:bg-stone-800 disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
+  return "inline-flex h-11 min-w-[160px] items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60";
+}
+
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:opacity-60";
+}
+
+function chipCardClass(active) {
+  return cx(
+    "rounded-[22px] p-4 text-left transition",
+    active
+      ? "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
+      : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
+  );
 }
 
 function SummaryStat({ label, value, tone = "neutral" }) {
@@ -122,15 +123,15 @@ function SummaryStat({ label, value, tone = "neutral" }) {
       : tone === "warning"
       ? "text-amber-600 dark:text-amber-300"
       : tone === "danger"
-      ? "text-red-600 dark:text-red-300"
+      ? "text-[var(--color-danger)]"
       : strongText();
 
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]">
-      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.14em]", softText())}>
+    <div className="rounded-[22px] bg-[var(--color-surface-2)] p-4 shadow-[var(--shadow-soft)]">
+      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
         {label}
       </div>
-      <div className={cx("mt-1 text-lg font-semibold", toneClass)}>{value}</div>
+      <div className={cx("mt-2 text-xl font-black tracking-tight", toneClass)}>{value}</div>
     </div>
   );
 }
@@ -139,12 +140,39 @@ function SectionHeading({ eyebrow, title, text }) {
   return (
     <div>
       {eyebrow ? (
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
           {eyebrow}
         </div>
       ) : null}
-      <h2 className={cx("mt-1 text-lg font-semibold", strongText())}>{title}</h2>
-      {text ? <p className={cx("mt-1 text-sm leading-6", mutedText())}>{text}</p> : null}
+      <h2 className={cx("mt-3 text-[1.5rem] font-black tracking-tight", strongText())}>{title}</h2>
+      {text ? <p className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</p> : null}
+    </div>
+  );
+}
+
+function StatusPill({ text, tone = "neutral" }) {
+  const cls =
+    tone === "success"
+      ? "bg-[#dcfce7] text-[#15803d]"
+      : tone === "warning"
+      ? "bg-[#fff1c9] text-[#b88900]"
+      : tone === "danger"
+      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
+      : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
+
+  return (
+    <span className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", cls)}>
+      {text}
+    </span>
+  );
+}
+
+function FormField({ label, children, hint = "" }) {
+  return (
+    <div>
+      <label className={cx("text-sm font-medium", strongText())}>{label}</label>
+      <div className="mt-2">{children}</div>
+      {hint ? <p className={cx("mt-2 text-xs leading-5", softText())}>{hint}</p> : null}
     </div>
   );
 }
@@ -178,8 +206,7 @@ export default function InventoryCreate() {
   const buyPrice = Number(form.costPrice || 0);
   const sellPrice = Number(form.sellPrice || 0);
   const stockQty = Number(form.stockQty || 0);
-  const minStockLevel =
-    form.minStockLevel === "" ? null : Number(form.minStockLevel || 0);
+  const minStockLevel = form.minStockLevel === "" ? null : Number(form.minStockLevel || 0);
 
   const projectedMargin = Number.isFinite(sellPrice - buyPrice) ? sellPrice - buyPrice : 0;
   const estimatedStockCost = Number.isFinite(stockQty * buyPrice) ? stockQty * buyPrice : 0;
@@ -322,89 +349,70 @@ export default function InventoryCreate() {
   }
 
   return (
-    <div className="space-y-5">
-      <section className={cx(shell(), "overflow-hidden")}>
-        <div className="border-b border-stone-200 px-5 py-5 dark:border-[rgb(var(--border))]">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
-              <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                Inventory
-              </div>
-              <h1 className={cx("mt-2 text-3xl font-semibold tracking-tight", strongText())}>
-                Create product
-              </h1>
-              <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                Add a new inventory item with pricing, stock setup, category structure, and
-                tracking rules that fit a real electronics retail workflow.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => navigate("/app/inventory")}
-                className={secondaryBtn()}
-                disabled={saving}
-              >
-                Back to inventory
-              </button>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <section className="space-y-5">
+        <div>
+          <h1 className={cx("text-4xl font-black tracking-tight sm:text-5xl", strongText())}>
+            Create product
+          </h1>
+          <p className={cx("mt-3 max-w-3xl text-sm leading-6", mutedText())}>
+            Add a new inventory item with pricing, stock setup, category structure, and tracking
+            rules that fit a real electronics retail workflow.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-2 xl:grid-cols-4">
-          <SummaryStat
-            label="Opening stock"
-            value={Number.isFinite(stockQty) ? stockQty : 0}
-            tone={stockTone}
-          />
+        <section className="grid gap-4 lg:grid-cols-2">
+          <SummaryStat label="Opening stock" value={Number.isFinite(stockQty) ? stockQty : 0} tone={stockTone} />
           <SummaryStat
             label="Unit margin"
             value={formatMoney(projectedMargin)}
             tone={projectedMargin > 0 ? "success" : projectedMargin < 0 ? "danger" : "warning"}
           />
-          <SummaryStat
-            label="Stock cost value"
-            value={formatMoney(estimatedStockCost)}
-          />
+          <SummaryStat label="Stock cost value" value={formatMoney(estimatedStockCost)} />
           <SummaryStat
             label="Stock retail value"
             value={formatMoney(estimatedStockRetail)}
             tone={stockTone}
           />
-        </div>
+        </section>
       </section>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <form onSubmit={submit} className="space-y-5">
           {error ? (
-            <div className="rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
+            <div className="rounded-[22px] bg-[rgba(219,80,74,0.10)] px-4 py-3 text-sm text-[var(--color-danger)]">
               {error}
             </div>
           ) : null}
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Identity"
               title="Product identity"
               text="Define the item exactly the way your staff should recognize and search it."
             />
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className={cx("text-sm font-medium", strongText())}>Product name</label>
-                <input
-                  placeholder="Example: Samsung Galaxy A15 128GB"
-                  className={inputClass()}
-                  value={form.name}
-                  onChange={(e) => setField("name", e.target.value)}
-                  required
-                  disabled={saving}
-                />
+                <FormField
+                  label="Product name"
+                  hint="Use the exact product name staff should search and recognize quickly."
+                >
+                  <input
+                    placeholder="Example: Samsung Galaxy A15 128GB"
+                    className={inputClass()}
+                    value={form.name}
+                    onChange={(e) => setField("name", e.target.value)}
+                    required
+                    disabled={saving}
+                  />
+                </FormField>
               </div>
 
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Item code / SKU</label>
+              <FormField
+                label="Item code / SKU"
+                hint="Optional, but useful for search, reporting, and internal control."
+              >
                 <input
                   placeholder="Example: SAM-A15-128-BLK"
                   className={inputClass()}
@@ -412,10 +420,12 @@ export default function InventoryCreate() {
                   onChange={(e) => setField("itemCode", e.target.value)}
                   disabled={saving}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Brand</label>
+              <FormField
+                label="Brand"
+                hint="Use the commercial brand exactly as you want it displayed across inventory."
+              >
                 <input
                   placeholder="Apple, Samsung, HP, Epson..."
                   className={inputClass()}
@@ -423,10 +433,12 @@ export default function InventoryCreate() {
                   onChange={(e) => setField("brand", e.target.value)}
                   disabled={saving}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Barcode</label>
+              <FormField
+                label="Barcode"
+                hint="Useful when scanning stock or matching items physically in store."
+              >
                 <input
                   placeholder="Optional barcode"
                   className={inputClass()}
@@ -434,10 +446,12 @@ export default function InventoryCreate() {
                   onChange={(e) => setField("barcode", e.target.value)}
                   disabled={saving}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Category</label>
+              <FormField
+                label="Category"
+                hint="Pick the main category the team will expect this product to live under."
+              >
                 <select
                   className={inputClass()}
                   value={category}
@@ -451,14 +465,14 @@ export default function InventoryCreate() {
                     </option>
                   ))}
                 </select>
-              </div>
+              </FormField>
 
               {isAccessories ? (
                 <>
-                  <div>
-                    <label className={cx("text-sm font-medium", strongText())}>
-                      Accessory type
-                    </label>
+                  <FormField
+                    label="Accessory type"
+                    hint="Use a sub-type so accessories stay organized and searchable."
+                  >
                     <select
                       className={inputClass()}
                       value={form.subcategory}
@@ -472,13 +486,13 @@ export default function InventoryCreate() {
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </FormField>
 
                   {isOtherAccessoryType ? (
-                    <div>
-                      <label className={cx("text-sm font-medium", strongText())}>
-                        Custom accessory type
-                      </label>
+                    <FormField
+                      label="Custom accessory type"
+                      hint="Only fill this when the accessory type is not covered above."
+                    >
                       <input
                         className={inputClass()}
                         value={form.subcategoryOther}
@@ -486,29 +500,29 @@ export default function InventoryCreate() {
                         placeholder="Example: Laptop adapter"
                         disabled={saving}
                       />
-                    </div>
+                    </FormField>
                   ) : null}
                 </>
               ) : null}
             </div>
           </section>
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Tracking"
               title="Tracking rules"
               text="Decide whether this item should carry unique serial or IMEI control."
             />
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
               <button
                 type="button"
                 onClick={() => onToggleSerial(false)}
-                className={checkboxCardClass(!hasSerial)}
+                className={chipCardClass(!hasSerial)}
                 disabled={saving}
               >
                 <div className="text-sm font-semibold">No serial tracking</div>
-                <div className={cx("mt-1 text-sm", !hasSerial ? "text-white/80" : mutedText())}>
+                <div className={cx("mt-2 text-sm leading-6", !hasSerial ? "text-white/80" : mutedText())}>
                   Best for bulk accessories or general stock items.
                 </div>
               </button>
@@ -516,40 +530,40 @@ export default function InventoryCreate() {
               <button
                 type="button"
                 onClick={() => onToggleSerial(true)}
-                className={checkboxCardClass(hasSerial)}
+                className={chipCardClass(hasSerial)}
                 disabled={saving}
               >
                 <div className="text-sm font-semibold">Track by serial / IMEI</div>
-                <div className={cx("mt-1 text-sm", hasSerial ? "text-white/80" : mutedText())}>
+                <div className={cx("mt-2 text-sm leading-6", hasSerial ? "text-white/80" : mutedText())}>
                   Best for phones, laptops, and other uniquely tracked units.
                 </div>
               </button>
 
               {hasSerial ? (
                 <div className="md:col-span-2">
-                  <label className={cx("text-sm font-medium", strongText())}>Serial / IMEI</label>
-                  <input
-                    placeholder="Unique serial or IMEI"
-                    className={inputClass()}
-                    value={form.serial}
-                    onChange={(e) => setField("serial", e.target.value)}
-                    disabled={saving}
-                  />
+                  <FormField label="Serial / IMEI" hint="Required when unique tracking is enabled.">
+                    <input
+                      placeholder="Unique serial or IMEI"
+                      className={inputClass()}
+                      value={form.serial}
+                      onChange={(e) => setField("serial", e.target.value)}
+                      disabled={saving}
+                    />
+                  </FormField>
                 </div>
               ) : null}
             </div>
           </section>
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Pricing"
               title="Pricing setup"
               text="Set buy and sell prices with enough margin clarity before this item goes live."
             />
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Buy price</label>
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField label="Buy price" hint="Your acquisition cost per unit.">
                 <input
                   type="number"
                   min="0"
@@ -559,10 +573,9 @@ export default function InventoryCreate() {
                   required
                   disabled={saving}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Sell price</label>
+              <FormField label="Sell price" hint="The retail price staff will use when selling.">
                 <input
                   type="number"
                   min="0"
@@ -572,20 +585,22 @@ export default function InventoryCreate() {
                   required
                   disabled={saving}
                 />
-              </div>
+              </FormField>
             </div>
           </section>
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Stock"
               title="Opening stock setup"
               text="Create the product with the correct opening quantity and the minimum level that should trigger attention."
             />
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>Opening stock</label>
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField
+                label="Opening stock"
+                hint="The number of units you physically have available right now."
+              >
                 <input
                   type="number"
                   min="0"
@@ -595,12 +610,12 @@ export default function InventoryCreate() {
                   required
                   disabled={saving}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className={cx("text-sm font-medium", strongText())}>
-                  Minimum stock level
-                </label>
+              <FormField
+                label="Minimum stock level"
+                hint="When stock reaches this number, the system should start drawing attention."
+              >
                 <input
                   type="number"
                   min="0"
@@ -610,11 +625,11 @@ export default function InventoryCreate() {
                   placeholder="Example: 5"
                   disabled={saving}
                 />
-              </div>
+              </FormField>
             </div>
           </section>
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
@@ -625,31 +640,24 @@ export default function InventoryCreate() {
                 Cancel
               </button>
 
-              <button type="submit" className={primaryBtn()} disabled={saving}>
-                {saving ? (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Saving...
-                  </span>
-                ) : (
-                  "Save product"
-                )}
-              </button>
+              <AsyncButton type="submit" loading={saving} className={primaryBtn()}>
+                Save product
+              </AsyncButton>
             </div>
           </section>
         </form>
 
         <aside className="space-y-5">
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Preview"
               title="Live product snapshot"
               text="This gives the owner a fast read on how this item will enter the inventory system."
             />
 
-            <div className="mt-5 space-y-4">
-              <div className={sectionCard()}>
-                <div className={cx("text-base font-semibold", strongText())}>
+            <div className="mt-6 space-y-4">
+              <div className={cx(softPanel(), "p-5")}>
+                <div className={cx("text-lg font-bold", strongText())}>
                   {form.name || "Unnamed product"}
                 </div>
                 <div className={cx("mt-1 text-sm", mutedText())}>
@@ -659,26 +667,22 @@ export default function InventoryCreate() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <StatusPill text={category || "No category"} />
                   {isAccessories && form.subcategory ? (
-                    <StatusPill text={form.subcategory === "Other" ? form.subcategoryOther || "Other accessory" : form.subcategory} />
+                    <StatusPill
+                      text={
+                        form.subcategory === "Other"
+                          ? form.subcategoryOther || "Other accessory"
+                          : form.subcategory
+                      }
+                    />
                   ) : null}
                   {hasSerial ? <StatusPill text="Serial tracked" tone="success" /> : <StatusPill text="Bulk tracked" />}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3">
-                <SummaryStat
-                  label="Opening stock status"
-                  value={stockLabel}
-                  tone={stockTone}
-                />
-                <SummaryStat
-                  label="Estimated stock cost"
-                  value={formatMoney(estimatedStockCost)}
-                />
-                <SummaryStat
-                  label="Estimated stock retail"
-                  value={formatMoney(estimatedStockRetail)}
-                />
+                <SummaryStat label="Opening stock status" value={stockLabel} tone={stockTone} />
+                <SummaryStat label="Estimated stock cost" value={formatMoney(estimatedStockCost)} />
+                <SummaryStat label="Estimated stock retail" value={formatMoney(estimatedStockRetail)} />
                 <SummaryStat
                   label="Unit margin"
                   value={formatMoney(projectedMargin)}
@@ -688,43 +692,29 @@ export default function InventoryCreate() {
             </div>
           </section>
 
-          <section className={cx(shell(), "p-5")}>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <SectionHeading
               eyebrow="Control"
               title="Operational discipline"
               text="These rules keep inventory cleaner once real staff start using the system."
             />
 
-            <ul className={cx("mt-4 space-y-3 text-sm leading-6", mutedText())}>
-              <li>Use a clear product name staff can recognize immediately.</li>
-              <li>Use SKU or item code for faster search and reporting.</li>
-              <li>Use serial tracking only when each unit must be uniquely controlled.</li>
-              <li>Set a realistic minimum stock level so shortages are caught early.</li>
-              <li>After creation, future quantity changes should go through stock adjustment flow.</li>
-            </ul>
+            <div className="mt-5 space-y-3">
+              {[
+                "Use a clear product name staff can recognize immediately.",
+                "Use SKU or item code for faster search and reporting.",
+                "Use serial tracking only when each unit must be uniquely controlled.",
+                "Set a realistic minimum stock level so shortages are caught early.",
+                "After creation, future quantity changes should go through stock adjustment flow.",
+              ].map((item) => (
+                <div key={item} className={cx(softPanel(), "px-4 py-3 text-sm leading-6", mutedText())}>
+                  {item}
+                </div>
+              ))}
+            </div>
           </section>
         </aside>
       </div>
     </div>
-  );
-}
-
-function StatusPill({ text, tone = "neutral" }) {
-  const cls =
-    tone === "success"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300"
-      : tone === "warning"
-      ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300"
-      : "border-stone-200 bg-stone-100 text-stone-700 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))] dark:text-[rgb(var(--text-muted))]";
-
-  return (
-    <span
-      className={cx(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
-        cls
-      )}
-    >
-      {text}
-    </span>
   );
 }

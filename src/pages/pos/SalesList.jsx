@@ -2,101 +2,96 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
+import AsyncButton from "../../components/ui/AsyncButton";
 import { listSales, cancelSale as cancelSaleApi } from "../../services/posApi";
-import TableSkeleton from "../../components/ui/TableSkeleton";
 import { handleSubscriptionBlockedError } from "../../utils/subscriptionError";
 
 const PAGE_SIZE = 10;
-const formatMoney = (n) => `RWF ${Number(n || 0).toLocaleString()}`;
+const formatMoney = (n) => `Rwf ${Number(n || 0).toLocaleString("en-US")}`;
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function shell() {
-  return "rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
+function pageCard() {
+  return "rounded-[28px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
-function panel() {
-  return "rounded-[24px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]";
+function raisedPanel() {
+  return "rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-soft)]";
+}
+
+function softPanel() {
+  return "rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)]";
 }
 
 function inputClass() {
-  return "h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "app-input";
 }
 
 function primaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-stone-950 px-4 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function dangerBtn(disabled = false) {
   return cx(
-    "inline-flex h-10 items-center justify-center rounded-2xl border px-4 text-sm font-medium transition",
+    "inline-flex h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold transition",
     disabled
-      ? "cursor-not-allowed border-rose-200 bg-rose-50 text-rose-400 opacity-70 dark:border-rose-900/30 dark:bg-rose-950/10 dark:text-rose-300/50"
-      : "border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300 dark:hover:bg-rose-950/30"
+      ? "cursor-not-allowed bg-[rgba(219,80,74,0.08)] text-[var(--color-danger)] opacity-50"
+      : "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)] hover:opacity-90"
   );
 }
 
-function StatusTag({ status }) {
-  const cls =
-    status === "PAID"
-      ? "badge-success"
-      : status === "OVERDUE"
-      ? "badge-danger"
-      : "badge-warning";
-
-  return <span className={cls}>{status}</span>;
+function SkeletonBlock({ className = "" }) {
+  return <div className={cx("animate-pulse rounded-[20px] bg-[var(--color-surface-2)]", className)} />;
 }
 
-function SummaryCard({ label, value, note, tone = "neutral" }) {
-  const accent =
-    tone === "success"
-      ? "bg-emerald-500"
-      : tone === "warning"
-      ? "bg-amber-500"
-      : tone === "danger"
-      ? "bg-rose-500"
-      : "bg-stone-900 dark:bg-[rgb(var(--text))]";
-
+function SectionHeading({ eyebrow, title, subtitle }) {
   return (
-    <div className={cx(shell(), "relative overflow-hidden p-4")}>
-      <div className={cx("absolute left-0 top-0 h-full w-1.5", accent)} />
-      <div className="pl-2">
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-          {label}
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
         </div>
-        <div className={cx("mt-2 text-2xl font-semibold", strongText())}>{value}</div>
-        {note ? <div className={cx("mt-1 text-sm", mutedText())}>{note}</div> : null}
-      </div>
+      ) : null}
+      <h1 className={cx("mt-3 text-[1.7rem] font-black tracking-tight sm:text-[2rem]", strongText())}>
+        {title}
+      </h1>
+      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
     </div>
   );
 }
 
-function EmptyState({ title, text }) {
+function StatusBadge({ kind = "neutral", children }) {
+  const cls =
+    kind === "danger"
+      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
+      : kind === "warning"
+      ? "bg-[#fff1c9] text-[#b88900]"
+      : kind === "success"
+      ? "bg-[#dcfce7] text-[#15803d]"
+      : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
+
   return (
-    <div className="flex min-h-[320px] items-center justify-center">
-      <div className="max-w-md text-center">
-        <div className={cx("text-base font-semibold", strongText())}>{title}</div>
-        <div className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</div>
-      </div>
-    </div>
+    <span className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", cls)}>
+      {children}
+    </span>
   );
 }
 
@@ -106,14 +101,91 @@ function SaleTypePill({ saleType }) {
   return (
     <span
       className={cx(
-        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border",
-        isCash
-          ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300"
-          : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300"
+        "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold",
+        isCash ? "bg-[#dcfce7] text-[#15803d]" : "bg-[#fff1c9] text-[#b88900]"
       )}
     >
-      {saleType}
+      {isCash ? "Cash" : "Credit"}
     </span>
+  );
+}
+
+function SummaryCard({ label, value, note, tone = "neutral", icon = "default" }) {
+  const iconTone =
+    tone === "danger"
+      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
+      : tone === "warning"
+      ? "bg-[#fff1c9] text-[#b88900]"
+      : tone === "success"
+      ? "bg-[#dcfce7] text-[#15803d]"
+      : "bg-[#dff1ff] text-[#4aa8ff]";
+
+  function CardIcon() {
+    const common = {
+      className: "h-7 w-7",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 1.9,
+    };
+
+    if (icon === "sales") {
+      return (
+        <svg {...common}>
+          <path d="M5 19V9M12 19V5M19 19v-8" strokeLinecap="round" />
+        </svg>
+      );
+    }
+
+    if (icon === "paid") {
+      return (
+        <svg {...common}>
+          <path d="M5 12l4 4 10-10" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    }
+
+    if (icon === "credit") {
+      return (
+        <svg {...common}>
+          <rect x="3" y="6" width="18" height="12" rx="2.5" />
+          <path d="M7 12h10" strokeLinecap="round" />
+        </svg>
+      );
+    }
+
+    if (icon === "overdue") {
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 8v4l2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    }
+
+    return (
+      <svg {...common}>
+        <path d="M5 19V9M12 19V5M19 19v-8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  return (
+    <article className={cx(pageCard(), "p-5 sm:p-6")}>
+      <div className="flex items-start gap-4 sm:gap-5">
+        <div className={cx("flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] shadow-[var(--shadow-soft)]", iconTone)}>
+          <CardIcon />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className={cx("text-sm font-semibold", strongText())}>{label}</div>
+          <div className={cx("mt-2 text-[1.7rem] font-black leading-tight tracking-[-0.02em]", strongText())}>
+            {value}
+          </div>
+          {note ? <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div> : null}
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -132,6 +204,254 @@ function relativeTime(value) {
   if (hrs < 24) return `${hrs}h ago`;
   if (days < 7) return `${days}d ago`;
   return d.toLocaleDateString();
+}
+
+function canCancelFromList(sale) {
+  if (!sale) return false;
+  if (sale.saleType !== "CASH") return false;
+  if (sale.isCancelled) return false;
+  return true;
+}
+
+function SalesListSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className={cx(pageCard(), "p-4 sm:p-5")}>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <SkeletonBlock className="h-8 w-28 rounded-full" />
+              <SkeletonBlock className="h-8 w-20 rounded-full" />
+              <SkeletonBlock className="h-8 w-20 rounded-full" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_240px]">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <SkeletonBlock className="h-24 w-full" />
+                <SkeletonBlock className="h-24 w-full" />
+              </div>
+              <SkeletonBlock className="h-24 w-full" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <SkeletonBlock className="h-20 w-full" />
+              <SkeletonBlock className="h-20 w-full" />
+            </div>
+
+            <div className="flex flex-wrap gap-2 justify-end">
+              <SkeletonBlock className="h-11 w-24 rounded-2xl" />
+              <SkeletonBlock className="h-11 w-24 rounded-2xl" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ title, text }) {
+  return (
+    <div className={cx(softPanel(), "px-4 py-12 text-center")}>
+      <div className={cx("text-base font-bold", strongText())}>{title}</div>
+      <div className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</div>
+    </div>
+  );
+}
+
+function InfoTile({ label, value, tone = "neutral" }) {
+  const toneCls =
+    tone === "success"
+      ? "bg-[#dcfce7] border-[#bbf7d0]"
+      : tone === "warning"
+      ? "bg-[#fff1c9] border-[#fde68a]"
+      : tone === "danger"
+      ? "bg-[rgba(219,80,74,0.12)] border-[rgba(219,80,74,0.22)]"
+      : "bg-[var(--color-surface-2)] border-[var(--color-border)]";
+
+  const labelCls =
+    tone === "success" || tone === "warning"
+      ? "text-[rgba(15,23,42,0.62)]"
+      : tone === "danger"
+      ? "text-[rgba(219,80,74,0.9)]"
+      : "text-[var(--color-text-muted)]";
+
+  const valueCls =
+    tone === "success"
+      ? "text-[#166534]"
+      : tone === "warning"
+      ? "text-[#92400e]"
+      : tone === "danger"
+      ? "text-[var(--color-danger)]"
+      : "text-[var(--color-text)]";
+
+  return (
+    <div
+      className={cx(
+        "rounded-[22px] border p-4 shadow-[var(--shadow-soft)]",
+        toneCls
+      )}
+    >
+      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", labelCls)}>
+        {label}
+      </div>
+
+      <div className={cx("mt-3 text-sm font-bold leading-6", valueCls)}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function SaleCard({ sale, onOpenCancel, cancelBusy, index }) {
+  const cancelEnabled = canCancelFromList(sale);
+  const saleType = String(sale.saleType || "").toUpperCase();
+  const status = String(sale.status || "").toUpperCase();
+  const balanceDue = Number(sale.balanceDue || 0);
+
+  const financeTone =
+    saleType === "CREDIT"
+      ? status === "OVERDUE"
+        ? "danger"
+        : "warning"
+      : "success";
+
+  return (
+    <div
+      className={cx(
+        pageCard(),
+        "relative overflow-hidden p-4 sm:p-5",
+        index % 2 === 0 ? "bg-[var(--color-card)]" : "bg-[var(--color-surface)]"
+      )}
+    >
+      <div className="absolute left-0 top-0 h-full w-1.5 bg-[var(--color-primary)] opacity-70" />
+      <div className="absolute inset-x-0 top-0 h-px bg-[var(--color-border)]" />
+
+      <div className="pl-2">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className={cx("text-[1.15rem] font-black tracking-tight", strongText())}>
+                  {formatMoney(sale.total)}
+                </div>
+                <SaleTypePill saleType={saleType} />
+                <StatusBadge
+                  kind={
+                    status === "PAID"
+                      ? "success"
+                      : status === "OVERDUE"
+                      ? "danger"
+                      : "warning"
+                  }
+                >
+                  {status}
+                </StatusBadge>
+              </div>
+
+              <div className={cx("mt-2 text-xs", softText())}>
+                Sale ID: {String(sale.id || "").slice(-8).toUpperCase() || "—"}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 xl:justify-end">
+              <Link to={`/app/pos/sales/${sale.id}`} className={secondaryBtn()}>
+                View
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => onOpenCancel(sale.id)}
+                disabled={!cancelEnabled || cancelBusy}
+                className={dangerBtn(!cancelEnabled || cancelBusy)}
+                title={!cancelEnabled ? "Only active cash sales can be cancelled here" : ""}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_240px]">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className={cx(raisedPanel(), "p-4")}>
+                <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                  Customer
+                </div>
+                <div className={cx("mt-3 text-sm font-bold", strongText())}>
+                  {sale.customer?.name || "Walk-in customer"}
+                </div>
+                <div className={cx("mt-1 text-xs", mutedText())}>
+                  {sale.customer?.phone || "No phone attached"}
+                </div>
+              </div>
+
+              <div className={cx(raisedPanel(), "p-4")}>
+                <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                  Cashier
+                </div>
+                <div className={cx("mt-3 text-sm font-bold", strongText())}>
+                  {sale.cashier?.name || "—"}
+                </div>
+                <div className={cx("mt-1 text-xs", mutedText())}>
+                  {sale.createdAt ? new Date(sale.createdAt).toLocaleString() : "—"}
+                </div>
+              </div>
+            </div>
+
+            <div className={cx(softPanel(), "p-4")}>
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                Final state
+              </div>
+
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className={cx("text-xs", mutedText())}>Updated</span>
+                  <span className={cx("text-xs font-semibold", strongText())}>
+                    {relativeTime(sale.updatedAt || sale.createdAt)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <span className={cx("text-xs", mutedText())}>
+                    {saleType === "CREDIT" ? "Balance due" : "Settlement"}
+                  </span>
+                  <span
+                    className={cx(
+                      "text-sm font-black",
+                      financeTone === "success"
+                        ? "text-[#15803d]"
+                        : financeTone === "warning"
+                        ? "text-[#b88900]"
+                        : "text-[var(--color-danger)]"
+                    )}
+                  >
+                    {saleType === "CREDIT" ? formatMoney(balanceDue) : "Paid immediately"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <InfoTile
+              label="Created"
+              value={sale.createdAt ? new Date(sale.createdAt).toLocaleDateString() : "—"}
+            />
+            <InfoTile
+              label="Status note"
+              value={
+                saleType === "CREDIT"
+                  ? status === "OVERDUE"
+                    ? "Needs follow-up"
+                    : "Credit still active"
+                  : "Cash sale completed"
+              }
+              tone={financeTone}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function SalesList() {
@@ -209,10 +529,7 @@ export default function SalesList() {
     setVisibleCount(PAGE_SIZE);
   }, [q]);
 
-  const visibleSales = useMemo(() => {
-    return filtered.slice(0, visibleCount);
-  }, [filtered, visibleCount]);
-
+  const visibleSales = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
   const hasMore = visibleCount < filtered.length;
 
   const summary = useMemo(() => {
@@ -232,6 +549,7 @@ export default function SalesList() {
 
   async function confirmCancel() {
     if (!cancelSaleId) return;
+
     setCancelBusy(true);
     try {
       await cancelSaleApi(cancelSaleId, { note: cancelNote || null });
@@ -251,237 +569,169 @@ export default function SalesList() {
     }
   }
 
-  function canCancelFromList(sale) {
-    if (!sale) return false;
-    if (sale.saleType !== "CASH") return false;
-    return true;
-  }
-
   function handleLoadMore() {
     setVisibleCount((prev) => prev + PAGE_SIZE);
   }
 
   return (
-    <div className="space-y-5">
-      <section className={cx(shell(), "overflow-hidden")}>
-        <div className="border-b border-stone-200 px-5 py-5 dark:border-[rgb(var(--border))]">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl">
-              <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                POS
-              </div>
-              <h1 className={cx("mt-2 text-3xl font-semibold tracking-tight", strongText())}>
-                Sales
-              </h1>
-              <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                Search receipts, review sale history, cancel eligible cash sales, and move into
-                refund flow from the receipt page.
-              </p>
-            </div>
+    <div className="space-y-6">
+      <section className="space-y-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <SectionHeading
+            eyebrow="POS"
+            title="Sales"
+            subtitle="Search receipts, review sale history, and manage eligible cash sale cancellations from a cleaner premium ledger."
+          />
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => nav("/app/pos")} className={secondaryBtn()}>
-                Back to POS
-              </button>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => nav("/app/pos")} className={secondaryBtn()}>
+              Back to POS
+            </button>
 
-              <Link to="/app/pos" className={primaryBtn()}>
-                New sale
-              </Link>
+            <Link to="/app/pos" className={primaryBtn()}>
+              New sale
+            </Link>
 
-              <button type="button" onClick={load} disabled={loading} className={secondaryBtn()}>
-                {loading ? "Refreshing..." : "Refresh"}
-              </button>
-            </div>
+            <AsyncButton loading={loading} onClick={load} className={secondaryBtn()}>
+              Refresh
+            </AsyncButton>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
             label="Total sales"
             value={summary.total}
             note="All sales currently loaded"
+            icon="sales"
           />
           <SummaryCard
             label="Paid"
             value={summary.paid}
             note="Fully paid sales"
             tone="success"
+            icon="paid"
           />
           <SummaryCard
             label="Credit sales"
             value={summary.credit}
             note="Sales with balance flow"
             tone="warning"
+            icon="credit"
           />
           <SummaryCard
             label="Overdue"
             value={summary.overdue}
             note="Need immediate attention"
             tone="danger"
+            icon="overdue"
           />
-        </div>
+        </section>
       </section>
 
-      <section className={cx(shell(), "overflow-hidden")}>
-        <div className="border-b border-stone-200 px-5 py-4 dark:border-[rgb(var(--border))]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className={cx("text-lg font-semibold", strongText())}>Sales ledger</h2>
-              <p className={cx("mt-1 text-sm", mutedText())}>
-                Find sales by customer, phone, cashier, or sale ID.
-              </p>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className={cx(pageCard(), "p-5 sm:p-6")}>
+          <div className={cx("text-base font-bold", strongText())}>Find a sale</div>
+          <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+            Search by customer name, phone, cashier, or sale ID.
+          </div>
+
+          <div className="mt-5">
+            <label className={cx("text-sm font-medium", strongText())}>Search</label>
+            <input
+              className={cx(inputClass(), "mt-2")}
+              placeholder="Customer, phone, cashier, sale id..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+
+          <div className="mt-5 space-y-3">
+            <div className={cx(softPanel(), "p-4")}>
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                Visible now
+              </div>
+              <div className={cx("mt-3 text-lg font-bold", strongText())}>
+                {filtered.length} matching sale{filtered.length === 1 ? "" : "s"}
+              </div>
             </div>
 
-            <div className="w-full max-w-md">
-              <input
-                className={inputClass()}
-                placeholder="Search by customer, phone, cashier, sale id..."
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
+            <div className={cx(softPanel(), "p-4")}>
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                Cancellation rule
+              </div>
+              <div className={cx("mt-3 text-sm leading-6", mutedText())}>
+                Only active <span className={cx("font-semibold", strongText())}>cash sales</span> can be cancelled from this list.
+              </div>
             </div>
           </div>
-        </div>
+        </aside>
 
-        <div className="p-5">
-          {loading ? (
-            <div className={cx(panel(), "overflow-hidden p-4")}>
-              <table className="w-full">
-                <tbody>
-                  <TableSkeleton rows={8} cols={5} />
-                </tbody>
-              </table>
-            </div>
-          ) : filtered.length === 0 ? (
-            <EmptyState title="No sales found" text="There are no sales matching your search." />
-          ) : (
-            <>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {visibleSales.map((s) => {
-                  const cancelEnabled = canCancelFromList(s);
-
-                  return (
-                    <div
-                      key={s.id}
-                      className={cx(
-                        panel(),
-                        "p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-                      )}
-                    >
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <div className={cx("text-base font-semibold", strongText())}>
-                              {formatMoney(s.total)}
-                            </div>
-                            <SaleTypePill saleType={s.saleType} />
-                            <StatusTag status={s.status} />
-                          </div>
-
-                          <div className="mt-2 text-sm">
-                            {s.customer ? (
-                              <div className="grid grid-cols-[140px_1fr] gap-y-1">
-                                <span className="text-gray-600 dark:text-gray-400">
-                                  Customer Name
-                                </span>
-                                <span className="font-medium text-gray-900 dark:text-gray-100">
-                                  {s.customer.name}
-                                </span>
-
-                                <span className="text-gray-600 dark:text-gray-400">
-                                  Customer Phone
-                                </span>
-                                <span className="text-gray-800 dark:text-gray-200">
-                                  {s.customer.phone || "Not provided"}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="text-gray-500 dark:text-gray-400 italic">
-                                Walk-in customer
-                              </div>
-                            )}
-                          </div>
-
-                          <div className={cx("mt-1 text-sm", mutedText())}>
-                            Cashier: {s.cashier?.name || "—"}
-                          </div>
-
-                          <div className={cx("mt-1 text-xs", softText())}>
-                            {s.createdAt ? new Date(s.createdAt).toLocaleString() : "—"}
-                          </div>
-
-                          <div className={cx("mt-1 text-xs", softText())}>
-                            Updated {relativeTime(s.updatedAt || s.createdAt)}
-                          </div>
-
-                          {s.saleType === "CREDIT" ? (
-                            <div className={cx("mt-3 text-sm", mutedText())}>
-                              Balance due:{" "}
-                              <span className={cx("font-medium", strongText())}>
-                                {formatMoney(s.balanceDue)}
-                              </span>
-                            </div>
-                          ) : null}
-
-                          <div className={cx("mt-2 text-xs", softText())}>
-                            Sale ID: {String(s.id).slice(-8).toUpperCase()}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                          <Link to={`/app/pos/sales/${s.id}`} className={secondaryBtn()}>
-                            View
-                          </Link>
-
-                          <button
-                            type="button"
-                            onClick={() => nav(`/app/pos/sales/${s.id}?refund=1`)}
-                            className={secondaryBtn()}
-                            title="Refund is done on the receipt page"
-                          >
-                            Refund
-                          </button>
-
-                          <button
-                            type="button"
-                            disabled={!cancelEnabled || cancelBusy}
-                            onClick={() => openCancel(s.id)}
-                            className={dangerBtn(!cancelEnabled || cancelBusy)}
-                            title={!cancelEnabled ? "Only CASH sales can be cancelled here" : ""}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+        <section className={cx(pageCard(), "overflow-hidden")}>
+          <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className={cx("text-xl font-bold", strongText())}>Sales ledger</div>
+                <div className={cx("mt-2 text-sm leading-6", mutedText())}>
+                  Each sale is grouped into a compact operational card with clearer separation in both dark and light mode.
+                </div>
               </div>
 
-              {hasMore ? (
-                <div className="mt-5 flex justify-center">
-                  <button type="button" onClick={handleLoadMore} className={primaryBtn()}>
-                    Load more
-                  </button>
-                </div>
+              {!loading ? (
+                <StatusBadge kind="success">
+                  Showing {visibleSales.length} of {filtered.length}
+                </StatusBadge>
               ) : null}
-            </>
-          )}
-        </div>
-      </section>
+            </div>
+          </div>
+
+          <div className="p-5 sm:p-6">
+            {loading ? (
+              <SalesListSkeleton />
+            ) : filtered.length === 0 ? (
+              <EmptyState
+                title="No sales found"
+                text="There are no sales matching your current search."
+              />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 gap-4">
+                  {visibleSales.map((sale, index) => (
+                    <SaleCard
+                      key={sale.id}
+                      sale={sale}
+                      onOpenCancel={openCancel}
+                      cancelBusy={cancelBusy}
+                      index={index}
+                    />
+                  ))}
+                </div>
+
+                <div className="mt-5 flex justify-center">
+                  {hasMore ? (
+                    <button type="button" onClick={handleLoadMore} className={primaryBtn()}>
+                      Load 10 more
+                    </button>
+                  ) : (
+                    <div className={cx("text-sm", mutedText())}>All matching sales loaded</div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      </div>
 
       {cancelOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]">
-          <div className={cx(shell(), "w-full max-w-md p-5")}>
-            <div className={cx("text-lg font-semibold", strongText())}>Cancel sale</div>
-            <p className={cx("mt-1 text-sm", mutedText())}>
+          <div className={cx(pageCard(), "w-full max-w-md p-5")}>
+            <div className={cx("text-lg font-bold", strongText())}>Cancel sale</div>
+            <p className={cx("mt-2 text-sm leading-6", mutedText())}>
               This will restock the items and mark the sale as cancelled.
             </p>
 
             <textarea
-              className={cx(
-                "mt-4 min-h-[96px] w-full rounded-2xl border border-stone-300 bg-white px-3.5 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-rose-400 focus:ring-2 focus:ring-rose-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-rose-400 dark:focus:ring-rose-950/30"
-              )}
+              className="mt-4 min-h-[110px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)]"
               rows={3}
               placeholder="Reason / note (optional)"
               value={cancelNote}

@@ -2,286 +2,181 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    color-scheme: light;
-
-    --bg: 248 248 247;
-    --bg-elevated: 255 255 255;
-    --bg-muted: 242 241 238;
-
-    --text: 22 27 34;
-    --text-muted: 91 101 112;
-    --text-soft: 121 129 139;
-
-    --border: 225 228 232;
-    --border-strong: 206 212 218;
-
-    --accent: 37 44 54;
-    --accent-foreground: 255 255 255;
-
-    /* Refined semantic tokens for cleaner light-mode contrast */
-   --success-bg: 236 253 245;
-    --success-text: 6 95 70;
-    --success-border: 110 231 183;
-
-    --warning-bg: 255 251 235;
-    --warning-text: 146 64 14;
-    --warning-border: 252 211 77;
-
-    --danger-bg: 254 242 242;
-    --danger-text: 153 27 27;
-    --danger-border: 252 165 165;
-
-
-    --info-bg: 239 243 247;
-    --info-text: 52 74 95;
-    --info-border: 191 219 254;
-
-    --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.04),
-      0 10px 24px rgba(16, 24, 40, 0.04);
-
-      --role-manager-bg: 239 246 255;
-      --role-manager-text: 30 64 175;
-      --role-manager-border: 147 197 253;
-
-      --role-owner-bg: 245 245 244;
-      --role-owner-text: 63 63 70;
-      --role-owner-border: 212 212 216;
-
-  }
-
-  .dark {
-    color-scheme: dark;
-
-    --bg: 17 19 22;
-    --bg-elevated: 24 27 31;
-    --bg-muted: 31 35 40;
-
-    --text: 236 239 242;
-    --text-muted: 169 176 185;
-    --text-soft: 136 145 155;
-
-    --border: 49 56 63;
-    --border-strong: 64 72 80;
-
-    --accent: 235 237 239;
-    --accent-foreground: 17 19 22;
-
-    --success-bg: 6 78 59;
-    --success-text: 167 243 208;
-    --success-border: 16 185 129;
-
-    --warning-bg: 69 39 12;
-    --warning-text: 253 224 71;
-    --warning-border: 217 119 6;
-
-    --danger-bg: 69 10 10;
-    --danger-text: 254 202 202;
-    --danger-border: 220 38 38;
-
-
-    --info-bg: 35 44 55;
-    --info-text: 185 208 230;
-    --info-border: 59 130 246;
-
-    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.28),
-      0 12px 26px rgba(0, 0, 0, 0.22);
-
-      --role-manager-bg: 30 58 138;
-      --role-manager-text: 191 219 254;
-      --role-manager-border: 59 130 246;
-
-      --role-owner-bg: 39 39 42;
-      --role-owner-text: 212 212 216;
-      --role-owner-border: 82 82 91;
-
-  }
-
-  * {
-    @apply border-transparent;
-  }
-
-  html {
-    @apply antialiased;
-  }
-
-  body {
-    margin: 0;
-    min-width: 320px;
-    background: rgb(var(--bg));
-    color: rgb(var(--text));
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  }
-
-  #root {
-    min-height: 100vh;
-  }
-
-  input,
-  select,
-  textarea {
-    @apply outline-none;
-  }
+:root {
+  --color-bg: #f4f6fb;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef3ff;
+  --color-surface-3: #dde8ff;
+  --color-card: #ffffff;
+  --color-text: #121826;
+  --color-text-muted: #667085;
+  --color-border: rgba(15, 23, 42, 0.08);
+  --color-primary: #3c91e6;
+  --color-primary-soft: rgba(60, 145, 230, 0.14);
+  --color-primary-ring: rgba(60, 145, 230, 0.22);
+  --color-danger: #db504a;
+  --shadow-soft: 0 10px 24px rgba(17, 24, 39, 0.06);
+  --shadow-card: 0 18px 48px rgba(15, 23, 42, 0.10);
 }
 
-@layer components {
-  .app-shell {
-    background: rgb(var(--bg));
-    color: rgb(var(--text));
-  }
-
-  .app-surface {
-    background: rgb(var(--bg-elevated));
-    border: 1px solid rgb(var(--border));
-    box-shadow: var(--shadow-soft);
-    @apply rounded-2xl;
-  }
-
-  .app-surface-muted {
-    background: rgb(var(--bg-muted));
-    border: 1px solid rgb(var(--border));
-    @apply rounded-2xl;
-  }
-
-  .app-card {
-    background: rgb(var(--bg-elevated));
-    border: 1px solid rgb(var(--border));
-    box-shadow: var(--shadow-soft);
-    @apply rounded-2xl p-5;
-  }
-
-  .app-input {
-    background: rgb(var(--bg-elevated));
-    color: rgb(var(--text));
-    border: 1px solid rgb(var(--border-strong));
-    @apply h-11 w-full rounded-xl px-3 text-sm transition;
-  }
-
-  .app-input::placeholder {
-    color: rgb(var(--text-soft));
-  }
-
-  .app-textarea {
-    background: rgb(var(--bg-elevated));
-    color: rgb(var(--text));
-    border: 1px solid rgb(var(--border-strong));
-    @apply min-h-[110px] w-full rounded-xl px-3 py-3 text-sm transition;
-  }
-
-  .app-input:focus,
-  .app-textarea:focus {
-    border-color: rgb(var(--text));
-    box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.12);
-  }
-
-  .btn-primary {
-    background: rgb(var(--accent));
-    color: rgb(var(--accent-foreground));
-    @apply inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition;
-  }
-
-  .btn-primary:hover {
-    filter: brightness(0.95);
-  }
-
-  .btn-secondary {
-    background: rgb(var(--bg-elevated));
-    color: rgb(var(--text));
-    border: 1px solid rgb(var(--border-strong));
-    @apply inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition;
-  }
-
-  .btn-secondary:hover {
-    background: rgb(var(--bg-muted));
-  }
-
-  .badge-neutral {
-    background: rgb(var(--bg-muted));
-    color: rgb(var(--text));
-    border: 1px solid rgb(var(--border));
-    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
-  }
-
-  .badge-info {
-    background: rgb(var(--info-bg));
-    color: rgb(var(--info-text));
-    border: 1px solid rgb(var(--info-border));
-    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
-  }
-
-  .badge-success {
-    background: rgb(var(--success-bg));
-    color: rgb(var(--success-text));
-    border: 1px solid rgb(var(--success-border));
-    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
-  }
-
-  .badge-warning {
-    background: rgb(var(--warning-bg));
-    color: rgb(var(--warning-text));
-    border: 1px solid rgb(var(--warning-border));
-    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
-  }
-
-  .badge-danger {
-    background: rgb(var(--danger-bg));
-    color: rgb(var(--danger-text));
-    border: 1px solid rgb(var(--danger-border));
-    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
-  }
-
-  .page-title {
-    color: rgb(var(--text));
-    @apply text-2xl font-semibold tracking-tight;
-  }
-
-  .page-subtitle {
-    color: rgb(var(--text-muted));
-    @apply mt-1 text-sm;
-  }
-
-  .section-title {
-    color: rgb(var(--text));
-    @apply text-base font-semibold;
-  }
-
-  .section-subtitle {
-    color: rgb(var(--text-muted));
-    @apply text-sm;
-  }
-
-  .app-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(var(--border-strong)) transparent;
-  }
-
-  .app-scrollbar::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-
-  .app-scrollbar::-webkit-scrollbar-thumb {
-    background: rgb(var(--border-strong));
-    border-radius: 999px;
-  }
-
-  .app-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .role-manager {
-  background: rgb(var(--role-manager-bg));
-  color: rgb(var(--role-manager-text));
-  border: 1px solid rgb(var(--role-manager-border));
-  @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
+:root[data-theme="dark"] {
+  --color-bg: #060714;
+  --color-surface: #0d1020;
+  --color-surface-2: #12172a;
+  --color-surface-3: #1a2138;
+  --color-card: #0f1326;
+  --color-text: #f8fafc;
+  --color-text-muted: #98a2b3;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-primary: #4aa3ff;
+  --color-primary-soft: rgba(74, 163, 255, 0.18);
+  --color-primary-ring: rgba(74, 163, 255, 0.18);
+  --color-danger: #ff6b63;
+  --shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.22);
+  --shadow-card: 0 22px 54px rgba(0, 0, 0, 0.32);
 }
 
-.role-owner {
-  background: rgb(var(--role-owner-bg));
-  color: rgb(var(--role-owner-text));
-  border: 1px solid rgb(var(--role-owner-border));
-  @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
+* {
+  box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(circle at top left, rgba(60, 145, 230, 0.1), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(60, 145, 230, 0.08), transparent 24%),
+    var(--color-bg);
+  color: var(--color-text);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  background: var(--color-primary);
+  color: white;
+}
+
+.app-input {
+  width: 100%;
+  height: 3rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 0 1rem;
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.app-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.app-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-ring);
+}
+
+.badge-success,
+.badge-info,
+.badge-neutral {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.badge-success {
+  background: rgba(16, 185, 129, 0.14);
+  color: rgb(5, 150, 105);
+}
+
+.badge-info {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.badge-neutral {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+}
+.badge-warning,
+.badge-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.badge-warning {
+  background: rgba(251, 146, 60, 0.16);
+  color: rgb(234, 88, 12);
+}
+
+.badge-danger {
+  background: rgba(250, 204, 21, 0.18);
+  color: rgb(202, 138, 4);
+}
+
+:root[data-theme="dark"] .badge-success {
+  background: rgba(52, 211, 153, 0.16);
+  color: rgb(110, 231, 183);
+}
+
+:root[data-theme="dark"] .badge-info {
+  background: rgba(74, 163, 255, 0.2);
+  color: rgb(125, 190, 255);
+}
+
+:root[data-theme="dark"] .badge-warning {
+  background: rgba(251, 146, 60, 0.18);
+  color: rgb(253, 186, 116);
+}
+
+:root[data-theme="dark"] .badge-danger {
+  background: rgba(250, 204, 21, 0.2);
+  color: rgb(253, 224, 71);
 }

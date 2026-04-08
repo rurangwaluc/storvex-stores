@@ -30,47 +30,47 @@ function cx(...xs) {
 }
 
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
+  return "text-[var(--color-text-muted)]";
 }
 
-function shell() {
-  return "rounded-[26px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
+function pageCard() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
-function panel() {
-  return "rounded-[22px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]";
+function softPanel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
 }
 
 function inputClass() {
-  return "h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "app-input";
 }
 
 function primaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-stone-950 px-4 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function miniBtn(kind = "default") {
-  if (kind === "success") {
-    return "inline-flex h-9 items-center justify-center rounded-xl border border-emerald-600 bg-emerald-600 px-3 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-60";
-  }
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
+}
 
-  if (kind === "warning") {
-    return "inline-flex h-9 items-center justify-center rounded-xl border border-amber-500 bg-amber-500 px-3 text-sm font-medium text-white transition hover:bg-amber-600 disabled:opacity-60";
-  }
+function successBtn() {
+  return "inline-flex h-10 items-center justify-center rounded-2xl bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60";
+}
 
-  return "inline-flex h-9 items-center justify-center rounded-xl border border-stone-300 bg-white px-3 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+function warningBtn() {
+  return "inline-flex h-10 items-center justify-center rounded-2xl bg-amber-500 px-4 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function neutralMiniBtn() {
+  return "inline-flex h-10 items-center justify-center rounded-2xl bg-[var(--color-surface)] px-4 text-sm font-semibold text-[var(--color-text)] ring-1 ring-[var(--color-border)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function formatMoney(n) {
@@ -95,30 +95,36 @@ function statusMeta(status) {
   const map = {
     BORROWED: {
       label: "Borrowed",
-      chip: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300",
+      chip:
+        "border border-[#f7b267]/35 bg-[#f7a541] text-[#3b2206] dark:border-[#f7a541]/22 dark:bg-[#f7a541] dark:text-[#1b1206]",
     },
     RECEIVED: {
       label: "Received",
-      chip: "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-300",
+      chip:
+        "border border-[#59b8ff]/35 bg-[#4aa8ff] text-[#071b2b] dark:border-[#4aa8ff]/22 dark:bg-[#4aa8ff] dark:text-[#06131f]",
     },
     SOLD: {
       label: "Sold",
-      chip: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300",
+      chip:
+        "border border-[#d7ef4a]/35 bg-[#d7ef4a] text-[#283103] dark:border-[#d7ef4a]/22 dark:bg-[#d7ef4a] dark:text-[#182001]",
     },
     PAID: {
       label: "Paid",
-      chip: "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-900/40 dark:bg-violet-950/20 dark:text-violet-300",
+      chip:
+        "border border-[#8ef0ea]/35 bg-[#8ef0ea] text-[#083232] dark:border-[#8ef0ea]/22 dark:bg-[#8ef0ea] dark:text-[#041d1d]",
     },
     RETURNED: {
       label: "Returned",
-      chip: "border-stone-200 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200",
+      chip:
+        "border border-[#ffd36e]/35 bg-[#ffd36e] text-[#3a2804] dark:border-[#ffd36e]/22 dark:bg-[#ffd36e] dark:text-[#1f1603]",
     },
   };
 
   return (
     map[String(status || "").toUpperCase()] || {
       label: String(status || "Unknown"),
-      chip: "border-stone-200 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200",
+      chip:
+        "border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text)]",
     }
   );
 }
@@ -129,7 +135,7 @@ function StatusPill({ status }) {
   return (
     <span
       className={cx(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+        "inline-flex min-h-[2rem] items-center justify-center rounded-full px-4 py-1.5 text-xs font-black tracking-[0.01em] shadow-[var(--shadow-soft)]",
         meta.chip
       )}
     >
@@ -144,10 +150,10 @@ function SupplierPill({ deal }) {
   return (
     <span
       className={cx(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+        "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold",
         isInternal
-          ? "border-stone-200 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
-          : "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-300"
+          ? "bg-[var(--color-surface)] text-[var(--color-text-muted)]"
+          : "bg-[rgba(60,145,230,0.14)] text-[var(--color-primary)]"
       )}
     >
       {isInternal ? "Internal store" : "External supplier"}
@@ -156,25 +162,50 @@ function SupplierPill({ deal }) {
 }
 
 function SummaryCard({ label, value, note, tone = "neutral" }) {
-  const accent =
-    tone === "danger"
-      ? "bg-rose-500"
+  const toneClass =
+    tone === "success"
+      ? "text-emerald-600 dark:text-emerald-300"
+      : tone === "warning"
+      ? "text-amber-600 dark:text-amber-300"
+      : tone === "danger"
+      ? "text-[var(--color-danger)]"
+      : strongText();
+
+  const accentClass =
+    tone === "success"
+      ? "bg-emerald-500"
       : tone === "warning"
       ? "bg-amber-500"
-      : tone === "success"
-      ? "bg-emerald-500"
-      : "bg-stone-900 dark:bg-[rgb(var(--text))]";
+      : tone === "danger"
+      ? "bg-[var(--color-danger)]"
+      : "bg-[var(--color-primary)]";
 
   return (
-    <div className={cx(shell(), "relative overflow-hidden p-4")}>
-      <div className={cx("absolute left-0 top-0 h-full w-1.5", accent)} />
+    <article className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
+      <div className={cx("absolute left-0 top-0 h-full w-1.5", accentClass)} />
       <div className="pl-2">
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
           {label}
         </div>
-        <div className={cx("mt-2 text-2xl font-semibold", strongText())}>{value}</div>
-        {note ? <div className={cx("mt-1 text-sm", mutedText())}>{note}</div> : null}
+        <div className={cx("mt-2 text-[1.7rem] font-black tracking-tight", toneClass)}>{value}</div>
+        {note ? <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div> : null}
       </div>
+    </article>
+  );
+}
+
+function SectionHeading({ eyebrow, title, subtitle }) {
+  return (
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
+        </div>
+      ) : null}
+      <h2 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
+        {title}
+      </h2>
+      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
     </div>
   );
 }
@@ -185,10 +216,10 @@ function FilterChip({ active, children, onClick }) {
       type="button"
       onClick={onClick}
       className={cx(
-        "inline-flex h-10 items-center justify-center rounded-2xl border px-4 text-sm font-medium transition",
+        "inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-semibold transition",
         active
-          ? "border-stone-950 bg-stone-950 text-white hover:bg-stone-800 dark:border-[rgb(var(--text))] dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))]"
-          : "border-stone-300 bg-white text-stone-800 hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]"
+          ? "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
       )}
     >
       {children}
@@ -196,43 +227,57 @@ function FilterChip({ active, children, onClick }) {
   );
 }
 
+function InfoStat({ label, value, sub }) {
+  return (
+    <div className={cx(softPanel(), "p-4")}>
+      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+        {label}
+      </div>
+      <div className={cx("mt-2 text-sm font-bold leading-6", strongText())}>{value || "—"}</div>
+      {sub ? <div className={cx("mt-1 text-xs leading-5", mutedText())}>{sub}</div> : null}
+    </div>
+  );
+}
+
+function SkeletonBlock({ className = "" }) {
+  return <div className={cx("animate-pulse rounded-[20px] bg-[var(--color-surface-2)]", className)} />;
+}
+
 function DealsSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className={cx(
-            panel(),
-            "overflow-hidden p-4 animate-pulse"
-          )}
-        >
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="min-w-0 flex-1">
+        <div key={i} className={cx(pageCard(), "overflow-hidden p-4 sm:p-5")}>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_240px]">
+            <div className="space-y-4">
               <div className="flex gap-2">
-                <div className="h-6 w-24 rounded-full bg-stone-200 dark:bg-stone-700" />
-                <div className="h-6 w-28 rounded-full bg-stone-200 dark:bg-stone-700" />
+                <SkeletonBlock className="h-7 w-24 rounded-full" />
+                <SkeletonBlock className="h-7 w-28 rounded-full" />
               </div>
 
-              <div className="mt-3 h-5 w-64 rounded bg-stone-200 dark:bg-stone-700" />
-              <div className="mt-2 h-4 w-52 rounded bg-stone-100 dark:bg-stone-800" />
-
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <div className="h-20 rounded-2xl bg-stone-100 dark:bg-stone-800" />
-                <div className="h-20 rounded-2xl bg-stone-100 dark:bg-stone-800" />
-                <div className="h-20 rounded-2xl bg-stone-100 dark:bg-stone-800" />
+              <div className="space-y-2">
+                <SkeletonBlock className="h-6 w-64" />
+                <SkeletonBlock className="h-4 w-44" />
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="h-10 rounded bg-stone-100 dark:bg-stone-800" />
-                <div className="h-10 rounded bg-stone-100 dark:bg-stone-800" />
-                <div className="h-10 rounded bg-stone-100 dark:bg-stone-800" />
-                <div className="h-10 rounded bg-stone-100 dark:bg-stone-800" />
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <SkeletonBlock className="h-24 w-full" />
+                <SkeletonBlock className="h-24 w-full" />
+                <SkeletonBlock className="h-24 w-full" />
               </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <SkeletonBlock className="h-16 w-full" />
+                <SkeletonBlock className="h-16 w-full" />
+                <SkeletonBlock className="h-16 w-full" />
+                <SkeletonBlock className="h-16 w-full" />
+              </div>
+
+              <SkeletonBlock className="h-16 w-full" />
             </div>
 
-            <div className="xl:w-[220px] xl:shrink-0">
-              <div className="h-44 rounded-2xl bg-stone-100 dark:bg-stone-800" />
+            <div>
+              <SkeletonBlock className="h-[220px] w-full" />
             </div>
           </div>
         </div>
@@ -243,116 +288,96 @@ function DealsSkeleton() {
 
 function EmptyState({ title, text }) {
   return (
-    <div className={cx(shell(), "px-5 py-12 text-center")}>
+    <div className={cx(pageCard(), "px-5 py-12 text-center")}>
       <div className={cx("text-base font-semibold", strongText())}>{title}</div>
       <div className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</div>
     </div>
   );
 }
 
-function DealCard({
-  deal,
-  busyKey,
-  onOpen,
-  onReceive,
-  onReturn,
-  onSold,
-}) {
+function DealCard({ deal, busyKey, onOpen, onReceive, onReturn, onSold }) {
   const supplierLabel = deal.supplierTenantId
     ? "Internal store"
     : deal.externalSupplierName || "External supplier";
 
   const busy = (key) => busyKey === `${deal.id}:${key}`;
+  const meta = statusMeta(deal.status);
 
   return (
-    <div className={cx(panel(), "overflow-hidden p-4 transition hover:shadow-md")}>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_220px]">
+    <article
+      className={cx(
+        pageCard(),
+        "overflow-hidden border border-[var(--color-border)] p-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] sm:p-5"
+      )}
+    >
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_240px]">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill status={deal.status} />
             <SupplierPill deal={deal} />
           </div>
 
-          <div className="mt-3 flex flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
+          <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0">
-              <h3 className={cx("truncate text-lg font-semibold", strongText())}>
+              <h3 className={cx("truncate text-lg font-black tracking-tight", strongText())}>
                 {deal.productName || "Unnamed product"}
               </h3>
               <div className={cx("mt-1 text-sm", mutedText())}>
-                Serial: <span className={cx("font-medium", strongText())}>{deal.serial || "—"}</span>
+                Serial: <span className={cx("font-semibold", strongText())}>{deal.serial || "—"}</span>
               </div>
             </div>
 
             <div className="shrink-0 text-left xl:text-right">
               <div className={softText()}>Agreed price</div>
-              <div className={cx("mt-1 text-base font-semibold", strongText())}>
+              <div className={cx("mt-1 text-base font-black tracking-tight", strongText())}>
                 {formatMoney(deal.agreedPrice)}
               </div>
             </div>
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))]">
-              <div className={softText()}>Supplier</div>
-              <div className={cx("mt-1 text-sm font-medium", strongText())}>{supplierLabel}</div>
-            </div>
-
-            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))]">
-              <div className={softText()}>Reseller</div>
-              <div className={cx("mt-1 text-sm font-medium", strongText())}>{deal.resellerName || "—"}</div>
-              <div className={cx("mt-1 text-xs", mutedText())}>{deal.resellerPhone || "No phone"}</div>
-            </div>
-
-            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))]">
-              <div className={softText()}>Timeline</div>
-              <div className={cx("mt-1 text-sm font-medium", strongText())}>
-                Created {toDateLabel(deal.createdAt)}
-              </div>
-              <div className={cx("mt-1 text-xs", mutedText())}>
-                Due {toDateLabel(deal.dueDate)}
-              </div>
-            </div>
+            <InfoStat label="Supplier" value={supplierLabel} />
+            <InfoStat
+              label="Reseller"
+              value={deal.resellerName || "—"}
+              sub={deal.resellerPhone || "No phone"}
+            />
+            <InfoStat
+              label="Timeline"
+              value={`Created ${toDateLabel(deal.createdAt)}`}
+              sub={`Due ${toDateLabel(deal.dueDate)}`}
+            />
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div>
-              <div className={softText()}>Qty</div>
-              <div className={cx("mt-1 text-sm font-semibold", strongText())}>{deal.quantity ?? "—"}</div>
-            </div>
-            <div>
-              <div className={softText()}>Sold</div>
-              <div className={cx("mt-1 text-sm font-semibold", strongText())}>{deal.soldQuantity ?? 0}</div>
-            </div>
-            <div>
-              <div className={softText()}>Returned</div>
-              <div className={cx("mt-1 text-sm font-semibold", strongText())}>{deal.returnedQuantity ?? 0}</div>
-            </div>
-            <div>
-              <div className={softText()}>Updated</div>
-              <div className={cx("mt-1 text-sm font-semibold", strongText())}>{toDateLabel(deal.updatedAt)}</div>
-            </div>
+            <InfoStat label="Qty" value={String(deal.quantity ?? "—")} />
+            <InfoStat label="Sold" value={String(deal.soldQuantity ?? 0)} />
+            <InfoStat label="Returned" value={String(deal.returnedQuantity ?? 0)} />
+            <InfoStat label="Updated" value={toDateLabel(deal.updatedAt)} />
           </div>
 
           {deal.notes ? (
-            <div className="mt-4 rounded-2xl border border-dashed border-stone-300 px-4 py-3 text-sm text-stone-700 dark:border-[rgb(var(--border))] dark:text-[rgb(var(--text-muted))]">
+            <div className="mt-4 rounded-[22px] border border-dashed border-[var(--color-border)] px-4 py-3 text-sm leading-6 text-[var(--color-text-muted)]">
               {deal.notes}
             </div>
           ) : null}
         </div>
 
-        <div className="xl:border-l xl:border-stone-200 xl:pl-4 dark:xl:border-[rgb(var(--border))]">
-          <div className="rounded-2xl border border-stone-200 bg-stone-50 p-3 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))]">
-            <div className={cx("text-sm font-semibold", strongText())}>Actions</div>
-            <div className={cx("mt-2 text-xs leading-5", mutedText())}>
-              Open details for payments and full timeline.
+        <aside className="min-w-0">
+          <div className={cx(softPanel(), "h-full p-4")}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className={cx("text-sm font-bold", strongText())}>Actions</div>
+                <div className={cx("mt-1 text-xs leading-5", mutedText())}>
+                  Open full detail or move this deal to the next valid stage.
+                </div>
+              </div>
+
+              <span className={cx("mt-1 h-2.5 w-2.5 rounded-full", meta.dot)} />
             </div>
 
-            <div className="mt-3 flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => onOpen(deal.id)}
-                className={primaryBtn()}
-              >
+            <div className="mt-4 flex flex-col gap-2">
+              <button type="button" onClick={() => onOpen(deal.id)} className={primaryBtn()}>
                 Open details
               </button>
 
@@ -362,7 +387,7 @@ function DealCard({
                     type="button"
                     onClick={() => onReceive(deal.id)}
                     disabled={busy("receive")}
-                    className={miniBtn("success")}
+                    className={successBtn()}
                   >
                     {busy("receive") ? "Receiving..." : "Receive"}
                   </button>
@@ -371,7 +396,7 @@ function DealCard({
                     type="button"
                     onClick={() => onReturn(deal.id)}
                     disabled={busy("return")}
-                    className={miniBtn()}
+                    className={neutralMiniBtn()}
                   >
                     {busy("return") ? "Returning..." : "Return"}
                   </button>
@@ -383,20 +408,25 @@ function DealCard({
                   type="button"
                   onClick={() => onSold(deal.id)}
                   disabled={busy("sold")}
-                  className={miniBtn("warning")}
+                  className={warningBtn()}
                 >
                   {busy("sold") ? "Saving..." : "Record sale"}
                 </button>
               ) : null}
             </div>
 
-            <div className={cx("mt-3 text-[11px]", softText())}>
-              Last updated: {toDateTimeLabel(deal.updatedAt)}
+            <div className="mt-4 rounded-[20px] bg-[var(--color-surface)] px-4 py-3 ring-1 ring-[var(--color-border)]">
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+                Last updated
+              </div>
+              <div className={cx("mt-2 text-sm font-medium leading-6", strongText())}>
+                {toDateTimeLabel(deal.updatedAt)}
+              </div>
             </div>
           </div>
-        </div>
+        </aside>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -556,99 +586,130 @@ export default function InterStoreDeals() {
 
   return (
     <>
-      <CreateDealModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSaved={loadDeals}
-      />
+      <CreateDealModal open={modalOpen} onClose={() => setModalOpen(false)} onSaved={loadDeals} />
 
-      <div className="space-y-5">
-        <section className={cx(shell(), "overflow-hidden")}>
-          <div className="border-b border-stone-200 px-5 py-5 dark:border-[rgb(var(--border))]">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div className="max-w-3xl">
-                <div className={cx("text-xs font-semibold uppercase tracking-[0.16em]", softText())}>
-                  Inter-store
+      <div className="space-y-6">
+        <section className="space-y-5">
+          <div className={cx(pageCard(), "overflow-hidden")}>
+            <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="max-w-3xl">
+                  <SectionHeading
+                    eyebrow="Inter-store"
+                    title="Inter-store deals"
+                    subtitle="Manage borrowed electronics, receipt confirmation, sales progress, returns, and supplier settlement from one locked operational screen."
+                  />
                 </div>
-                <h1 className={cx("mt-2 text-3xl font-semibold tracking-tight", strongText())}>
-                  Inter-store deals
-                </h1>
-                <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                  Manage borrowed electronics, sales progress, returns, and supplier settlement
-                  from one premium operational screen.
-                </p>
-              </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <button type="button" onClick={exportCSV} className={secondaryBtn()}>
-                  Export CSV
-                </button>
-                <button type="button" onClick={() => setModalOpen(true)} className={primaryBtn()}>
-                  New deal
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button type="button" onClick={exportCSV} className={secondaryBtn()}>
+                    Export CSV
+                  </button>
+
+                  <button type="button" onClick={() => setModalOpen(true)} className={primaryBtn()}>
+                    New deal
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-2 xl:grid-cols-5">
-            <SummaryCard label="Total deals" value={summary.total} note="All visible records" />
-            <SummaryCard label="Borrowed" value={summary.borrowed} note="Waiting for receipt" tone="warning" />
-            <SummaryCard label="Received" value={summary.received} note="Inside your store" />
-            <SummaryCard label="Sold" value={summary.sold} note="Awaiting full payment closure" tone="success" />
-            <SummaryCard label="Paid" value={summary.paid} note="Closed successfully" tone="success" />
+            <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-2 xl:grid-cols-5">
+              <SummaryCard label="Total deals" value={summary.total} note="All visible records" />
+              <SummaryCard
+                label="Borrowed"
+                value={summary.borrowed}
+                note="Waiting for receipt"
+                tone="warning"
+              />
+              <SummaryCard
+                label="Received"
+                value={summary.received}
+                note="Inside your store"
+              />
+              <SummaryCard
+                label="Sold"
+                value={summary.sold}
+                note="Awaiting full payment closure"
+                tone="success"
+              />
+              <SummaryCard
+                label="Paid"
+                value={summary.paid}
+                note="Closed successfully"
+                tone="success"
+              />
+            </div>
           </div>
         </section>
 
-        <section className={cx(shell(), "p-4")}>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-            <div className="lg:col-span-6">
-              <label className={cx("text-sm font-medium", strongText())}>Search</label>
-              <input
-                className={inputClass()}
-                placeholder="Search product, serial number, reseller, phone, supplier..."
-                value={filters.q}
-                onChange={(e) => setFilter("q", e.target.value)}
-              />
+        <section className={cx(pageCard(), "p-5 sm:p-6")}>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+              <div className="lg:col-span-6">
+                <label className={cx("text-sm font-medium", strongText())}>Search</label>
+                <input
+                  className={cx(inputClass(), "mt-2")}
+                  placeholder="Search product, serial number, reseller, phone, supplier..."
+                  value={filters.q}
+                  onChange={(e) => setFilter("q", e.target.value)}
+                />
+              </div>
+
+              <div className="lg:col-span-3">
+                <label className={cx("text-sm font-medium", strongText())}>Stage</label>
+                <select
+                  className={cx(inputClass(), "mt-2")}
+                  value={filters.status}
+                  onChange={(e) => setFilter("status", e.target.value)}
+                >
+                  <option value="ALL">All stages</option>
+                  <option value="BORROWED">Borrowed</option>
+                  <option value="RECEIVED">Received</option>
+                  <option value="SOLD">Sold</option>
+                  <option value="PAID">Paid</option>
+                  <option value="RETURNED">Returned</option>
+                </select>
+              </div>
+
+              <div className="lg:col-span-3">
+                <label className={cx("text-sm font-medium", strongText())}>Supplier type</label>
+                <select
+                  className={cx(inputClass(), "mt-2")}
+                  value={filters.supplier}
+                  onChange={(e) => setFilter("supplier", e.target.value)}
+                >
+                  <option value="ALL">All suppliers</option>
+                  <option value="INTERNAL">Internal store</option>
+                  <option value="EXTERNAL">External supplier</option>
+                </select>
+              </div>
             </div>
 
-            <div className="lg:col-span-3">
-              <label className={cx("text-sm font-medium", strongText())}>Stage</label>
-              <select
-                className={inputClass()}
-                value={filters.status}
-                onChange={(e) => setFilter("status", e.target.value)}
-              >
-                <option value="ALL">All stages</option>
-                <option value="BORROWED">Borrowed</option>
-                <option value="RECEIVED">Received</option>
-                <option value="SOLD">Sold</option>
-                <option value="PAID">Paid</option>
-                <option value="RETURNED">Returned</option>
-              </select>
-            </div>
-
-            <div className="lg:col-span-3">
-              <label className={cx("text-sm font-medium", strongText())}>Supplier type</label>
-              <select
-                className={inputClass()}
-                value={filters.supplier}
-                onChange={(e) => setFilter("supplier", e.target.value)}
-              >
-                <option value="ALL">All suppliers</option>
-                <option value="INTERNAL">Internal store</option>
-                <option value="EXTERNAL">External supplier</option>
-              </select>
+            <div className={cx(softPanel(), "p-4")}>
+              <div className={cx("text-sm font-semibold", strongText())}>Visible results</div>
+              <div className={cx("mt-2 text-2xl font-black tracking-tight", strongText())}>
+                {filteredDeals.length}
+              </div>
+              <div className={cx("mt-1 text-sm leading-6", mutedText())}>
+                Filtered deals ready for action.
+              </div>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             <FilterChip active={filters.status === "ALL"} onClick={() => setFilter("status", "ALL")}>
               All
             </FilterChip>
-            <FilterChip active={filters.status === "BORROWED"} onClick={() => setFilter("status", "BORROWED")}>
+            <FilterChip
+              active={filters.status === "BORROWED"}
+              onClick={() => setFilter("status", "BORROWED")}
+            >
               Borrowed
             </FilterChip>
-            <FilterChip active={filters.status === "RECEIVED"} onClick={() => setFilter("status", "RECEIVED")}>
+            <FilterChip
+              active={filters.status === "RECEIVED"}
+              onClick={() => setFilter("status", "RECEIVED")}
+            >
               Received
             </FilterChip>
             <FilterChip active={filters.status === "SOLD"} onClick={() => setFilter("status", "SOLD")}>
@@ -676,15 +737,19 @@ export default function InterStoreDeals() {
                     key={deal.id}
                     deal={deal}
                     busyKey={busyKey}
-                    onOpen={(id) => navigate(`/app/interstore/${id}`)}
-                    onReceive={(id) =>
-                      runAction(`${id}:receive`, () => markReceived(id), "Deal marked as received")
+                    onOpen={(dealId) => navigate(`/app/interstore/${dealId}`)}
+                    onReceive={(dealId) =>
+                      runAction(
+                        `${dealId}:receive`,
+                        () => markReceived(dealId),
+                        "Deal marked as received"
+                      )
                     }
-                    onReturn={(id) =>
-                      runAction(`${id}:return`, () => markReturned(id), "Return recorded")
+                    onReturn={(dealId) =>
+                      runAction(`${dealId}:return`, () => markReturned(dealId), "Return recorded")
                     }
-                    onSold={(id) =>
-                      runAction(`${id}:sold`, () => markSold(id), "Sale recorded")
+                    onSold={(dealId) =>
+                      runAction(`${dealId}:sold`, () => markSold(dealId), "Sale recorded")
                     }
                   />
                 ))}
