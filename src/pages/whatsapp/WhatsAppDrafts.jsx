@@ -14,6 +14,7 @@ import {
   deleteWhatsAppSaleDraft,
   finalizeWhatsAppSaleDraft,
 } from "../../services/whatsappInboxApi";
+import WhatsAppWorkspaceTabs from "./WhatsAppWorkspaceTabs";
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -828,6 +829,8 @@ export default function WhatsAppDrafts() {
           />
         </div>
       </section>
+
+      <WhatsAppWorkspaceTabs />
 
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <aside className={cx(pageCard(), "p-4 sm:p-5")}>

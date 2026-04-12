@@ -26,20 +26,12 @@ function softText() {
   return "text-[var(--color-text-muted)]";
 }
 
-function panelCard() {
-  return "rounded-[24px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
-}
-
 function softPanel() {
   return "rounded-[18px] bg-[var(--color-surface-2)]";
 }
 
-function primaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-4 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-4 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
+function inputClass() {
+  return "h-10 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 text-sm text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]";
 }
 
 function successBadge() {
@@ -122,26 +114,42 @@ function formatTimeAgo(value) {
 
 function normalizeMessage(raw) {
   return {
-    id: raw?.id || "",
+    id: String(raw?.id || ""),
     direction: String(raw?.direction || "INBOUND").toUpperCase(),
     type: String(raw?.type || "TEXT").toUpperCase(),
-    textContent: raw?.textContent || "",
-    mediaUrl: raw?.mediaUrl || "",
-    messageId: raw?.messageId || "",
+    textContent: String(raw?.textContent || ""),
+    mediaUrl: String(raw?.mediaUrl || ""),
+    messageId: String(raw?.messageId || ""),
     createdAt: raw?.createdAt || null,
-    sentById: raw?.sentById || "",
+    sentById: String(raw?.sentById || ""),
   };
+}
+
+function normalizeStaffOption(raw) {
+  return {
+    id: String(raw?.id || ""),
+    name: String(raw?.name || ""),
+    email: String(raw?.email || ""),
+    role: String(raw?.role || "").toUpperCase(),
+    isActive: typeof raw?.isActive === "boolean" ? raw.isActive : true,
+  };
+}
+
+function roleLabel(role) {
+  const v = String(role || "").toUpperCase();
+  if (v === "OWNER") return "Owner";
+  if (v === "MANAGER") return "Manager";
+  if (v === "CASHIER") return "Cashier";
+  if (v === "SELLER") return "Seller";
+  if (v === "STOREKEEPER") return "Storekeeper";
+  if (v === "TECHNICIAN") return "Technician";
+  return "Staff";
 }
 
 function CloseIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M6 6l12 12M18 6L6 18"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -149,12 +157,7 @@ function CloseIcon() {
 function MinimizeIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M6 12h12"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+      <path d="M6 12h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -187,6 +190,27 @@ function SendIcon() {
   );
 }
 
+function ChevronDownIcon({ open }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      className={cx("transition-transform duration-200", open ? "rotate-180" : "")}
+    >
+      <path
+        d="M6 9l6 6 6-6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function CustomerAvatar({ conversation }) {
   const label = String(
     conversation?.customer?.name || conversation?.customer?.phone || conversation?.phone || "?"
@@ -196,7 +220,7 @@ function CustomerAvatar({ conversation }) {
     .toUpperCase();
 
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-xs font-bold text-[var(--color-primary)] ring-1 ring-[var(--color-primary-ring)]">
+    <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-white/14 text-[11px] font-bold text-white ring-1 ring-white/20">
       {label}
     </div>
   );
@@ -204,20 +228,21 @@ function CustomerAvatar({ conversation }) {
 
 function MessageSkeleton() {
   return (
-    <div className="space-y-3 px-3 py-3">
+    <div className="space-y-2 px-2 py-2.5 sm:px-3">
       {[...Array(6)].map((_, i) => (
         <div key={i} className={cx("flex", i % 2 ? "justify-end" : "justify-start")}>
           <div
             className={cx(
-              "max-w-[82%] rounded-[20px] px-4 py-3",
+              "max-w-[82%] rounded-[16px] px-3 py-2 sm:max-w-[78%]",
               i % 2
-                ? "bg-[var(--color-primary-soft)] ring-1 ring-[var(--color-primary-ring)]"
-                : "bg-[var(--color-surface-2)]"
+                ? "bg-[var(--color-primary-soft)] rounded-br-[5px]"
+                : "bg-[var(--color-card)] border border-[var(--color-border)] rounded-bl-[5px]"
             )}
           >
-            <div className="h-3 w-16 rounded bg-[var(--color-surface)]" />
-            <div className="mt-2 h-3 w-40 rounded bg-[var(--color-surface)]" />
-            <div className="mt-2 h-3 w-28 rounded bg-[var(--color-surface)]" />
+            <div className="h-2.5 w-16 rounded bg-[var(--color-surface)]" />
+            <div className="mt-2 h-3 w-36 rounded bg-[var(--color-surface)]" />
+            <div className="mt-1.5 h-3 w-28 rounded bg-[var(--color-surface)]" />
+            <div className="mt-2 ml-auto h-2.5 w-10 rounded bg-[var(--color-surface)]" />
           </div>
         </div>
       ))}
@@ -232,35 +257,39 @@ function MessageBubble({ item }) {
     <div className={cx("flex", outbound ? "justify-end" : "justify-start")}>
       <div
         className={cx(
-          "max-w-[84%] rounded-[20px] px-4 py-3 shadow-[var(--shadow-card)]",
+          "relative max-w-[82%] rounded-[16px] px-3 py-2 sm:max-w-[78%]",
           outbound
-            ? "bg-[var(--color-primary)] text-white"
-            : "bg-[var(--color-surface-2)] text-[var(--color-text)]"
+            ? "rounded-br-[5px] bg-[var(--color-primary)] text-white"
+            : "rounded-bl-[5px] border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)]"
         )}
       >
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <span
             className={cx(
-              "text-[10px] font-semibold uppercase tracking-[0.18em]",
-              outbound ? "text-white/80" : "text-[var(--color-text-muted)]"
+              "text-[9px] font-semibold uppercase tracking-[0.14em]",
+              outbound ? "text-white/70" : "text-[var(--color-text-muted)]"
             )}
           >
             {outbound ? "Store" : "Customer"}
           </span>
 
-          <span
-            className={cx(
-              "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-              outbound ? "bg-white/15 text-white" : "bg-[var(--color-surface)] text-[var(--color-text-muted)]"
-            )}
-          >
-            {item.type}
-          </span>
+          {item.type && item.type !== "TEXT" ? (
+            <span
+              className={cx(
+                "rounded-full px-1.5 py-0.5 text-[9px] font-semibold",
+                outbound
+                  ? "bg-white/12 text-white/80"
+                  : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]"
+              )}
+            >
+              {item.type}
+            </span>
+          ) : null}
         </div>
 
         <div
           className={cx(
-            "mt-2 whitespace-pre-wrap break-words text-sm leading-6",
+            "mt-1 whitespace-pre-wrap break-words text-[14px] leading-[1.45]",
             outbound ? "text-white" : "text-[var(--color-text)]"
           )}
         >
@@ -270,23 +299,157 @@ function MessageBubble({ item }) {
         {item.mediaUrl ? (
           <div
             className={cx(
-              "mt-2 break-all text-xs leading-5",
-              outbound ? "text-white/80" : "text-[var(--color-text-muted)]"
+              "mt-1.5 break-all text-[11px] leading-5",
+              outbound ? "text-white/75" : "text-[var(--color-text-muted)]"
             )}
           >
             {item.mediaUrl}
           </div>
         ) : null}
 
-        <div
-          className={cx(
-            "mt-2 text-[11px]",
-            outbound ? "text-white/75" : "text-[var(--color-text-muted)]"
-          )}
-        >
-          {formatTimeAgo(item.createdAt)}
+        <div className="mt-1 flex items-center justify-end">
+          <span
+            className={cx(
+              "text-[10px]",
+              outbound ? "text-white/70" : "text-[var(--color-text-muted)]"
+            )}
+          >
+            {formatTimeAgo(item.createdAt)}
+          </span>
         </div>
       </div>
+    </div>
+  );
+}
+
+function AssignmentStrip({
+  canManageAssignment,
+  staffOptions,
+  assignedUserId,
+  assignedStaffName,
+  assignedStaffRole,
+  onAssign,
+  onClear,
+}) {
+  const [nextUserId, setNextUserId] = useState(assignedUserId || "");
+  const [assigning, setAssigning] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const normalizedStaff = useMemo(
+    () => (Array.isArray(staffOptions) ? staffOptions.map(normalizeStaffOption) : []),
+    [staffOptions]
+  );
+
+  useEffect(() => {
+    setNextUserId(assignedUserId || "");
+  }, [assignedUserId]);
+
+  if (!canManageAssignment) return null;
+
+  async function handleAssign() {
+    if (!nextUserId) {
+      toast.error("Choose a staff member first");
+      return;
+    }
+
+    if (typeof onAssign !== "function") {
+      toast.error("Assignment action is not connected yet");
+      return;
+    }
+
+    try {
+      setAssigning(true);
+      await onAssign(nextUserId);
+      setExpanded(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to assign conversation");
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  async function handleClear() {
+    if (typeof onClear !== "function") {
+      toast.error("Clear action is not connected yet");
+      return;
+    }
+
+    try {
+      setClearing(true);
+      await onClear();
+      setNextUserId("");
+      setExpanded(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to clear assignment");
+    } finally {
+      setClearing(false);
+    }
+  }
+
+  return (
+    <div className="border-b border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 sm:px-4">
+      <div className="flex items-center justify-between gap-3 rounded-[16px] bg-[var(--color-bg)]/70 px-3 py-2">
+        <div className="min-w-0">
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.14em]", softText())}>
+            Owner
+          </div>
+          <div className={cx("mt-0.5 truncate text-[13px] font-medium", strongText())}>
+            {assignedStaffName || "Unassigned"}
+          </div>
+          <div className={cx("truncate text-[11px]", mutedText())}>
+            {assignedStaffRole ? roleLabel(assignedStaffRole) : "No staff member selected"}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="inline-flex h-[32px] items-center gap-1.5 rounded-full bg-[var(--color-surface-2)] px-3 text-[12px] font-semibold text-[var(--color-text)] transition hover:opacity-90"
+        >
+          {expanded ? "Hide" : "Assign"}
+          <ChevronDownIcon open={expanded} />
+        </button>
+      </div>
+
+      {expanded ? (
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+          <select
+            className={inputClass()}
+            value={nextUserId}
+            onChange={(e) => setNextUserId(e.target.value)}
+          >
+            <option value="">Choose staff member</option>
+            {normalizedStaff.map((staff) => (
+              <option key={staff.id} value={staff.id}>
+                {staff.name} • {roleLabel(staff.role)}
+              </option>
+            ))}
+          </select>
+
+          <AsyncButton
+            type="button"
+            loading={assigning}
+            loadingText="Assigning..."
+            onClick={handleAssign}
+            className="inline-flex h-[34px] items-center justify-center rounded-full bg-[var(--color-surface-2)] px-3 text-[12px] font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Save
+          </AsyncButton>
+
+          <AsyncButton
+            type="button"
+            loading={clearing}
+            loadingText="Clearing..."
+            onClick={handleClear}
+            className="inline-flex h-[34px] items-center justify-center rounded-full bg-[var(--color-surface-2)] px-3 text-[12px] font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Clear
+          </AsyncButton>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -297,6 +460,10 @@ export default function WhatsAppConversationDrawer({
   onClose,
   onConversationPatched,
   draftsByConversationId = {},
+  staffOptions = [],
+  canManageAssignment = false,
+  onAssignConversation = null,
+  onClearConversationAssignment = null,
 }) {
   const nav = useNavigate();
   const mountedRef = useRef(true);
@@ -478,6 +645,72 @@ export default function WhatsAppConversationDrawer({
     }
   }
 
+  async function handleAssignConversation(userId) {
+    if (typeof onAssignConversation !== "function") return;
+
+    const pickedStaff = Array.isArray(staffOptions)
+      ? staffOptions.map(normalizeStaffOption).find((staff) => staff.id === String(userId))
+      : null;
+
+    await onAssignConversation(conversationId, userId);
+
+    onConversationPatched?.({
+      ...conversation,
+      assignedToId: userId,
+      assignedTo: pickedStaff
+        ? {
+            id: pickedStaff.id,
+            name: pickedStaff.name,
+            email: pickedStaff.email,
+            role: pickedStaff.role,
+            isActive: pickedStaff.isActive,
+          }
+        : conversation?.assignedTo || null,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  async function handleClearConversationAssignment() {
+    if (typeof onClearConversationAssignment !== "function") return;
+
+    await onClearConversationAssignment(conversationId);
+
+    onConversationPatched?.({
+      ...conversation,
+      assignedToId: "",
+      assignedTo: null,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  const staffNameById = useMemo(() => {
+    const map = {};
+    for (const raw of Array.isArray(staffOptions) ? staffOptions : []) {
+      const staff = normalizeStaffOption(raw);
+      if (!staff.id) continue;
+      map[staff.id] = staff.name || roleLabel(staff.role);
+    }
+    return map;
+  }, [staffOptions]);
+
+  const staffRoleById = useMemo(() => {
+    const map = {};
+    for (const raw of Array.isArray(staffOptions) ? staffOptions : []) {
+      const staff = normalizeStaffOption(raw);
+      if (!staff.id) continue;
+      map[staff.id] = staff.role || "";
+    }
+    return map;
+  }, [staffOptions]);
+
+  const assignedStaffName =
+    conversation?.assignedTo?.name ||
+    (conversation?.assignedToId ? staffNameById[String(conversation.assignedToId)] || "" : "");
+
+  const assignedStaffRole =
+    conversation?.assignedTo?.role ||
+    (conversation?.assignedToId ? staffRoleById[String(conversation.assignedToId)] || "" : "");
+
   const stats = useMemo(() => {
     const total = messages.length;
     const inbound = messages.filter((m) => m.direction === "INBOUND").length;
@@ -489,34 +722,37 @@ export default function WhatsAppConversationDrawer({
 
   return createPortal(
     <div className="pointer-events-none fixed inset-0 z-[90] overflow-hidden">
-      <div
+      <button
+        type="button"
+        aria-label="Close conversation drawer"
         className={cx(
-          "pointer-events-none absolute inset-0 transition duration-200",
+          "pointer-events-auto absolute inset-0 transition duration-200",
           visible ? "bg-black/20 opacity-100" : "bg-black/0 opacity-0"
         )}
+        onClick={onClose}
       />
 
-      <div className="absolute bottom-3 right-3 left-3 sm:left-auto sm:right-4 sm:bottom-4">
+      <div className="absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-auto sm:right-4">
         <div
           className={cx(
             "pointer-events-auto ml-auto w-full overflow-hidden border border-[var(--color-border)] bg-[var(--color-card)] shadow-2xl transition-all duration-200",
             minimized
-              ? "max-w-[380px] rounded-[22px]"
-              : "max-w-[420px] rounded-[26px] sm:max-w-[430px]",
+              ? "max-w-[360px] rounded-[22px]"
+              : "max-w-[620px] rounded-[22px] sm:max-w-[660px]",
             visible ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
           )}
         >
-          <div className="bg-[var(--color-primary)] px-3 py-3 text-white">
-            <div className="flex items-start gap-3">
+          <div className="bg-[var(--color-primary)] px-3 py-1.5 text-white sm:px-4">
+            <div className="flex items-center gap-2.5">
               <CustomerAvatar conversation={conversation} />
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-bold">
+                    <div className="truncate text-[13px] font-bold leading-5">
                       {conversation.customer?.name || conversation.phone || "Unknown customer"}
                     </div>
-                    <div className="mt-0.5 truncate text-[11px] text-white/80">
+                    <div className="truncate text-[11px] leading-4 text-white/75">
                       {conversation.customer?.phone || conversation.phone || "—"}
                     </div>
                   </div>
@@ -525,7 +761,7 @@ export default function WhatsAppConversationDrawer({
                     <button
                       type="button"
                       onClick={() => setMinimized((v) => !v)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/12 text-white transition hover:bg-white/18"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/16"
                       aria-label={minimized ? "Expand chat" : "Minimize chat"}
                     >
                       <MinimizeIcon />
@@ -534,7 +770,7 @@ export default function WhatsAppConversationDrawer({
                     <button
                       type="button"
                       onClick={onClose}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/12 text-white transition hover:bg-white/18"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/16"
                       aria-label="Close chat"
                     >
                       <CloseIcon />
@@ -542,12 +778,16 @@ export default function WhatsAppConversationDrawer({
                   </div>
                 </div>
 
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <ProtectionPill tone={conversation.status === "OPEN" ? "success" : "warning"}>
                     {conversation.status === "OPEN" ? "Open" : "Closed"}
                   </ProtectionPill>
 
                   <ProtectionPill tone="info">{stats.total} messages</ProtectionPill>
+
+                  {assignedStaffName ? (
+                    <ProtectionPill tone="info">{assignedStaffName}</ProtectionPill>
+                  ) : null}
 
                   {linkedDraft ? (
                     <ProtectionPill tone="process">
@@ -561,16 +801,26 @@ export default function WhatsAppConversationDrawer({
 
           {!minimized ? (
             <>
-              <div className="border-b border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5">
-                <div className="flex flex-wrap gap-2">
+              <AssignmentStrip
+                canManageAssignment={canManageAssignment}
+                staffOptions={staffOptions}
+                assignedUserId={conversation.assignedToId || ""}
+                assignedStaffName={assignedStaffName}
+                assignedStaffRole={assignedStaffRole}
+                onAssign={handleAssignConversation}
+                onClear={handleClearConversationAssignment}
+              />
+
+              <div className="border-b border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 sm:px-4">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <AsyncButton
                     type="button"
                     loading={refreshing}
-                    loadingText="Refreshing..."
+                    loadingText=""
                     onClick={() => loadMessages(true)}
-                    className={secondaryBtn()}
+                    className="inline-flex h-[34px] items-center justify-center rounded-full bg-[var(--color-surface-2)] px-3 text-[12px] font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <span className={cx("mr-2 inline-flex", refreshing ? "animate-spin" : "")}>
+                    <span className={cx("mr-1.5 inline-flex", refreshing ? "animate-spin" : "")}>
                       <RefreshIcon />
                     </span>
                     Refresh
@@ -579,9 +829,9 @@ export default function WhatsAppConversationDrawer({
                   <AsyncButton
                     type="button"
                     loading={statusSaving}
-                    loadingText="Updating..."
+                    loadingText=""
                     onClick={() => handleStatusChange("OPEN")}
-                    className={secondaryBtn()}
+                    className="inline-flex h-[34px] items-center justify-center rounded-full bg-[var(--color-surface-2)] px-3 text-[12px] font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={conversation.status === "OPEN"}
                   >
                     Reopen
@@ -590,17 +840,27 @@ export default function WhatsAppConversationDrawer({
                   <AsyncButton
                     type="button"
                     loading={statusSaving}
-                    loadingText="Updating..."
+                    loadingText=""
                     onClick={() => handleStatusChange("CLOSED")}
-                    className={secondaryBtn()}
+                    className="inline-flex h-[34px] items-center justify-center rounded-full bg-[var(--color-surface-2)] px-3 text-[12px] font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={conversation.status === "CLOSED"}
                   >
                     Close
                   </AsyncButton>
+
+                  {linkedDraft ? (
+                    <button
+                      type="button"
+                      onClick={() => nav("/app/whatsapp/drafts")}
+                      className="inline-flex h-[34px] items-center justify-center rounded-full bg-[var(--color-surface-2)] px-3 text-[12px] font-semibold text-[var(--color-text)] transition hover:opacity-90"
+                    >
+                      Draft
+                    </button>
+                  ) : null}
                 </div>
               </div>
 
-              <div className="h-[330px] overflow-y-auto bg-[var(--color-bg)] px-3 py-3 sm:h-[360px]">
+              <div className="h-[220px] overflow-y-auto bg-[var(--color-bg)] px-2 py-2.5 sm:h-[245px] sm:px-3">
                 {loading ? (
                   <MessageSkeleton />
                 ) : messages.length === 0 ? (
@@ -609,7 +869,7 @@ export default function WhatsAppConversationDrawer({
                     text="This conversation exists, but no messages were returned."
                   />
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {messages.map((item) => (
                       <MessageBubble key={item.id} item={item} />
                     ))}
@@ -618,81 +878,55 @@ export default function WhatsAppConversationDrawer({
                 )}
               </div>
 
-              <div className="border-t border-[var(--color-border)] bg-[var(--color-card)] px-3 py-3">
-                <div className={cx(softPanel(), "p-3")}>
-                  <label className={cx("mb-2 block text-xs font-semibold", strongText())}>
-                    Reply
-                  </label>
-
-                  <textarea
-                    ref={textareaRef}
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Type a message..."
-                    className="min-h-[88px] w-full resize-none rounded-[18px] border border-[var(--color-border)] bg-[var(--color-card)] px-3.5 py-3 text-sm leading-6 text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]"
-                  />
-
-                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className={cx("text-[11px] leading-5", mutedText())}>
-                      Ctrl/Cmd + Enter to send
+              <div className="border-t border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 sm:px-4">
+                <div className={cx(softPanel(), "p-2.5")}>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="min-w-0 flex-1">
+                      <textarea
+                        ref={textareaRef}
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Type a message"
+                        rows={1}
+                        className="max-h-32 min-h-[46px] w-full resize-none rounded-[20px] border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-sm leading-5 text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]"
+                        onInput={(e) => {
+                          e.target.style.height = "46px";
+                          e.target.style.height = `${Math.min(e.target.scrollHeight, 128)}px`;
+                        }}
+                      />
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setReplyText("")}
-                        className={secondaryBtn()}
-                        disabled={sending}
-                      >
-                        Clear
-                      </button>
+                    <div className="flex items-center justify-end gap-2 sm:shrink-0">
+                      {replyText ? (
+                        <button
+                          type="button"
+                          onClick={() => setReplyText("")}
+                          className="inline-flex h-11 items-center justify-center rounded-full px-3 text-xs font-semibold text-[var(--color-text-muted)] transition hover:bg-[var(--color-card)] hover:text-[var(--color-text)] disabled:opacity-60"
+                          disabled={sending}
+                        >
+                          Clear
+                        </button>
+                      ) : null}
 
                       <AsyncButton
                         type="button"
                         loading={sending}
-                        loadingText="Sending..."
+                        loadingText=""
                         onClick={handleReply}
-                        className={primaryBtn()}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--color-primary)] text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                        aria-label="Send message"
                       >
-                        <span className="mr-2 inline-flex">
-                          <SendIcon />
-                        </span>
-                        Send
+                        <SendIcon />
                       </AsyncButton>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {linkedDraft ? (
-                    <button
-                      type="button"
-                      onClick={() => nav("/app/whatsapp/drafts")}
-                      className={secondaryBtn()}
-                    >
-                      Open draft
-                    </button>
-                  ) : null}
-
-                  <button
-                    type="button"
-                    onClick={() => nav("/app/pos/sales")}
-                    className={secondaryBtn()}
-                  >
-                    Sales
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => nav("/app/customers")}
-                    className={secondaryBtn()}
-                  >
-                    Customers
-                  </button>
-                </div>
-
-                <div className="mt-2 text-[11px] leading-5 text-[var(--color-text-muted)]">
-                  Last activity: {formatDateTime(conversation.updatedAt || conversation.createdAt)}
+                <div className="mt-1.5 flex items-center justify-between gap-3 text-[11px] leading-5 text-[var(--color-text-muted)]">
+                  <span>Ctrl/Cmd + Enter</span>
+                  <span className="truncate">
+                    {formatDateTime(conversation.updatedAt || conversation.createdAt)}
+                  </span>
                 </div>
               </div>
             </>

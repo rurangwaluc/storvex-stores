@@ -1,14 +1,17 @@
+/* src/services/whatsappInboxApi.js */
 import { apiFetch } from "./apiClient";
 
 /**
  * WhatsApp inbox API
- * Locked to the current backend contract.
  *
- * Backend routes in use:
+ * Backend routes currently in use:
  * - GET    /whatsapp/inbox/conversations
+ * - GET    /whatsapp/inbox/assignable-staff
  * - GET    /whatsapp/inbox/conversations/:id/messages
  * - POST   /whatsapp/inbox/conversations/:id/reply
  * - PATCH  /whatsapp/inbox/conversations/:id/status
+ * - PATCH  /whatsapp/inbox/conversations/:id/assign
+ * - PATCH  /whatsapp/inbox/conversations/:id/unassign
  * - GET    /whatsapp/inbox/sale-drafts
  * - GET    /whatsapp/inbox/sale-drafts/:saleId
  * - POST   /whatsapp/inbox/conversations/:id/create-sale-draft
@@ -34,6 +37,36 @@ function toBoolean(value) {
   return Boolean(value);
 }
 
+function toNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function sanitizeAssignedUser(value) {
+  const item = ensureObject(value);
+  if (!Object.keys(item).length) return null;
+
+  return {
+    id: trimString(item.id),
+    name: trimString(item.name),
+    email: trimString(item.email),
+    role: trimString(item.role).toUpperCase(),
+    isActive: typeof item.isActive === "boolean" ? item.isActive : true,
+  };
+}
+
+function sanitizeAccount(value) {
+  const item = ensureObject(value);
+  if (!Object.keys(item).length) return null;
+
+  return {
+    id: trimString(item.id),
+    phoneNumber: trimString(item.phoneNumber),
+    businessName: trimString(item.businessName),
+    isActive: typeof item.isActive === "boolean" ? item.isActive : false,
+  };
+}
+
 function sanitizeConversation(value) {
   const item = ensureObject(value);
 
@@ -46,6 +79,8 @@ function sanitizeConversation(value) {
     customerId: trimString(item.customerId || item.customer?.id),
     updatedAt: item.updatedAt || null,
     createdAt: item.createdAt || null,
+    messageCount: toNumber(item.messageCount, 0),
+
     customer: item.customer
       ? {
           id: trimString(item.customer.id),
@@ -62,6 +97,25 @@ function sanitizeConversation(value) {
             typeof item.customer.whatsappOptIn === "boolean"
               ? item.customer.whatsappOptIn
               : undefined,
+        }
+      : null,
+
+    assignedTo: sanitizeAssignedUser(item.assignedTo),
+    account: sanitizeAccount(item.account),
+
+    latestMessage: item.latestMessage
+      ? {
+          id: trimString(item.latestMessage.id),
+          direction: trimString(item.latestMessage.direction || "INBOUND").toUpperCase(),
+          type: trimString(item.latestMessage.type || "TEXT").toUpperCase(),
+          textContent:
+            typeof item.latestMessage.textContent === "string"
+              ? item.latestMessage.textContent
+              : "",
+          mediaUrl: trimString(item.latestMessage.mediaUrl),
+          messageId: trimString(item.latestMessage.messageId),
+          createdAt: item.latestMessage.createdAt || null,
+          sentById: trimString(item.latestMessage.sentById),
         }
       : null,
   };
@@ -90,17 +144,17 @@ function sanitizeDraftItem(value) {
     id: trimString(item.id),
     saleId: trimString(item.saleId),
     productId: trimString(item.productId),
-    quantity: Number(item.quantity || 0),
-    price: Number(item.price || item.unitPrice || 0),
-    unitPrice: Number(item.price || item.unitPrice || 0),
+    quantity: toNumber(item.quantity, 0),
+    price: toNumber(item.price ?? item.unitPrice, 0),
+    unitPrice: toNumber(item.price ?? item.unitPrice, 0),
     product: Object.keys(product).length
       ? {
           id: trimString(product.id),
           name: trimString(product.name),
           sku: trimString(product.sku),
           serial: trimString(product.serial),
-          sellPrice: Number(product.sellPrice || 0),
-          stockQty: Number(product.stockQty || 0),
+          sellPrice: toNumber(product.sellPrice, 0),
+          stockQty: toNumber(product.stockQty, 0),
         }
       : null,
   };
@@ -115,10 +169,10 @@ function sanitizeDraft(value) {
     cashierId: trimString(item.cashierId),
     customerId: trimString(item.customerId),
     conversationId: trimString(item.conversationId || item.conversation?.id),
-    total: Number(item.total || 0),
+    total: toNumber(item.total, 0),
     saleType: trimString(item.saleType || "CREDIT").toUpperCase(),
-    amountPaid: Number(item.amountPaid || 0),
-    balanceDue: Number(item.balanceDue || 0),
+    amountPaid: toNumber(item.amountPaid, 0),
+    balanceDue: toNumber(item.balanceDue, 0),
     dueDate: item.dueDate || null,
     status: trimString(item.status),
     isDraft: typeof item.isDraft === "boolean" ? item.isDraft : true,
@@ -128,12 +182,14 @@ function sanitizeDraft(value) {
     createdAt: item.createdAt || null,
     updatedAt: item.updatedAt || item.finalizedAt || item.createdAt || null,
     finalizedAt: item.finalizedAt || null,
+
     cashier: item.cashier
       ? {
           id: trimString(item.cashier.id),
           name: trimString(item.cashier.name),
         }
       : null,
+
     customer: item.customer
       ? {
           id: trimString(item.customer.id),
@@ -152,6 +208,7 @@ function sanitizeDraft(value) {
               : undefined,
         }
       : null,
+
     conversation: item.conversation
       ? {
           id: trimString(item.conversation.id),
@@ -159,6 +216,7 @@ function sanitizeDraft(value) {
           status: trimString(item.conversation.status || "OPEN").toUpperCase(),
         }
       : null,
+
     items: ensureArray(item.items).map(sanitizeDraftItem),
   };
 }
@@ -168,7 +226,7 @@ function sanitizePayment(value) {
 
   return {
     id: trimString(item.id),
-    amount: Number(item.amount || 0),
+    amount: toNumber(item.amount, 0),
     method: trimString(item.method).toUpperCase(),
     createdAt: item.createdAt || null,
     note: trimString(item.note),
@@ -184,8 +242,20 @@ function sanitizeCashMovement(value) {
     reason: trimString(item.reason).toUpperCase(),
     amount: item.amount != null ? String(item.amount) : "",
     note: trimString(item.note),
-    createdAt: item.createdAt || null,
-    createdBy: trimString(item.createdBy),
+    createdAt: item.createdAt || item.created_at || null,
+    createdBy: trimString(item.createdBy || item.created_by),
+  };
+}
+
+function sanitizeStaff(value) {
+  const item = ensureObject(value);
+
+  return {
+    id: trimString(item.id),
+    name: trimString(item.name),
+    email: trimString(item.email),
+    role: trimString(item.role).toUpperCase(),
+    isActive: typeof item.isActive === "boolean" ? item.isActive : true,
   };
 }
 
@@ -200,13 +270,6 @@ export async function listWhatsAppConversations() {
     conversations: ensureArray(data?.conversations).map(sanitizeConversation),
   };
 }
-
-/**
- * There is no dedicated backend route for:
- * GET /whatsapp/inbox/conversations/:id
- *
- * So we resolve one conversation from the list endpoint.
- */
 
 export async function getWhatsAppConversation(conversationId) {
   const id = trimString(conversationId);
@@ -228,6 +291,7 @@ export async function listWhatsAppConversationMessages(conversationId) {
 
   return {
     conversationId: trimString(data?.conversationId || id),
+    conversation: data?.conversation ? sanitizeConversation(data.conversation) : null,
     messages: ensureArray(data?.messages).map(sanitizeMessage),
   };
 }
@@ -251,6 +315,10 @@ export async function replyToWhatsAppConversation(conversationId, payload) {
           messageId: trimString(data.message.messageId),
           createdAt: data.message.createdAt || null,
           sentById: trimString(data.message.sentById),
+          direction: "OUTBOUND",
+          type: "TEXT",
+          textContent: body.text,
+          mediaUrl: "",
         }
       : null,
   };
@@ -273,6 +341,54 @@ export async function updateWhatsAppConversationStatus(conversationId, payload) 
           updatedAt: data.updated.updatedAt || null,
         }
       : null,
+  };
+}
+
+/**
+ * Assignable staff
+ */
+
+export async function listAssignableWhatsAppStaff() {
+  const data = await apiFetch("/whatsapp/inbox/assignable-staff");
+
+  return {
+    staff: ensureArray(data?.staff).map(sanitizeStaff),
+  };
+}
+
+/**
+ * Assignment
+ */
+
+export async function assignWhatsAppConversationOwner(conversationId, payload) {
+  const id = trimString(conversationId);
+  const body = {
+    assignedToId: trimString(ensureObject(payload).assignedToId),
+  };
+
+  const data = await apiFetch(`/whatsapp/inbox/conversations/${id}/assign`, {
+    method: "PATCH",
+    body,
+  });
+
+  return {
+    ok: toBoolean(data?.ok),
+    message: trimString(data?.message),
+    conversation: data?.conversation ? sanitizeConversation(data.conversation) : null,
+  };
+}
+
+export async function clearWhatsAppConversationOwner(conversationId) {
+  const id = trimString(conversationId);
+
+  const data = await apiFetch(`/whatsapp/inbox/conversations/${id}/unassign`, {
+    method: "PATCH",
+  });
+
+  return {
+    ok: toBoolean(data?.ok),
+    message: trimString(data?.message),
+    conversation: data?.conversation ? sanitizeConversation(data.conversation) : null,
   };
 }
 
@@ -357,3 +473,19 @@ export async function finalizeWhatsAppSaleDraft(saleId, payload) {
     cashMovement: data?.cashMovement ? sanitizeCashMovement(data.cashMovement) : null,
   };
 }
+
+/**
+ * Stable aliases
+ */
+export const assignConversationOwner = assignWhatsAppConversationOwner;
+export const clearConversationOwner = clearWhatsAppConversationOwner;
+export const listAssignableStaff = listAssignableWhatsAppStaff;
+
+export {
+  sanitizeConversation,
+  sanitizeMessage,
+  sanitizeDraft,
+  sanitizeStaff,
+  sanitizeAssignedUser,
+  sanitizeAccount,
+};

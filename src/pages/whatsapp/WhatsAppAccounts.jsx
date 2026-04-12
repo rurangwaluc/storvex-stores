@@ -8,6 +8,7 @@ import {
   listWhatsAppAccounts,
   updateWhatsAppAccount,
 } from "../../services/whatsappAccountsApi";
+import WhatsAppWorkspaceTabs from "./WhatsAppWorkspaceTabs";
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -305,14 +306,6 @@ function validateForm(form) {
   }
 
   return "";
-}
-
-function updateMask(value) {
-  const text = String(value || "");
-  if (!text) return "Not saved";
-
-  if (text.length <= 8) return "Saved";
-  return `${text.slice(0, 4)}••••${text.slice(-4)}`;
 }
 
 function SecureTextarea({
@@ -690,6 +683,8 @@ export default function WhatsAppAccounts() {
           />
         </div>
       </section>
+
+      <WhatsAppWorkspaceTabs />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[420px,minmax(0,1fr)]">
         <section className={cx(pageCard(), "overflow-hidden")}>

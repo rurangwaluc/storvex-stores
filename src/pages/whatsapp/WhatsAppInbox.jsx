@@ -7,8 +7,12 @@ import PageSkeleton from "../../components/ui/PageSkeleton";
 import {
   listWhatsAppConversations,
   listWhatsAppSaleDrafts,
+  listAssignableWhatsAppStaff,
+  assignWhatsAppConversationOwner,
+  clearWhatsAppConversationOwner,
 } from "../../services/whatsappInboxApi";
 import WhatsAppConversationDrawer from "./WhatsAppConversationDrawer";
+import WhatsAppWorkspaceTabs from "./WhatsAppWorkspaceTabs";
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -64,13 +68,6 @@ function processBadge() {
 
 function neutralBadge() {
   return "bg-[var(--color-surface)] text-[var(--color-text-muted)]";
-}
-
-function formatDateTime(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString();
 }
 
 function formatTimeAgo(value) {
@@ -231,21 +228,31 @@ function normalizeConversation(raw) {
   if (!raw) return null;
 
   return {
-    id: raw.id || "",
-    phone: raw.phone || "",
+    id: String(raw.id || ""),
+    phone: String(raw.phone || ""),
     status: String(raw.status || "OPEN").toUpperCase(),
-    assignedToId: raw.assignedToId || "",
-    accountId: raw.accountId || "",
-    customerId: raw.customerId || raw.customer?.id || "",
+    assignedToId: String(raw.assignedToId || ""),
+    accountId: String(raw.accountId || ""),
+    customerId: String(raw.customerId || raw.customer?.id || ""),
     updatedAt: raw.updatedAt || null,
     createdAt: raw.createdAt || null,
+    assignedTo: raw.assignedTo
+      ? {
+          id: String(raw.assignedTo.id || ""),
+          name: String(raw.assignedTo.name || ""),
+          email: String(raw.assignedTo.email || ""),
+          role: String(raw.assignedTo.role || "").toUpperCase(),
+          isActive:
+            typeof raw.assignedTo.isActive === "boolean" ? raw.assignedTo.isActive : true,
+        }
+      : null,
     customer: raw.customer
       ? {
-          id: raw.customer.id || "",
-          name: raw.customer.name || "",
-          phone: raw.customer.phone || raw.phone || "",
-          email: raw.customer.email || "",
-          address: raw.customer.address || "",
+          id: String(raw.customer.id || ""),
+          name: String(raw.customer.name || ""),
+          phone: String(raw.customer.phone || raw.phone || ""),
+          email: String(raw.customer.email || ""),
+          address: String(raw.customer.address || ""),
         }
       : null,
   };
@@ -255,11 +262,11 @@ function normalizeDraft(raw) {
   if (!raw) return null;
 
   return {
-    id: raw.id || "",
-    conversationId: raw.conversationId || raw.conversation?.id || "",
-    customerId: raw.customerId || "",
+    id: String(raw.id || ""),
+    conversationId: String(raw.conversationId || raw.conversation?.id || ""),
+    customerId: String(raw.customerId || ""),
     saleType: String(raw.saleType || "CREDIT").toUpperCase(),
-    status: raw.status || "",
+    status: String(raw.status || ""),
     total: Number(raw.total || 0),
     balanceDue: Number(raw.balanceDue || 0),
     createdAt: raw.createdAt || null,
@@ -267,11 +274,23 @@ function normalizeDraft(raw) {
   };
 }
 
+function normalizeStaff(raw) {
+  if (!raw) return null;
+
+  return {
+    id: String(raw.id || ""),
+    name: String(raw.name || ""),
+    email: String(raw.email || ""),
+    role: String(raw.role || "").toUpperCase(),
+    isActive: typeof raw.isActive === "boolean" ? raw.isActive : true,
+  };
+}
+
 function groupLabel(status) {
   return status === "OPEN" ? "Open conversations" : "Closed conversations";
 }
 
-function getConversationSearchText(item, linkedDraft) {
+function getConversationSearchText(item, linkedDraft, assignedName) {
   return [
     item?.phone,
     item?.status,
@@ -280,13 +299,20 @@ function getConversationSearchText(item, linkedDraft) {
     item?.customer?.email,
     linkedDraft?.id,
     linkedDraft?.saleType,
+    assignedName,
   ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
 }
 
-function CompactQueueRow({ item, linkedDraft, selected, onOpen }) {
+function CompactQueueRow({
+  item,
+  linkedDraft,
+  selected,
+  onOpen,
+  assignedStaffName,
+}) {
   return (
     <button
       type="button"
@@ -322,6 +348,10 @@ function CompactQueueRow({ item, linkedDraft, selected, onOpen }) {
                 {item.status === "OPEN" ? "Open" : "Closed"}
               </ProtectionPill>
 
+              {assignedStaffName ? (
+                <ProtectionPill tone="info">{assignedStaffName}</ProtectionPill>
+              ) : null}
+
               {linkedDraft ? (
                 <ProtectionPill tone="process">
                   Draft #{String(linkedDraft.id).slice(-6).toUpperCase()}
@@ -332,9 +362,11 @@ function CompactQueueRow({ item, linkedDraft, selected, onOpen }) {
 
           <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <div className={cx("min-w-0 truncate", mutedText())}>
-              {linkedDraft
-                ? `${linkedDraft.saleType} draft • RWF ${Number(linkedDraft.total || 0).toLocaleString()}`
-                : "No linked draft yet"}
+              {assignedStaffName
+                ? `Assigned to ${assignedStaffName}`
+                : linkedDraft
+                  ? `${linkedDraft.saleType} draft • RWF ${Number(linkedDraft.total || 0).toLocaleString()}`
+                  : "No linked draft yet"}
             </div>
 
             <div className={cx("shrink-0", softText())}>
@@ -347,7 +379,14 @@ function CompactQueueRow({ item, linkedDraft, selected, onOpen }) {
   );
 }
 
-function QueueGroup({ title, items, draftsByConversationId, selectedConversationId, onOpen }) {
+function QueueGroup({
+  title,
+  items,
+  draftsByConversationId,
+  selectedConversationId,
+  onOpen,
+  staffNameById,
+}) {
   if (!items.length) return null;
 
   return (
@@ -358,15 +397,21 @@ function QueueGroup({ title, items, draftsByConversationId, selectedConversation
       </div>
 
       <div className="grid grid-cols-1 gap-2">
-        {items.map((item) => (
-          <CompactQueueRow
-            key={item.id}
-            item={item}
-            linkedDraft={draftsByConversationId[item.id] || null}
-            selected={selectedConversationId === item.id}
-            onOpen={() => onOpen(item)}
-          />
-        ))}
+        {items.map((item) => {
+          const assignedStaffName =
+            item.assignedTo?.name || staffNameById[item.assignedToId] || "";
+
+          return (
+            <CompactQueueRow
+              key={item.id}
+              item={item}
+              linkedDraft={draftsByConversationId[item.id] || null}
+              selected={selectedConversationId === item.id}
+              onOpen={() => onOpen(item)}
+              assignedStaffName={assignedStaffName}
+            />
+          );
+        })}
       </div>
     </section>
   );
@@ -391,6 +436,8 @@ export default function WhatsAppInbox() {
 
   const [conversations, setConversations] = useState([]);
   const [drafts, setDrafts] = useState([]);
+  const [staffOptions, setStaffOptions] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -413,12 +460,13 @@ export default function WhatsAppInbox() {
 
   async function loadInbox(showToast = false) {
     try {
-      if (!conversations.length && !drafts.length) setLoading(true);
+      if (!conversations.length && !drafts.length && !staffOptions.length) setLoading(true);
       else setRefreshing(true);
 
-      const [conversationRes, draftRes] = await Promise.all([
+      const [conversationRes, draftRes, staffRes] = await Promise.all([
         listWhatsAppConversations(),
         listWhatsAppSaleDrafts(),
+        listAssignableWhatsAppStaff(),
       ]);
 
       if (!mountedRef.current) return;
@@ -431,6 +479,10 @@ export default function WhatsAppInbox() {
         ? draftRes.drafts.map(normalizeDraft).filter(Boolean)
         : [];
 
+      const nextStaff = Array.isArray(staffRes?.staff)
+        ? staffRes.staff.map(normalizeStaff).filter(Boolean)
+        : [];
+
       nextConversations.sort(
         (a, b) =>
           new Date(b.updatedAt || b.createdAt || 0).getTime() -
@@ -439,6 +491,7 @@ export default function WhatsAppInbox() {
 
       setConversations(nextConversations);
       setDrafts(nextDrafts);
+      setStaffOptions(nextStaff);
       setRenderCount(INITIAL_RENDER_COUNT);
 
       if (selectedConversationId) {
@@ -457,6 +510,7 @@ export default function WhatsAppInbox() {
       toast.error(err?.message || "Failed to load WhatsApp inbox");
       setConversations([]);
       setDrafts([]);
+      setStaffOptions([]);
       setSelectedConversationId("");
       setDrawerOpen(false);
     } finally {
@@ -467,7 +521,7 @@ export default function WhatsAppInbox() {
   }
 
   useEffect(() => {
-    loadInbox();
+    void loadInbox();
   }, []);
 
   const draftsByConversationId = useMemo(() => {
@@ -491,24 +545,30 @@ export default function WhatsAppInbox() {
     return map;
   }, [drafts]);
 
+  const staffNameById = useMemo(() => {
+    const map = {};
+    for (const staff of staffOptions) {
+      if (!staff?.id) continue;
+      map[staff.id] = staff.name || staff.role || "Staff";
+    }
+    return map;
+  }, [staffOptions]);
+
   const filteredConversations = useMemo(() => {
     const q = query.trim().toLowerCase();
 
-    const out = conversations.filter((item) => {
+    return conversations.filter((item) => {
       const linkedDraft = draftsByConversationId[item.id] || null;
+      const assignedName = item.assignedTo?.name || staffNameById[item.assignedToId] || "";
 
       if (statusFilter !== "ALL" && item.status !== statusFilter) return false;
-
       if (linkedFilter === "LINKED" && !linkedDraft) return false;
       if (linkedFilter === "UNLINKED" && linkedDraft) return false;
-
       if (!q) return true;
 
-      return getConversationSearchText(item, linkedDraft).includes(q);
+      return getConversationSearchText(item, linkedDraft, assignedName).includes(q);
     });
-
-    return out;
-  }, [conversations, draftsByConversationId, query, statusFilter, linkedFilter]);
+  }, [conversations, draftsByConversationId, query, statusFilter, linkedFilter, staffNameById]);
 
   const visibleConversations = useMemo(() => {
     return filteredConversations.slice(0, renderCount);
@@ -558,6 +618,10 @@ export default function WhatsAppInbox() {
               customer: nextConversation.customer
                 ? { ...(item.customer || {}), ...nextConversation.customer }
                 : item.customer,
+              assignedTo:
+                nextConversation.assignedTo !== undefined
+                  ? nextConversation.assignedTo
+                  : item.assignedTo,
             }
           : item
       );
@@ -570,6 +634,58 @@ export default function WhatsAppInbox() {
 
       return next;
     });
+  }
+
+  async function handleAssignConversation(conversationId, userId) {
+    if (!conversationId || !userId) return;
+
+    try {
+      const res = await assignWhatsAppConversationOwner(conversationId, { assignedToId: userId });
+      const updated = res?.conversation || null;
+
+      if (updated?.id) {
+        patchConversation(normalizeConversation(updated));
+      } else {
+        const assignedTo = staffOptions.find((x) => x.id === userId) || null;
+
+        patchConversation({
+          id: conversationId,
+          assignedToId: userId,
+          assignedTo,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      toast.success("Conversation assigned");
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to assign conversation");
+    }
+  }
+
+  async function handleClearConversationAssignment(conversationId) {
+    if (!conversationId) return;
+
+    try {
+      const res = await clearWhatsAppConversationOwner(conversationId);
+      const updated = res?.conversation || null;
+
+      if (updated?.id) {
+        patchConversation(normalizeConversation(updated));
+      } else {
+        patchConversation({
+          id: conversationId,
+          assignedToId: "",
+          assignedTo: null,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      toast.success("Assignment cleared");
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to clear assignment");
+    }
   }
 
   function resetFilters() {
@@ -655,6 +771,8 @@ export default function WhatsAppInbox() {
           </div>
         </section>
 
+        <WhatsAppWorkspaceTabs />
+
         <section className={cx(pageCard(), "overflow-hidden")}>
           <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
             <div className="flex flex-col gap-4">
@@ -665,7 +783,7 @@ export default function WhatsAppInbox() {
                   </div>
                   <p className={cx("mt-1 text-sm leading-6", mutedText())}>
                     Compact queue built for high volume. Open any thread to reply, update status,
-                    and jump into related draft work.
+                    assign an owner, and jump into related draft work.
                   </p>
                 </div>
 
@@ -675,7 +793,7 @@ export default function WhatsAppInbox() {
                   </span>
                   <input
                     className={cx(inputClass(), "pl-10")}
-                    placeholder="Search by phone, name, email, draft, or status..."
+                    placeholder="Search by phone, name, email, draft, staff, or status..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
@@ -738,7 +856,9 @@ export default function WhatsAppInbox() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <ProtectionPill tone="neutral">{filteredConversations.length} matched</ProtectionPill>
+                  <ProtectionPill tone="neutral">
+                    {filteredConversations.length} matched
+                  </ProtectionPill>
                   {(query || statusFilter !== "ALL" || linkedFilter !== "ALL") && (
                     <button type="button" onClick={resetFilters} className={secondaryBtn()}>
                       Reset filters
@@ -763,6 +883,7 @@ export default function WhatsAppInbox() {
                   draftsByConversationId={draftsByConversationId}
                   selectedConversationId={selectedConversationId}
                   onOpen={openConversation}
+                  staffNameById={staffNameById}
                 />
 
                 <QueueGroup
@@ -771,6 +892,7 @@ export default function WhatsAppInbox() {
                   draftsByConversationId={draftsByConversationId}
                   selectedConversationId={selectedConversationId}
                   onOpen={openConversation}
+                  staffNameById={staffNameById}
                 />
 
                 {remainingCount > 0 ? (
@@ -791,6 +913,10 @@ export default function WhatsAppInbox() {
         onClose={() => setDrawerOpen(false)}
         onConversationPatched={patchConversation}
         draftsByConversationId={draftsByConversationId}
+        canManageAssignment={true}
+        staffOptions={staffOptions}
+        onAssignConversation={handleAssignConversation}
+        onClearConversationAssignment={handleClearConversationAssignment}
       />
     </>
   );

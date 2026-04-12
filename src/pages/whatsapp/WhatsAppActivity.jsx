@@ -6,6 +6,7 @@ import AsyncButton from "../../components/ui/AsyncButton";
 import PageSkeleton from "../../components/ui/PageSkeleton";
 import { listWhatsAppConversations, listWhatsAppSaleDrafts } from "../../services/whatsappInboxApi";
 import { listWhatsAppAccounts } from "../../services/whatsappAccountsApi";
+import WhatsAppWorkspaceTabs from "./WhatsAppWorkspaceTabs";
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -248,7 +249,48 @@ function formatTimeAgo(value) {
   if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
 
   const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-  return `${days} day${days > 1 ? "s" : ""} ago`;
+  if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+
+  return d.toLocaleDateString();
+}
+
+function startOfToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function startOfYesterday() {
+  const d = startOfToday();
+  d.setDate(d.getDate() - 1);
+  return d;
+}
+
+function isToday(value) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+  return d >= startOfToday();
+}
+
+function isYesterday(value) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+  return d >= startOfYesterday() && d < startOfToday();
+}
+
+function dayGroupLabel(value) {
+  if (!value) return "No date";
+  if (isToday(value)) return "Today";
+  if (isYesterday(value)) return "Yesterday";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "No date";
+  return d.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function normalizeConversation(raw) {
@@ -313,19 +355,14 @@ function buildActivityFeed({ conversations, drafts, accounts }) {
   for (const account of accounts) {
     events.push({
       id: `account-${account.id}-${account.updatedAt || account.createdAt || "x"}`,
-      kind: "ACCOUNT",
+      kind: "CHANNEL",
       tone: account.isActive ? "success" : "warning",
-      title: account.isActive
-        ? "WhatsApp channel active"
-        : "WhatsApp channel inactive",
+      title: account.isActive ? "WhatsApp channel active" : "WhatsApp channel inactive",
       description: account.businessName || account.phoneNumber || "WhatsApp channel",
-      meta: account.phoneNumberId
-        ? `Channel ID: ${account.phoneNumberId}`
-        : account.hasAccessToken
-        ? "Connection saved"
-        : "Connection not saved",
+      meta: account.phoneNumber || "No phone number saved",
       at: account.updatedAt || account.createdAt || null,
       link: "/app/whatsapp/accounts",
+      sortAt: new Date(account.updatedAt || account.createdAt || 0).getTime(),
     });
   }
 
@@ -334,14 +371,12 @@ function buildActivityFeed({ conversations, drafts, accounts }) {
       id: `conversation-${convo.id}-${convo.updatedAt || convo.createdAt || "x"}`,
       kind: "CONVERSATION",
       tone: convo.status === "OPEN" ? "info" : "neutral",
-      title:
-        convo.status === "OPEN"
-          ? "Conversation needs attention"
-          : "Conversation closed",
+      title: convo.status === "OPEN" ? "Conversation needs attention" : "Conversation closed",
       description: convo.customer?.name || convo.customer?.phone || convo.phone || "Unknown customer",
       meta: convo.customer?.email || convo.phone || "WhatsApp conversation",
       at: convo.updatedAt || convo.createdAt || null,
       link: "/app/whatsapp/inbox",
+      sortAt: new Date(convo.updatedAt || convo.createdAt || 0).getTime(),
     });
   }
 
@@ -352,28 +387,24 @@ function buildActivityFeed({ conversations, drafts, accounts }) {
       tone: draft.saleType === "CREDIT" ? "warning" : "process",
       title: `${draft.saleType === "CREDIT" ? "Credit" : "Cash"} draft active`,
       description: `Draft #${String(draft.id).slice(-6).toUpperCase()}`,
-      meta: `RWF ${Number(draft.total || 0).toLocaleString()}${
-        draft.balanceDue > 0 ? ` • Balance RWF ${Number(draft.balanceDue).toLocaleString()}` : ""
-      }`,
+      meta: `RWF ${Number(draft.total || 0).toLocaleString()}`,
       at: draft.updatedAt || draft.createdAt || null,
       link: "/app/whatsapp/drafts",
+      sortAt: new Date(draft.updatedAt || draft.createdAt || 0).getTime(),
     });
   }
 
-  return events
-    .sort(
-      (a, b) => new Date(b.at || 0).getTime() - new Date(a.at || 0).getTime()
-    );
+  return events.sort((a, b) => b.sortAt - a.sortAt);
 }
 
-function ActivityCard({ item, onOpen }) {
+function ActivityRow({ item, onOpen }) {
   return (
     <button
       type="button"
       onClick={onOpen}
       className={cx(
-        pageCard(),
-        "w-full overflow-hidden p-4 text-left transition hover:translate-y-[-1px]"
+        softPanel(),
+        "w-full overflow-hidden border border-transparent p-4 text-left transition hover:translate-y-[-1px]"
       )}
     >
       <div className="flex items-start gap-3">
@@ -385,7 +416,7 @@ function ActivityCard({ item, onOpen }) {
             <div className={cx("text-xs", softText())}>{formatTimeAgo(item.at)}</div>
           </div>
 
-          <div className={cx("mt-3 break-words text-sm font-bold", strongText())}>
+          <div className={cx("mt-2 break-words text-sm font-bold", strongText())}>
             {item.title}
           </div>
 
@@ -394,9 +425,7 @@ function ActivityCard({ item, onOpen }) {
           </div>
 
           {item.meta ? (
-            <div className={cx("mt-2 break-words text-xs leading-5", softText())}>
-              {item.meta}
-            </div>
+            <div className={cx("mt-1 break-words text-xs leading-5", softText())}>{item.meta}</div>
           ) : null}
 
           <div className="mt-3 flex items-center justify-between gap-3">
@@ -406,6 +435,35 @@ function ActivityCard({ item, onOpen }) {
         </div>
       </div>
     </button>
+  );
+}
+
+function GroupBlock({ title, items, onOpen, expanded, onExpand }) {
+  return (
+    <section className={cx(pageCard(), "overflow-hidden")}>
+      <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className={cx("text-lg font-black tracking-tight", strongText())}>{title}</div>
+            <div className={cx("mt-1 text-sm", mutedText())}>{items.length} items</div>
+          </div>
+
+          {!expanded ? (
+            <button type="button" onClick={onExpand} className={secondaryBtn()}>
+              Show more
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="p-5 sm:p-6">
+        <div className="grid grid-cols-1 gap-3">
+          {items.map((item) => (
+            <ActivityRow key={item.id} item={item} onOpen={() => onOpen(item)} />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -420,6 +478,8 @@ export default function WhatsAppActivity() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
+
+  const [groupExpanded, setGroupExpanded] = useState({});
 
   useEffect(() => {
     mountedRef.current = true;
@@ -510,6 +570,21 @@ export default function WhatsAppActivity() {
     });
   }, [activityFeed, query]);
 
+  const groupedFeed = useMemo(() => {
+    const grouped = new Map();
+
+    for (const item of filteredFeed) {
+      const key = dayGroupLabel(item.at);
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(item);
+    }
+
+    return Array.from(grouped.entries()).map(([label, items]) => ({
+      label,
+      items,
+    }));
+  }, [filteredFeed]);
+
   const latestConversation = useMemo(() => {
     return [...conversations].sort(
       (a, b) =>
@@ -525,6 +600,15 @@ export default function WhatsAppActivity() {
         new Date(a.updatedAt || a.createdAt || 0).getTime()
     )[0] || null;
   }, [drafts]);
+
+  function getVisibleItems(label, items) {
+    if (groupExpanded[label]) return items;
+    return items.slice(0, 12);
+  }
+
+  function handleOpen(item) {
+    nav(item.link);
+  }
 
   if (loading) {
     return <PageSkeleton titleWidth="w-44" lines={5} variant="default" />;
@@ -586,7 +670,7 @@ export default function WhatsAppActivity() {
           <SummaryCard
             label="Connected channels"
             value={summary.connectedChannels}
-            note="Channels with saved connection values"
+            note="Channels with saved connection details"
             tone="neutral"
           />
           <SummaryCard
@@ -604,52 +688,66 @@ export default function WhatsAppActivity() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className={cx(pageCard(), "overflow-hidden")}>
-          <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <div className={cx("text-lg font-black tracking-tight", strongText())}>
-                  Activity stream
-                </div>
-                <p className={cx("mt-1 text-sm leading-6", mutedText())}>
-                  A live operational view built from your current WhatsApp channels, conversations,
-                  and drafts.
-                </p>
-              </div>
+      <WhatsAppWorkspaceTabs />
 
-              <div className="relative w-full max-w-md">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
-                  <SearchIcon />
-                </span>
-                <input
-                  className={cx(inputClass(), "pl-10")}
-                  placeholder="Search activity by type, customer, channel, or draft..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-6">
+          <section className={cx(pageCard(), "overflow-hidden")}>
+            <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className={cx("text-lg font-black tracking-tight", strongText())}>
+                    Activity stream
+                  </div>
+                  <p className={cx("mt-1 text-sm leading-6", mutedText())}>
+                    Grouped and compact so the page stays clean even with high WhatsApp volume.
+                  </p>
+                </div>
+
+                <div className="relative w-full max-w-md">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+                    <SearchIcon />
+                  </span>
+                  <input
+                    className={cx(inputClass(), "pl-10")}
+                    placeholder="Search activity by type, customer, channel, or draft..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="p-5 sm:p-6">
-            {filteredFeed.length === 0 ? (
-              <EmptyState
-                title="No activity found"
-                text="There is no WhatsApp activity matching your current search."
-              />
-            ) : (
-              <div className="grid grid-cols-1 gap-3">
-                {filteredFeed.map((item) => (
-                  <ActivityCard
-                    key={item.id}
-                    item={item}
-                    onOpen={() => nav(item.link)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+            <div className="p-5 sm:p-6">
+              {groupedFeed.length === 0 ? (
+                <EmptyState
+                  title="No activity found"
+                  text="There is no WhatsApp activity matching your current search."
+                />
+              ) : (
+                <div className="space-y-6">
+                  {groupedFeed.map((group) => {
+                    const visibleItems = getVisibleItems(group.label, group.items);
+                    const expanded =
+                      groupExpanded[group.label] || visibleItems.length >= group.items.length;
+
+                    return (
+                      <GroupBlock
+                        key={group.label}
+                        title={group.label}
+                        items={visibleItems}
+                        expanded={expanded}
+                        onExpand={() =>
+                          setGroupExpanded((prev) => ({ ...prev, [group.label]: true }))
+                        }
+                        onOpen={handleOpen}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
         </div>
 
         <div className="space-y-6">
@@ -716,7 +814,7 @@ export default function WhatsAppActivity() {
               <div className={cx(softPanel(), "p-4")}>
                 <div className={cx("text-sm font-bold", strongText())}>Conversation load</div>
                 <div className={cx("mt-1 text-sm leading-6", mutedText())}>
-                  Whether your store has customer threads that still need attention.
+                  Which customer threads still need staff attention.
                 </div>
               </div>
 

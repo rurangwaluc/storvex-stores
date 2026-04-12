@@ -126,6 +126,14 @@ function Icon({ type }) {
         </svg>
       );
 
+    case "chat-broadcast":
+      return (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
+          <path d="M6 18l-2 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z" />
+          <path d="M8 10h8M8 13h8M8 16h5" strokeLinecap="round" />
+        </svg>
+      );
+
     case "reports":
       return (
         <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -261,6 +269,12 @@ const NAV_ITEMS = [
         to: "/app/whatsapp/activity",
         label: "WhatsApp activity",
         icon: "chat-activity",
+        roles: ["OWNER", "MANAGER"],
+      },
+      {
+        to: "/app/whatsapp/broadcasts",
+        label: "WhatsApp broadcasts",
+        icon: "chat-broadcast",
         roles: ["OWNER", "MANAGER"],
       },
     ],

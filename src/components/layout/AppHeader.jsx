@@ -1,4 +1,6 @@
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 function MenuIcon() {
   return (
@@ -43,15 +45,26 @@ function MoonIcon() {
 
 function routeLabel(pathname) {
   if (pathname === "/app") return "Dashboard";
+
+  if (pathname.startsWith("/app/whatsapp/broadcasts")) return "WhatsApp broadcasts";
+  if (pathname.startsWith("/app/whatsapp/activity")) return "WhatsApp activity";
+  if (pathname.startsWith("/app/whatsapp/accounts")) return "WhatsApp accounts";
+  if (pathname.startsWith("/app/whatsapp/drafts")) return "WhatsApp drafts";
+  if (pathname.startsWith("/app/whatsapp/inbox")) return "WhatsApp inbox";
+
+  if (pathname.startsWith("/app/pos/drawer")) return "Cash drawer";
+  if (pathname.startsWith("/app/pos/credit")) return "Credit dashboard";
+  if (pathname.startsWith("/app/pos/sales")) return "Sales";
   if (pathname.startsWith("/app/pos")) return "POS";
+
   if (pathname.startsWith("/app/interstore")) return "Inter-Store";
+
   if (pathname.startsWith("/app/inventory/reorder")) return "Reorder list";
   if (pathname.startsWith("/app/inventory/stock-history")) return "Stock history";
   if (pathname.startsWith("/app/inventory")) return "Inventory";
+
   if (pathname.startsWith("/app/suppliers")) return "Suppliers";
   if (pathname.startsWith("/app/customers")) return "Customers";
-  if (pathname.startsWith("/app/whatsapp/inbox")) return "WhatsApp inbox";
-  if (pathname.startsWith("/app/whatsapp/drafts")) return "WhatsApp drafts";
   if (pathname.startsWith("/app/documents")) return "Document Center";
   if (pathname.startsWith("/app/repairs")) return "Repairs";
   if (pathname.startsWith("/app/reports")) return "Reports";
@@ -59,7 +72,132 @@ function routeLabel(pathname) {
   if (pathname.startsWith("/app/billing")) return "Billing";
   if (pathname.startsWith("/app/audit")) return "Audit logs";
   if (pathname.startsWith("/app/employees")) return "Employees";
+
   return "Workspace";
+}
+
+function safeReadJson(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function pickFirstNonEmpty(...values) {
+  for (const value of values) {
+    const v = String(value || "").trim();
+    if (v) return v;
+  }
+  return "";
+}
+
+function decodeTokenUser(token) {
+  if (!token) return {};
+
+  try {
+    const decoded = jwtDecode(token);
+
+    return {
+      userName: pickFirstNonEmpty(
+        decoded?.name,
+        decoded?.fullName,
+        decoded?.username,
+        decoded?.userName
+      ),
+      userEmail: pickFirstNonEmpty(decoded?.email),
+      workspaceName: pickFirstNonEmpty(
+        decoded?.tenantName,
+        decoded?.storeName,
+        decoded?.businessName,
+        decoded?.shopName
+      ),
+      workspaceLocation: pickFirstNonEmpty(
+        decoded?.locationName,
+        decoded?.branchName,
+        decoded?.workspaceLocation
+      ),
+    };
+  } catch {
+    return {};
+  }
+}
+
+function getSessionSnapshot() {
+  if (typeof window === "undefined") {
+    return {
+      userName: "",
+      userEmail: "",
+      workspaceName: "",
+      workspaceLocation: "",
+    };
+  }
+
+  const token = localStorage.getItem("tenantToken") || localStorage.getItem("token") || "";
+
+  const decoded = decodeTokenUser(token);
+
+  const userObj =
+    safeReadJson("user") ||
+    safeReadJson("tenantUser") ||
+    safeReadJson("authUser") ||
+    safeReadJson("me") ||
+    safeReadJson("profile");
+
+  const userName = pickFirstNonEmpty(
+    localStorage.getItem("userName"),
+    localStorage.getItem("name"),
+    userObj?.name,
+    userObj?.fullName,
+    userObj?.username,
+    decoded.userName
+  );
+
+  const userEmail = pickFirstNonEmpty(
+    localStorage.getItem("userEmail"),
+    localStorage.getItem("email"),
+    userObj?.email,
+    decoded.userEmail
+  );
+
+  const workspaceName = pickFirstNonEmpty(
+    localStorage.getItem("tenantName"),
+    localStorage.getItem("storeName"),
+    localStorage.getItem("businessName"),
+    userObj?.tenantName,
+    userObj?.storeName,
+    userObj?.businessName,
+    decoded.workspaceName
+  );
+
+  const workspaceLocation = pickFirstNonEmpty(
+    localStorage.getItem("workspaceLocation"),
+    localStorage.getItem("locationName"),
+    localStorage.getItem("branchName"),
+    userObj?.workspaceLocation,
+    userObj?.locationName,
+    userObj?.branchName,
+    decoded.workspaceLocation
+  );
+
+  return {
+    userName,
+    userEmail,
+    workspaceName,
+    workspaceLocation,
+  };
+}
+
+function initials(text) {
+  const value = String(text || "").trim();
+  if (!value) return "S";
+
+  const parts = value.split(/\s+/).filter(Boolean).slice(0, 2);
+  const built = parts.map((part) => part[0]?.toUpperCase() || "").join("");
+
+  return built || value[0].toUpperCase() || "S";
 }
 
 export default function AppHeader({
@@ -73,6 +211,43 @@ export default function AppHeader({
 }) {
   const location = useLocation();
   const activeLabel = routeLabel(location.pathname);
+
+  const [session, setSession] = useState(() => getSessionSnapshot());
+
+  useEffect(() => {
+    const refresh = () => setSession(getSessionSnapshot());
+
+    refresh();
+
+    window.addEventListener("storage", refresh);
+    window.addEventListener("focus", refresh);
+
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
+  const finalUserName = useMemo(() => {
+    return pickFirstNonEmpty(session.userName, session.userEmail, "Account");
+  }, [session.userName, session.userEmail]);
+
+  const finalWorkspaceName = useMemo(() => {
+    return pickFirstNonEmpty(session.workspaceName, workspaceName);
+  }, [session.workspaceName, workspaceName]);
+
+  const finalWorkspaceLocation = useMemo(() => {
+    return pickFirstNonEmpty(session.workspaceLocation, workspaceLocation);
+  }, [session.workspaceLocation, workspaceLocation]);
+
+  const subLine = useMemo(() => {
+    const parts = [finalUserName];
+
+    if (finalWorkspaceName) parts.push(finalWorkspaceName);
+    if (finalWorkspaceLocation) parts.push(finalWorkspaceLocation);
+
+    return parts.join(" • ");
+  }, [finalUserName, finalWorkspaceName, finalWorkspaceLocation]);
 
   return (
     <header className="sticky top-0 z-30 bg-[var(--color-bg)]/92 backdrop-blur-md">
@@ -96,12 +271,12 @@ export default function AppHeader({
         </button>
 
         <div className="min-w-0">
-          <div className="text-[15px] font-bold text-[var(--color-text)]">
+          <div className="truncate text-[15px] font-bold text-[var(--color-text)]">
             {activeLabel}
           </div>
+
           <div className="truncate text-[12px] text-[var(--color-text-muted)]">
-            {workspaceName || "Storvex"}
-            {workspaceLocation ? ` • ${workspaceLocation}` : ""}
+            {subLine}
           </div>
         </div>
 
@@ -121,6 +296,7 @@ export default function AppHeader({
             >
               <SunIcon />
             </span>
+
             <span
               className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
                 isDark
@@ -134,9 +310,11 @@ export default function AppHeader({
 
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[var(--color-surface-2)] text-sm font-bold text-[var(--color-text)] transition hover:opacity-90"            aria-label="Open profile"
+            className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[var(--color-surface-2)] text-sm font-bold text-[var(--color-text)] transition hover:opacity-90"
+            aria-label="Open profile"
+            title={finalUserName}
           >
-            {String(workspaceName || "S").trim().charAt(0).toUpperCase() || "S"}
+            {initials(finalUserName)}
           </button>
         </div>
       </div>

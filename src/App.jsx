@@ -64,6 +64,7 @@ import WhatsAppInbox from "./pages/whatsapp/WhatsAppInbox";
 import WhatsAppConversation from "./pages/whatsapp/WhatsAppConversation";
 import WhatsAppAccounts from "./pages/whatsapp/WhatsAppAccounts";
 import WhatsAppActivity from "./pages/whatsapp/WhatsAppActivity";
+import WhatsAppBroadcasts from "./pages/whatsapp/WhatsAppBroadcasts";
 
 import DocumentsHome from "./pages/documents/DocumentsHome";
 import DocumentListPage from "./pages/documents/DocumentListPage";
@@ -265,6 +266,7 @@ export default function App() {
               <Route element={<RequireRole roles={["OWNER", "MANAGER"]} />}>
                 <Route path="reports" element={<Reports />} />
                 <Route path="whatsapp/activity" element={<WhatsAppActivity />} />
+                <Route path="whatsapp/broadcasts" element={<WhatsAppBroadcasts />} />
               </Route>
 
             <Route element={<RequireRole roles={["OWNER", "CASHIER", "TECHNICIAN"]} />}>
