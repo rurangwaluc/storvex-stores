@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
+
+import AsyncButton from "../../components/ui/AsyncButton";
 import { buildDocumentPrintUrl, openDocumentPrint } from "../../services/documentPrint";
 import { deleteDeliveryNote } from "../../services/deliveryNotesApi";
 import { deleteProforma } from "../../services/proformasApi";
@@ -11,27 +13,38 @@ function cx(...xs) {
 }
 
 function shell() {
-  return "rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function panel() {
+  return "rounded-[22px] bg-[var(--color-surface-2)]";
 }
 
 function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
+  return "text-[var(--color-text)]";
 }
 
 function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function softBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
-}
-
-function primaryBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl bg-stone-950 px-4 text-sm font-medium text-white transition hover:bg-stone-800 disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-4 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function dangerBtn() {
-  return "inline-flex h-10 items-center justify-center rounded-2xl border border-rose-300 bg-white px-4 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:opacity-60 dark:border-rose-800/50 dark:bg-[rgb(var(--bg))] dark:text-rose-300 dark:hover:bg-rose-950/20";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[rgba(219,80,74,0.12)] px-4 text-sm font-semibold text-[var(--color-danger)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function PillLink({ to, children }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex items-center rounded-full bg-[var(--color-surface-2)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] transition hover:opacity-90"
+    >
+      {children}
+    </Link>
+  );
 }
 
 function ConfirmDeleteModal({
@@ -45,18 +58,34 @@ function ConfirmDeleteModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-      <div className={cx(shell(), "w-full max-w-md p-5")}>
-        <h3 className={cx("text-lg font-semibold", strongText())}>{title}</h3>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={deleting ? undefined : onCancel}
+      />
+      <div className={cx(shell(), "relative z-10 w-full max-w-md p-5")}>
+        <h3 className={cx("text-lg font-black tracking-tight", strongText())}>{title}</h3>
         <p className={cx("mt-2 text-sm leading-6", mutedText())}>{body}</p>
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button type="button" onClick={onCancel} className={softBtn()} disabled={deleting}>
+          <AsyncButton
+            type="button"
+            onClick={onCancel}
+            disabled={deleting}
+            variant="secondary"
+          >
             Cancel
-          </button>
-          <button type="button" onClick={onConfirm} className={dangerBtn()} disabled={deleting}>
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
+          </AsyncButton>
+
+          <AsyncButton
+            type="button"
+            onClick={onConfirm}
+            loading={deleting}
+            loadingText="Deleting..."
+            className={dangerBtn()}
+          >
+            Delete
+          </AsyncButton>
         </div>
       </div>
     </div>
@@ -168,7 +197,7 @@ export default function DocumentPreviewRoute() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <ConfirmDeleteModal
         open={showDelete}
         title={`Delete ${meta.singularLabel}?`}
@@ -180,101 +209,89 @@ export default function DocumentPreviewRoute() {
         onConfirm={handleDelete}
       />
 
-      <div className={cx(shell(), "p-5")}>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <Link
-              to="/app/documents"
-              className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-stone-700 transition hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text-muted))] dark:hover:bg-[rgb(var(--bg-muted))]"
-            >
-              Document Center
-            </Link>
-            <span className={mutedText()}>/</span>
-            <Link
-              to={meta.backTo}
-              className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-stone-700 transition hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text-muted))] dark:hover:bg-[rgb(var(--bg-muted))]"
-            >
-              {meta.backLabel}
-            </Link>
-            <span className={mutedText()}>/</span>
-            <span className={cx("rounded-full px-3 py-1.5", strongText())}>Preview</span>
-          </div>
-
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0">
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", mutedText())}>
-                Live renderer preview
-              </div>
-              <h1 className={cx("mt-2 text-2xl font-semibold tracking-tight", strongText())}>
-                {meta.title}
-              </h1>
-              <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                This is the real backend document renderer. Brand colors and terms from General
-                Settings appear here directly.
-              </p>
+      <section className={cx(shell(), "overflow-hidden")}>
+        <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <PillLink to="/app/documents">Document Center</PillLink>
+              <span className={mutedText()}>/</span>
+              <PillLink to={meta.backTo}>{meta.backLabel}</PillLink>
+              <span className={mutedText()}>/</span>
+              <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold text-[var(--color-text)]">
+                Preview
+              </span>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Link to="/app/documents" className={softBtn()}>
-                Back to Document Center
-              </Link>
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div className="min-w-0 max-w-3xl">
+                <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", mutedText())}>
+                  Documents
+                </div>
+                <h1 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
+                  {meta.title}
+                </h1>
+                <p className={cx("mt-2 text-sm leading-6", mutedText())}>
+                  This is the live backend renderer preview. Brand colors, company details,
+                  and document settings are reflected here directly.
+                </p>
+              </div>
 
-              <Link to={meta.backTo} className={softBtn()}>
-                Back to {meta.backLabel}
-              </Link>
-
-              {editUrl ? (
-                <Link to={editUrl} className={softBtn()}>
-                  Edit
-                </Link>
-              ) : null}
-
-              {meta.createTo && meta.createLabel ? (
-                <Link to={meta.createTo} className={softBtn()}>
-                  {meta.createLabel}
-                </Link>
-              ) : null}
-
-              {meta.canDelete ? (
-                <button
-                  type="button"
-                  onClick={() => setShowDelete(true)}
-                  className={dangerBtn()}
-                  disabled={deleting}
-                >
-                  {deleting ? "Deleting..." : "Delete"}
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => navigate(-1)} className={softBtn()}>
+                  Go back
                 </button>
-              ) : null}
 
-              <button type="button" onClick={() => navigate(-1)} className={softBtn()}>
-                Go Back
-              </button>
+                {editUrl ? (
+                  <Link to={editUrl} className={softBtn()}>
+                    Edit
+                  </Link>
+                ) : null}
 
-              <button
-                type="button"
-                onClick={() => openDocumentPrint(resource, id)}
-                className={primaryBtn()}
-              >
-                Open Print Tab
-              </button>
+                {meta.createTo && meta.createLabel ? (
+                  <Link to={meta.createTo} className={softBtn()}>
+                    {meta.createLabel}
+                  </Link>
+                ) : null}
+
+                {meta.canDelete ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDelete(true)}
+                    className={dangerBtn()}
+                    disabled={deleting}
+                  >
+                    {deleting ? "Deleting..." : "Delete"}
+                  </button>
+                ) : null}
+
+                <AsyncButton
+                  type="button"
+                  variant="primary"
+                  onClick={() => openDocumentPrint(resource, id)}
+                >
+                  Open Print Tab
+                </AsyncButton>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className={cx(shell(), "overflow-hidden p-2 md:p-3")}>
-        {printUrl ? (
-          <iframe
-            title={`${meta.title} ${id}`}
-            src={printUrl}
-            className="h-[78vh] w-full rounded-[20px] bg-white"
-          />
-        ) : (
-          <div className="p-8 text-sm text-stone-500 dark:text-[rgb(var(--text-muted))]">
-            Preview URL is not available.
+        <div className="p-3 sm:p-4">
+          <div className={cx(panel(), "overflow-hidden p-2 sm:p-3")}>
+            {printUrl ? (
+              <iframe
+                title={`${meta.title} ${id}`}
+                src={printUrl}
+                className="h-[76vh] w-full rounded-[18px] bg-white"
+              />
+            ) : (
+              <div className={cx("p-8 text-sm", mutedText())}>
+                Preview URL is not available.
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      </section>
     </div>
   );
 }

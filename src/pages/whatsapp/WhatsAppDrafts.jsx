@@ -337,6 +337,42 @@ function DraftQueueCard({ item, active, onClick }) {
   );
 }
 
+// ─── confirm dialog ───────────────────────────────────────────────────────────
+
+function ConfirmDeleteDraftDialog({ open, busy, onCancel, onConfirm }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]">
+      <div className={cx(
+        "w-full max-w-md rounded-[28px] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[var(--shadow-card)] sm:p-6"
+      )}>
+        <div className={cx("text-lg font-bold", strongText())}>Delete draft?</div>
+        <p className={cx("mt-3 text-sm leading-6", mutedText())}>
+          This WhatsApp sale draft will be permanently deleted. The linked conversation stays intact — only the pending sale record is removed.
+        </p>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onConfirm}
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-[rgba(219,80,74,0.12)] px-5 text-sm font-semibold text-[var(--color-danger)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? "Deleting…" : "Delete draft"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function WhatsAppDrafts() {
   const nav = useNavigate();
 
@@ -349,6 +385,7 @@ export default function WhatsAppDrafts() {
   const [saving, setSaving] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const [query, setQuery] = useState("");
@@ -738,21 +775,20 @@ export default function WhatsAppDrafts() {
     }
   }
 
-  async function handleDelete() {
+  function handleDelete() {
     if (!draft?.id) return;
+    setShowDeleteConfirm(true);
+  }
 
-    const confirmed = window.confirm("Delete this WhatsApp sale draft?");
-    if (!confirmed) return;
-
+  async function confirmDeleteDraft() {
+    if (!draft?.id) return;
+    setDeleting(true);
     try {
-      setDeleting(true);
       await deleteWhatsAppSaleDraft(draft.id);
-
       toast.success("Draft deleted");
-
       const deletedId = draft.id;
       setDraft(null);
-
+      setShowDeleteConfirm(false);
       const nextDrafts = drafts.filter((d) => d.id !== deletedId);
       setDrafts(nextDrafts);
       setSelectedDraftId(nextDrafts[0]?.id || "");
@@ -1263,6 +1299,14 @@ export default function WhatsAppDrafts() {
           )}
         </main>
       </section>
+
+      {/* Delete confirm modal */}
+      <ConfirmDeleteDraftDialog
+        open={showDeleteConfirm}
+        busy={deleting}
+        onCancel={() => { if (!deleting) setShowDeleteConfirm(false); }}
+        onConfirm={confirmDeleteDraft}
+      />
     </div>
   );
 }

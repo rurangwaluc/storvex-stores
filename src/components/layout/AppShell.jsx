@@ -81,7 +81,7 @@ export default function AppShell({ children }) {
           workspaceLocation={workspaceLocation}
         />
 
-        <main className="px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5">
+        <main className="px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}>
           {children}
         </main>
       </div>

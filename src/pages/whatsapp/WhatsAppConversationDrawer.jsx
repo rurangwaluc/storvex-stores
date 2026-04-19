@@ -190,6 +190,21 @@ function SendIcon() {
   );
 }
 
+function AssignIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <circle cx="9.5" cy="7" r="3.5" stroke="currentColor" strokeWidth="2" />
+      <path d="M20 8v6M17 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function ChevronDownIcon({ open }) {
   return (
     <svg
@@ -235,8 +250,8 @@ function MessageSkeleton() {
             className={cx(
               "max-w-[82%] rounded-[16px] px-3 py-2 sm:max-w-[78%]",
               i % 2
-                ? "bg-[var(--color-primary-soft)] rounded-br-[5px]"
-                : "bg-[var(--color-card)] border border-[var(--color-border)] rounded-bl-[5px]"
+                ? "rounded-br-[5px] bg-[var(--color-primary-soft)]"
+                : "rounded-bl-[5px] border border-[var(--color-border)] bg-[var(--color-card)]"
             )}
           >
             <div className="h-2.5 w-16 rounded bg-[var(--color-surface)]" />
@@ -656,7 +671,7 @@ export default function WhatsAppConversationDrawer({
 
     onConversationPatched?.({
       ...conversation,
-      assignedToId: userId,
+      assignedToId: String(userId || ""),
       assignedTo: pickedStaff
         ? {
             id: pickedStaff.id,

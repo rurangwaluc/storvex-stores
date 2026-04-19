@@ -42,3 +42,8 @@ export function deactivateCustomer(id) {
     method: "DELETE",
   });
 }
+
+// Get customer ledger
+export function getCustomerLedger(customerId) {
+  return apiFetch(`/customers/${customerId}/ledger`);
+}

@@ -255,6 +255,14 @@ function normalizeConversation(raw) {
           address: String(raw.customer.address || ""),
         }
       : null,
+    messageCount: Number(raw.messageCount || 0),
+    latestMessage: raw.latestMessage
+      ? {
+          direction:   String(raw.latestMessage.direction || "INBOUND").toUpperCase(),
+          textContent: String(raw.latestMessage.textContent || ""),
+          createdAt:   raw.latestMessage.createdAt || null,
+        }
+      : null,
   };
 }
 
@@ -300,6 +308,7 @@ function getConversationSearchText(item, linkedDraft, assignedName) {
     linkedDraft?.id,
     linkedDraft?.saleType,
     assignedName,
+    item?.latestMessage?.textContent,
   ]
     .filter(Boolean)
     .join(" ")
@@ -362,15 +371,22 @@ function CompactQueueRow({
 
           <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <div className={cx("min-w-0 truncate", mutedText())}>
-              {assignedStaffName
-                ? `Assigned to ${assignedStaffName}`
+              {item.latestMessage?.textContent
+                ? (item.latestMessage.direction === "OUTBOUND" ? "You: " : "") +
+                  item.latestMessage.textContent
                 : linkedDraft
-                  ? `${linkedDraft.saleType} draft • RWF ${Number(linkedDraft.total || 0).toLocaleString()}`
-                  : "No linked draft yet"}
+                  ? `${linkedDraft.saleType} draft · RWF ${Number(linkedDraft.total || 0).toLocaleString()}`
+                  : assignedStaffName
+                    ? `Assigned to ${assignedStaffName}`
+                    : "No messages yet"}
             </div>
 
             <div className={cx("shrink-0", softText())}>
-              {formatTimeAgo(item.updatedAt || item.createdAt)}
+              {formatTimeAgo(
+                item.latestMessage?.createdAt ||
+                item.updatedAt ||
+                item.createdAt
+              )}
             </div>
           </div>
         </div>
@@ -699,6 +715,24 @@ export default function WhatsAppInbox() {
     setRenderCount(INITIAL_RENDER_COUNT);
   }, [query, statusFilter, linkedFilter]);
 
+  // Called by the drawer when a new draft is created from within a conversation.
+  // Adds the new draft to the local drafts list so the "linked draft" badge
+  // appears immediately — without needing a full inbox reload.
+  function handleDraftCreated(draft) {
+    if (!draft?.id) return;
+
+    const normalized = normalizeDraft(draft);
+    if (!normalized) return;
+
+    setDrafts((prev) => {
+      // Remove any existing draft for the same conversation (replace it)
+      const without = prev.filter(
+        (d) => d.conversationId !== normalized.conversationId
+      );
+      return [normalized, ...without];
+    });
+  }
+
   if (loading) {
     return <PageSkeleton titleWidth="w-40" lines={5} variant="default" />;
   }
@@ -917,6 +951,7 @@ export default function WhatsAppInbox() {
         staffOptions={staffOptions}
         onAssignConversation={handleAssignConversation}
         onClearConversationAssignment={handleClearConversationAssignment}
+        onDraftCreated={handleDraftCreated}
       />
     </>
   );

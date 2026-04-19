@@ -72,6 +72,7 @@ function routeLabel(pathname) {
   if (pathname.startsWith("/app/billing")) return "Billing";
   if (pathname.startsWith("/app/audit")) return "Audit logs";
   if (pathname.startsWith("/app/employees")) return "Employees";
+  if (pathname.startsWith("/app/expenses")) return "Expenses";
 
   return "Workspace";
 }

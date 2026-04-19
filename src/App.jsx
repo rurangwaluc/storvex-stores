@@ -61,7 +61,7 @@ import SettingsAudit from "./pages/settings/SettingsAudit";
 
 import WhatsAppDrafts from "./pages/whatsapp/WhatsAppDrafts";
 import WhatsAppInbox from "./pages/whatsapp/WhatsAppInbox";
-import WhatsAppConversation from "./pages/whatsapp/WhatsAppConversation";
+// import WhatsAppConversation from "./pages/whatsapp/WhatsAppConversation";
 import WhatsAppAccounts from "./pages/whatsapp/WhatsAppAccounts";
 import WhatsAppActivity from "./pages/whatsapp/WhatsAppActivity";
 import WhatsAppBroadcasts from "./pages/whatsapp/WhatsAppBroadcasts";
@@ -81,6 +81,7 @@ import WarrantyCreate from "./pages/warranties/WarrantyCreate";
 import WarrantyEdit from "./pages/warranties/WarrantyEdit";
 
 import { listDeliveryNotes } from "./services/deliveryNotesApi";
+import Expenses from "./pages/expenses/Expenses";
 
 function GuardedStoreLayout() {
   return (
@@ -130,6 +131,7 @@ export default function App() {
             <Route element={<RequireRole roles={["OWNER"]} />}>
               <Route path="audit" element={<AuditLogs />} />
               <Route path="billing" element={<Billing />} />
+              
             </Route>
 
             <Route element={<RequireRole roles={["OWNER", "MANAGER", "STOREKEEPER"]} />}>
@@ -156,7 +158,7 @@ export default function App() {
               <Route path="pos/sales/:id" element={<PosReceipt />} />
               <Route path="pos/sales/:id/receipt" element={<Navigate to=".." replace />} />
               <Route path="pos/credit" element={<CreditDashboard />} />
-
+              <Route path="expenses" element={<Expenses />} />
               <Route path="customers" element={<CustomerList />} />
               <Route path="customers/new" element={<CustomerCreate />} />
               <Route path="customers/:id" element={<CustomerEdit />} />
@@ -255,7 +257,7 @@ export default function App() {
             </Route>
               <Route element={<RequireRole roles={["OWNER", "MANAGER", "CASHIER"]} />}>
                 <Route path="whatsapp/inbox" element={<WhatsAppInbox />} />
-                <Route path="whatsapp/inbox/:conversationId" element={<WhatsAppConversation />} />
+                {/* <Route path="whatsapp/inbox/:conversationId" element={<WhatsAppConversation />} /> */}
                 <Route path="whatsapp/drafts" element={<WhatsAppDrafts />} />
                 <Route path="whatsapp/accounts" element={<WhatsAppAccounts />} />
                 <Route path="pos/drawer" element={<CashDrawer />} />
