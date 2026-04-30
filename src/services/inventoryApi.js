@@ -1,111 +1,409 @@
-import apiClient, { apiFetch } from "./apiClient";
+import { apiFetch, getActiveBranchId } from "./apiClient";
 
-function buildQueryString(params = {}) {
-  const search = new URLSearchParams();
+const INVENTORY_BASE = "/inventory";
 
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === "") return;
-    search.set(key, String(value));
+function cleanString(value) {
+  const s = String(value || "").trim();
+  return s || "";
+}
+
+function cleanObject(obj) {
+  const out = {};
+
+  for (const [key, value] of Object.entries(obj || {})) {
+    if (value === undefined || value === null || value === "") continue;
+    out[key] = value;
+  }
+
+  return out;
+}
+
+function withBranchOptions(options = {}) {
+  const branchId =
+    cleanString(options.branchId) ||
+    cleanString(options.activeBranchId) ||
+    cleanString(getActiveBranchId());
+
+  return {
+    ...options,
+    branchId,
+  };
+}
+
+function buildQuery(params = {}) {
+  return cleanObject({
+    q: cleanString(params.q),
+    active: params.active,
+    category: cleanString(params.category),
+    subcategory: cleanString(params.subcategory),
+    brand: cleanString(params.brand),
+    lowStock: params.lowStock,
+    outOfStock: params.outOfStock,
+    threshold: params.threshold,
+    sort: params.sort,
+    limit: params.limit,
+    cursor: params.cursor,
+    branchId: cleanString(params.branchId),
+    allBranches: params.allBranches,
+    from: params.from,
+    to: params.to,
+    type: params.type,
   });
-
-  const qs = search.toString();
-  return qs ? `?${qs}` : "";
 }
 
-async function downloadBlob(path, params = {}, fallbackName = "download.bin") {
-  const res = await apiClient.get(`${path}${buildQueryString(params)}`, {
-    responseType: "blob",
+function normalizeProductPayload(payload = {}) {
+  return cleanObject({
+    name: cleanString(payload.name),
+    sku: cleanString(payload.sku),
+    serial: cleanString(payload.serial),
+    barcode: cleanString(payload.barcode),
+    category: cleanString(payload.category),
+    subcategory: cleanString(payload.subcategory),
+    subcategoryOther: cleanString(payload.subcategoryOther),
+    brand: cleanString(payload.brand),
+    minStockLevel: payload.minStockLevel,
+    costPrice: payload.costPrice,
+    sellPrice: payload.sellPrice,
+    stockQty: payload.stockQty,
   });
-
-  const blob = res?.data instanceof Blob ? res.data : new Blob([res.data]);
-  const contentDisposition = String(res?.headers?.["content-disposition"] || "");
-  const filenameMatch =
-    contentDisposition.match(/filename\*=UTF-8''([^;]+)/i) ||
-    contentDisposition.match(/filename="([^"]+)"/i) ||
-    contentDisposition.match(/filename=([^;]+)/i);
-
-  const filename = filenameMatch?.[1]
-    ? decodeURIComponent(String(filenameMatch[1]).replace(/["']/g, "").trim())
-    : fallbackName;
-
-  return { blob, filename };
 }
 
-export function listProducts(params = {}) {
-  return apiFetch(`/inventory/products${buildQueryString(params)}`);
+function normalizeStockAdjustmentPayload(payload = {}) {
+  return cleanObject({
+    type: cleanString(payload.type).toUpperCase(),
+    quantity: payload.quantity,
+    newStockQty: payload.newStockQty,
+    lossReason: cleanString(payload.lossReason).toUpperCase(),
+    note: cleanString(payload.note),
+  });
 }
 
-export function searchProducts(q, limit = 20) {
-  return apiFetch(`/inventory/products/search${buildQueryString({ q, limit })}`);
+function downloadBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+
+  window.URL.revokeObjectURL(url);
 }
 
-export function getProductById(id) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(id)}`);
+function filenameFromResponse(response, fallback) {
+  const disposition =
+    response?.headers?.["content-disposition"] ||
+    response?.headers?.get?.("content-disposition") ||
+    "";
+
+  const match = String(disposition).match(/filename="?([^"]+)"?/i);
+
+  return match?.[1] || fallback;
 }
 
-export function createProduct(payload) {
-  return apiFetch("/inventory/products", {
+/**
+ * Product list.
+ *
+ * Backend returns:
+ * {
+ *   products,
+ *   count,
+ *   nextCursor,
+ *   branchScope
+ * }
+ */
+export function getProducts(params = {}, options = {}) {
+  return apiFetch(`${INVENTORY_BASE}/products`, {
+    method: "GET",
+    query: buildQuery(params),
+    ...withBranchOptions(options),
+  });
+}
+
+/**
+ * Product search for POS/inventory pickers.
+ */
+export function searchProducts(params = {}, options = {}) {
+  const query =
+    typeof params === "string"
+      ? { q: params }
+      : buildQuery(params);
+
+  return apiFetch(`${INVENTORY_BASE}/products/search`, {
+    method: "GET",
+    query,
+    ...withBranchOptions(options),
+  });
+}
+
+/**
+ * Single product detail.
+ *
+ * Backend returns branch-aware fields:
+ * - stockQty
+ * - branchStockQty
+ * - branchReservedQty
+ * - effectiveStockQty
+ * - branchScope
+ */
+export function getProductById(productId, options = {}) {
+  const id = cleanString(productId);
+
+  if (!id) {
+    return Promise.reject(new Error("Product id is required"));
+  }
+
+  return apiFetch(`${INVENTORY_BASE}/products/${encodeURIComponent(id)}`, {
+    method: "GET",
+    ...withBranchOptions(options),
+  });
+}
+
+/**
+ * Create product in the active branch.
+ *
+ * stockQty is allowed here because backend creates:
+ * - Product catalog row
+ * - BranchInventory row for active branch
+ * - synced Product.stockQty
+ */
+export function createProduct(payload, options = {}) {
+  return apiFetch(`${INVENTORY_BASE}/products`, {
     method: "POST",
-    body: payload,
+    body: normalizeProductPayload(payload),
+    ...withBranchOptions(options),
   });
 }
 
-export function updateProduct(id, payload) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(id)}`, {
+/**
+ * Update product catalog fields only.
+ *
+ * Do not send stockQty here. Stock changes must go through adjustStock().
+ */
+export function updateProduct(productId, payload, options = {}) {
+  const id = cleanString(productId);
+
+  if (!id) {
+    return Promise.reject(new Error("Product id is required"));
+  }
+
+  const body = normalizeProductPayload(payload);
+  delete body.stockQty;
+
+  return apiFetch(`${INVENTORY_BASE}/products/${encodeURIComponent(id)}`, {
     method: "PUT",
-    body: payload,
+    body,
+    ...withBranchOptions(options),
   });
 }
 
-export function deleteProduct(id) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(id)}`, {
+/**
+ * Soft deactivate product.
+ */
+export function deleteProduct(productId, options = {}) {
+  const id = cleanString(productId);
+
+  if (!id) {
+    return Promise.reject(new Error("Product id is required"));
+  }
+
+  return apiFetch(`${INVENTORY_BASE}/products/${encodeURIComponent(id)}`, {
     method: "DELETE",
+    ...withBranchOptions(options),
   });
 }
 
-export function activateProduct(id) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(id)}/activate`, {
-    method: "PATCH",
-  });
-}
+/**
+ * Reactivate product.
+ */
+export function activateProduct(productId, options = {}) {
+  const id = cleanString(productId);
 
-export function adjustStock(id, payload) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(id)}/stock-adjustments`, {
+  if (!id) {
+    return Promise.reject(new Error("Product id is required"));
+  }
+
+  return apiFetch(`${INVENTORY_BASE}/products/${encodeURIComponent(id)}/activate`, {
     method: "POST",
-    body: payload,
+    ...withBranchOptions(options),
   });
 }
 
-export function getStockAdjustments(id) {
-  return apiFetch(`/inventory/products/${encodeURIComponent(id)}/stock-adjustments`);
+/**
+ * Branch-safe stock adjustment.
+ *
+ * RESTOCK:
+ * {
+ *   type: "RESTOCK",
+ *   quantity: 3,
+ *   note: "..."
+ * }
+ *
+ * LOSS:
+ * {
+ *   type: "LOSS",
+ *   quantity: 1,
+ *   lossReason: "DAMAGED",
+ *   note: "..."
+ * }
+ *
+ * CORRECTION:
+ * {
+ *   type: "CORRECTION",
+ *   newStockQty: 10,
+ *   note: "..."
+ * }
+ */
+export function adjustStock(productId, payload, options = {}) {
+  const id = cleanString(productId);
+
+  if (!id) {
+    return Promise.reject(new Error("Product id is required"));
+  }
+
+  return apiFetch(`${INVENTORY_BASE}/products/${encodeURIComponent(id)}/stock-adjustments`, {
+    method: "POST",
+    body: normalizeStockAdjustmentPayload(payload),
+    ...withBranchOptions(options),
+  });
 }
 
-export function listAllStockAdjustments(params = {}) {
-  return apiFetch(`/inventory/stock-adjustments${buildQueryString(params)}`);
+/**
+ * Stock history for one product.
+ */
+export function getProductStockAdjustments(productId, params = {}, options = {}) {
+  const id = cleanString(productId);
+
+  if (!id) {
+    return Promise.reject(new Error("Product id is required"));
+  }
+
+  return apiFetch(`${INVENTORY_BASE}/products/${encodeURIComponent(id)}/stock-adjustments`, {
+    method: "GET",
+    query: buildQuery(params),
+    ...withBranchOptions(options),
+  });
 }
 
-export function getInventorySummary() {
-  return apiFetch("/inventory/summary");
+/**
+ * All stock adjustments / stock history page.
+ */
+export function getStockAdjustments(params = {}, options = {}) {
+  return apiFetch(`${INVENTORY_BASE}/stock-adjustments`, {
+    method: "GET",
+    query: buildQuery(params),
+    ...withBranchOptions(options),
+  });
 }
 
-export async function downloadReorderPdf(params = {}) {
-  return downloadBlob("/inventory/reorder.pdf", params, "storvex-reorder-list.pdf");
+/**
+ * Branch-aware summary.
+ *
+ * Backend returns:
+ * {
+ *   branchScope,
+ *   summary: {
+ *     totalActiveProducts,
+ *     totalStockUnits,
+ *     outOfStockCount,
+ *     lowStockCount,
+ *     stockCostValue,
+ *     stockSellValue
+ *   }
+ * }
+ */
+export function getInventorySummary(params = {}, options = {}) {
+  return apiFetch(`${INVENTORY_BASE}/summary`, {
+    method: "GET",
+    query: buildQuery(params),
+    ...withBranchOptions(options),
+  });
 }
 
-export async function downloadInventoryExcel(params = {}) {
-  return downloadBlob("/inventory/export.xlsx", params, "storvex-inventory.xlsx");
+/**
+ * Download reorder PDF.
+ */
+export async function downloadReorderPdf(params = {}, options = {}) {
+  const response = await apiFetch(`${INVENTORY_BASE}/reorder.pdf`, {
+    method: "GET",
+    query: buildQuery(params),
+    responseType: "blob",
+    ...withBranchOptions(options),
+  });
+
+  const filename = "storvex-reorder.pdf";
+  downloadBlob(response, filename);
+
+  return response;
 }
 
-export async function downloadStockAdjustmentsExcel(params = {}) {
-  return downloadBlob(
-    "/inventory/stock-adjustments/export.xlsx",
-    params,
-    "storvex-stock-history.xlsx"
-  );
+/**
+ * Download inventory Excel.
+ */
+export async function downloadInventoryExcel(params = {}, options = {}) {
+  const response = await apiFetch(`${INVENTORY_BASE}/export.xlsx`, {
+    method: "GET",
+    query: buildQuery(params),
+    responseType: "blob",
+    ...withBranchOptions(options),
+  });
+
+  const filename = "storvex-inventory.xlsx";
+  downloadBlob(response, filename);
+
+  return response;
 }
 
-const inventoryApi = {
-  listProducts,
+/**
+ * Download stock adjustments Excel.
+ */
+export async function downloadStockAdjustmentsExcel(params = {}, options = {}) {
+  const response = await apiFetch(`${INVENTORY_BASE}/stock-adjustments/export.xlsx`, {
+    method: "GET",
+    query: buildQuery(params),
+    responseType: "blob",
+    ...withBranchOptions(options),
+  });
+
+  const filename = "storvex-stock-history.xlsx";
+  downloadBlob(response, filename);
+
+  return response;
+}
+
+/**
+ * Raw blob helpers for pages that need custom download behavior.
+ */
+export function getReorderPdfBlob(params = {}, options = {}) {
+  return apiFetch(`${INVENTORY_BASE}/reorder.pdf`, {
+    method: "GET",
+    query: buildQuery(params),
+    responseType: "blob",
+    ...withBranchOptions(options),
+  });
+}
+
+export function getInventoryExcelBlob(params = {}, options = {}) {
+  return apiFetch(`${INVENTORY_BASE}/export.xlsx`, {
+    method: "GET",
+    query: buildQuery(params),
+    responseType: "blob",
+    ...withBranchOptions(options),
+  });
+}
+
+export function getStockAdjustmentsExcelBlob(params = {}, options = {}) {
+  return apiFetch(`${INVENTORY_BASE}/stock-adjustments/export.xlsx`, {
+    method: "GET",
+    query: buildQuery(params),
+    responseType: "blob",
+    ...withBranchOptions(options),
+  });
+}
+
+export const inventoryApi = {
+  getProducts,
   searchProducts,
   getProductById,
   createProduct,
@@ -113,12 +411,15 @@ const inventoryApi = {
   deleteProduct,
   activateProduct,
   adjustStock,
+  getProductStockAdjustments,
   getStockAdjustments,
-  listAllStockAdjustments,
   getInventorySummary,
   downloadReorderPdf,
   downloadInventoryExcel,
   downloadStockAdjustmentsExcel,
+  getReorderPdfBlob,
+  getInventoryExcelBlob,
+  getStockAdjustmentsExcelBlob,
 };
 
 export default inventoryApi;

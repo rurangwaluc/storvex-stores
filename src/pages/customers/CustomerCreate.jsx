@@ -80,10 +80,20 @@ export default function CustomerCreate() {
         <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", mutedText())}>
+              <div
+                className={cx(
+                  "text-[11px] font-semibold uppercase tracking-[0.18em]",
+                  mutedText()
+                )}
+              >
                 CRM
               </div>
-              <h1 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
+              <h1
+                className={cx(
+                  "mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]",
+                  strongText()
+                )}
+              >
                 New Customer
               </h1>
               <p className={cx("mt-2 text-sm leading-6", mutedText())}>
@@ -132,7 +142,9 @@ export default function CustomerCreate() {
                 </div>
 
                 <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Email</label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
+                    Email
+                  </label>
                   <input
                     className="app-input"
                     type="email"
@@ -143,7 +155,9 @@ export default function CustomerCreate() {
                 </div>
 
                 <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Address</label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
+                    Address
+                  </label>
                   <input
                     className="app-input"
                     value={form.address}
@@ -153,7 +167,9 @@ export default function CustomerCreate() {
                 </div>
 
                 <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>TIN Number</label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
+                    TIN Number
+                  </label>
                   <input
                     className="app-input"
                     value={form.tinNumber}
@@ -163,7 +179,9 @@ export default function CustomerCreate() {
                 </div>
 
                 <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>ID Number</label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
+                    ID Number
+                  </label>
                   <input
                     className="app-input"
                     value={form.idNumber}
@@ -173,10 +191,12 @@ export default function CustomerCreate() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Notes</label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
+                    Notes
+                  </label>
                   <textarea
-                    className="app-textarea w-full"
-                    rows={4}
+                    className="app-textarea w-full min-h-[140px]"
+                    rows={5}
                     value={form.notes}
                     onChange={(e) => setField("notes", e.target.value)}
                     placeholder="Internal notes about this customer..."
@@ -188,9 +208,7 @@ export default function CustomerCreate() {
                 <div
                   className={cx(
                     "relative h-6 w-11 rounded-full transition",
-                    form.whatsappOptIn
-                      ? "bg-[var(--color-primary)]"
-                      : "bg-[var(--color-surface)]"
+                    form.whatsappOptIn ? "bg-[var(--color-primary)]" : "bg-[var(--color-surface)]"
                   )}
                 >
                   <div

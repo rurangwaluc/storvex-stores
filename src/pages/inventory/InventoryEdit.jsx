@@ -45,9 +45,18 @@ const ACCESSORY_SUBCATEGORY_OPTIONS = [
   "Other",
 ];
 
-function normCategory(v) {
-  const x = String(v || "").trim();
-  const low = x.toLowerCase();
+function cx(...xs) {
+  return xs.filter(Boolean).join(" ");
+}
+
+function cleanString(value) {
+  const s = String(value || "").trim();
+  return s || "";
+}
+
+function normalizeCategory(value) {
+  const raw = cleanString(value);
+  const low = raw.toLowerCase();
 
   if (low === "accessory" || low === "accessories") return "Accessories";
   if (low === "phone" || low === "phones") return "Phones";
@@ -62,131 +71,258 @@ function normCategory(v) {
   if (low === "camera" || low === "cameras") return "Cameras";
   if (low === "storage") return "Storage";
   if (low === "smart devices" || low === "smart device") return "Smart Devices";
-  if (low === "components" || low === "component") return "Components";
-  if (x === "Other") return "Other";
+  if (low === "component" || low === "components") return "Components";
+  if (low === "other") return "Other";
 
-  return CATEGORY_OPTIONS.includes(x) ? x : "";
+  return CATEGORY_OPTIONS.includes(raw) ? raw : "";
 }
 
-function cx(...xs) {
-  return xs.filter(Boolean).join(" ");
+function formatRwf(value) {
+  const n = Number(value || 0);
+
+  return new Intl.NumberFormat("en-RW", {
+    style: "currency",
+    currency: "RWF",
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(n) ? n : 0);
 }
 
-function formatMoney(n) {
-  return `Rwf ${Number(n || 0).toLocaleString("en-US")}`;
+function formatNumber(value) {
+  const n = Number(value || 0);
+  return new Intl.NumberFormat("en-RW").format(Number.isFinite(n) ? n : 0);
 }
 
-function strongText() {
-  return "text-[var(--color-text)]";
+function parseMoney(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : NaN;
 }
 
-function mutedText() {
-  return "text-[var(--color-text-muted)]";
+function parseStock(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return NaN;
+  return Math.floor(n);
 }
 
-function softText() {
-  return "text-[var(--color-text-muted)]";
+function productAvailableHere(product) {
+  return Number(product?.effectiveStockQty ?? product?.branchStockQty ?? product?.stockQty ?? 0);
+}
+
+function activeBranchNameFromStorage() {
+  const name = cleanString(localStorage.getItem("activeBranchName"));
+  const code = cleanString(localStorage.getItem("activeBranchCode"));
+
+  if (code && name) return `${code} • ${name}`;
+  if (name) return name;
+  if (code) return code;
+
+  return "this branch";
 }
 
 function pageCard() {
-  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+  return "rounded-[30px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
 function softPanel() {
-  return "rounded-[22px] bg-[var(--color-surface-2)]";
+  return "rounded-[24px] bg-[var(--color-surface-2)]";
 }
 
 function inputClass() {
-  return "app-input";
+  return "h-12 w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function primaryBtn() {
-  return "inline-flex h-11 min-w-[160px] items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60";
+function buttonBase() {
+  return "inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function secondaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:opacity-60";
-}
-
-function chipCardClass(active) {
+function secondaryButton() {
   return cx(
-    "rounded-[22px] p-4 text-left transition",
-    active
-      ? "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
-      : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
+    buttonBase(),
+    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
   );
 }
 
-function SummaryStat({ label, value, tone = "neutral" }) {
-  const toneClass =
+function primaryButton() {
+  return cx(
+    buttonBase(),
+    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
+}
+
+function BackIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SaveIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M5 12l4 4L19 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ProductIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M21 8l-9-5-9 5 9 5 9-5Z" />
+      <path d="M3 11v8l9 5 9-5v-8" />
+      <path d="M12 13v8" />
+    </svg>
+  );
+}
+
+function WarningIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 9v4" strokeLinecap="round" />
+      <path d="M12 17h.01" strokeLinecap="round" />
+      <path d="M10.3 4.6 2.8 18a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 4.6a2 2 0 0 0-3.4 0Z" />
+    </svg>
+  );
+}
+
+function StatusPill({ tone = "neutral", children }) {
+  const classes =
     tone === "success"
-      ? "text-emerald-600 dark:text-emerald-300"
+      ? "bg-emerald-500/10 text-emerald-600"
       : tone === "warning"
-      ? "text-amber-600 dark:text-amber-300"
-      : tone === "danger"
-      ? "text-[var(--color-danger)]"
-      : strongText();
+        ? "bg-amber-500/10 text-amber-600"
+        : tone === "danger"
+          ? "bg-red-500/10 text-red-600"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
 
   return (
-    <div className="rounded-[22px] bg-[var(--color-surface-2)] p-4 shadow-[var(--shadow-soft)]">
-      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
-        {label}
-      </div>
-      <div className={cx("mt-2 text-xl font-black tracking-tight", toneClass)}>{value}</div>
-    </div>
-  );
-}
-
-function SectionHeading({ eyebrow, title, text }) {
-  return (
-    <div>
-      {eyebrow ? (
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
-          {eyebrow}
-        </div>
-      ) : null}
-      <h2 className={cx("mt-3 text-[1.5rem] font-black tracking-tight", strongText())}>{title}</h2>
-      {text ? <p className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</p> : null}
-    </div>
-  );
-}
-
-function StatusPill({ text, tone = "neutral" }) {
-  const cls =
-    tone === "success"
-      ? "bg-[#dcfce7] text-[#15803d]"
-      : tone === "warning"
-      ? "bg-[#fff1c9] text-[#b88900]"
-      : tone === "danger"
-      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
-      : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
-
-  return (
-    <span className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", cls)}>
-      {text}
+    <span
+      className={cx(
+        "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]",
+        classes,
+      )}
+    >
+      {children}
     </span>
   );
 }
 
-function FormField({ label, children, hint = "" }) {
+function Field({ label, hint, children, required = false, className = "" }) {
   return (
-    <div>
-      <label className={cx("text-sm font-medium", strongText())}>{label}</label>
-      <div className="mt-2">{children}</div>
-      {hint ? <p className={cx("mt-2 text-xs leading-5", softText())}>{hint}</p> : null}
+    <label className={cx("block", className)}>
+      <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+        {label}
+        {required ? <span className="text-red-500"> *</span> : null}
+      </span>
+
+      {children}
+
+      {hint ? (
+        <span className="mt-2 block text-xs font-semibold leading-5 text-[var(--color-text-muted)]">
+          {hint}
+        </span>
+      ) : null}
+    </label>
+  );
+}
+
+function MetricCard({ label, value, note, tone = "neutral" }) {
+  const dot =
+    tone === "success"
+      ? "bg-emerald-500"
+      : tone === "warning"
+        ? "bg-amber-500"
+        : tone === "danger"
+          ? "bg-red-500"
+          : "bg-[var(--color-primary)]";
+
+  return (
+    <article className={cx(pageCard(), "relative overflow-hidden p-5")}>
+      <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-[rgba(74,163,255,0.08)] blur-2xl" />
+
+      <div className="relative">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
+            {label}
+          </p>
+          <span className={cx("h-2.5 w-2.5 rounded-full", dot)} />
+        </div>
+
+        <p className="mt-3 truncate text-xl font-black tracking-[-0.03em] text-[var(--color-text)]">
+          {value}
+        </p>
+
+        {note ? (
+          <p className="mt-1 text-xs font-semibold leading-5 text-[var(--color-text-muted)]">
+            {note}
+          </p>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function ChoiceCard({ active, title, text, onClick, disabled }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cx(
+        "rounded-[24px] p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60",
+        active
+          ? "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]",
+      )}
+    >
+      <span className="block text-sm font-black">{title}</span>
+      <span className={cx("mt-2 block text-xs font-semibold leading-5", active ? "text-white/80" : "text-[var(--color-text-muted)]")}>
+        {text}
+      </span>
+    </button>
+  );
+}
+
+function ErrorState({ message, onRetry, onBack }) {
+  return (
+    <div className="space-y-5">
+      <section className={cx(pageCard(), "p-6 text-center")}>
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[26px] bg-red-500/10 text-red-600 shadow-[var(--shadow-soft)]">
+          <WarningIcon />
+        </div>
+
+        <h1 className="mt-5 text-2xl font-black tracking-[-0.04em] text-[var(--color-text)]">
+          Product could not be loaded
+        </h1>
+
+        <p className="mx-auto mt-2 max-w-xl text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+          {message || "Something went wrong while loading this product."}
+        </p>
+
+        <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+          <button type="button" onClick={onBack} className={secondaryButton()}>
+            <BackIcon />
+            Back
+          </button>
+
+          <button type="button" onClick={onRetry} className={primaryButton()}>
+            Try again
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
 
 export default function InventoryEdit() {
-  const { id } = useParams();
   const navigate = useNavigate();
+  const { id } = useParams();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [productMeta, setProductMeta] = useState(null);
   const [hasSerial, setHasSerial] = useState(false);
+  const [product, setProduct] = useState(null);
+  const [activeBranchLabel, setActiveBranchLabel] = useState(() => activeBranchNameFromStorage());
 
   const [form, setForm] = useState({
     name: "",
@@ -202,589 +338,631 @@ export default function InventoryEdit() {
     brand: "",
   });
 
-  const category = useMemo(() => normCategory(form.category), [form.category]);
+  const category = useMemo(() => normalizeCategory(form.category), [form.category]);
   const isAccessories = category === "Accessories";
-  const isOtherAccessoryType = isAccessories && String(form.subcategory || "").trim() === "Other";
+  const isOtherAccessoryType = isAccessories && form.subcategory === "Other";
 
-  const buyPrice = Number(form.costPrice || 0);
-  const sellPrice = Number(form.sellPrice || 0);
-  const currentStock = Number(productMeta?.stockQty || 0);
-  const minStockLevel = form.minStockLevel === "" ? null : Number(form.minStockLevel || 0);
+  const buyPrice = parseMoney(form.costPrice || 0);
+  const sellPrice = parseMoney(form.sellPrice || 0);
+  const availableHere = productAvailableHere(product);
+  const lowStockAlert = form.minStockLevel === "" ? null : parseStock(form.minStockLevel);
 
-  const projectedMargin = Number.isFinite(sellPrice - buyPrice) ? sellPrice - buyPrice : 0;
-  const estimatedStockCost = Number.isFinite(currentStock * buyPrice) ? currentStock * buyPrice : 0;
-  const estimatedStockRetail = Number.isFinite(currentStock * sellPrice) ? currentStock * sellPrice : 0;
+  const profitPerItem =
+    Number.isFinite(sellPrice) && Number.isFinite(buyPrice)
+      ? sellPrice - buyPrice
+      : 0;
+
+  const stockCost =
+    Number.isFinite(availableHere) && Number.isFinite(buyPrice)
+      ? availableHere * buyPrice
+      : 0;
+
+  const stockSellValue =
+    Number.isFinite(availableHere) && Number.isFinite(sellPrice)
+      ? availableHere * sellPrice
+      : 0;
 
   const stockTone =
-    currentStock <= 0
+    availableHere <= 0
       ? "danger"
-      : minStockLevel != null && currentStock <= minStockLevel
-      ? "warning"
-      : "success";
+      : lowStockAlert != null && Number.isFinite(lowStockAlert) && availableHere <= lowStockAlert
+        ? "warning"
+        : "success";
 
   const stockLabel =
-    currentStock <= 0
+    availableHere <= 0
       ? "Out of stock"
-      : minStockLevel != null && currentStock <= minStockLevel
-      ? "Low stock"
-      : "Healthy stock";
+      : lowStockAlert != null && Number.isFinite(lowStockAlert) && availableHere <= lowStockAlert
+        ? "Low stock"
+        : "Good stock";
+
+  async function loadProduct() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const loadedProduct = await getProductById(String(id || ""));
+
+      const normalizedCategory = normalizeCategory(loadedProduct?.category);
+
+      setProduct(loadedProduct);
+      setForm({
+        name: loadedProduct?.name || "",
+        sku: loadedProduct?.sku || "",
+        serial: loadedProduct?.serial || "",
+        barcode: loadedProduct?.barcode || "",
+        costPrice: loadedProduct?.costPrice ?? "",
+        sellPrice: loadedProduct?.sellPrice ?? "",
+        minStockLevel: loadedProduct?.minStockLevel ?? "",
+        category: normalizedCategory,
+        subcategory: loadedProduct?.subcategory || "",
+        subcategoryOther: loadedProduct?.subcategoryOther || "",
+        brand: loadedProduct?.brand || "",
+      });
+
+      setHasSerial(Boolean(cleanString(loadedProduct?.serial)));
+      setActiveBranchLabel(activeBranchNameFromStorage());
+    } catch (err) {
+      if (!handleSubscriptionBlockedError(err, { toastId: "inventory-edit-load-blocked" })) {
+        setError(err?.message || "Failed to load product");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    let cancelled = false;
+    let alive = true;
 
-    async function load() {
+    async function run() {
       setLoading(true);
       setError("");
 
       try {
-        const p = await getProductById(String(id));
-        if (cancelled) return;
+        const loadedProduct = await getProductById(String(id || ""));
 
-        const cat = normCategory(p?.category);
+        if (!alive) return;
 
-        setProductMeta(p);
+        const normalizedCategory = normalizeCategory(loadedProduct?.category);
+
+        setProduct(loadedProduct);
         setForm({
-          name: p?.name || "",
-          sku: p?.sku || "",
-          serial: p?.serial || "",
-          barcode: p?.barcode || "",
-          costPrice: p?.costPrice ?? "",
-          sellPrice: p?.sellPrice ?? "",
-          minStockLevel: p?.minStockLevel ?? "",
-          category: cat,
-          subcategory: p?.subcategory || "",
-          subcategoryOther: p?.subcategoryOther || "",
-          brand: p?.brand || "",
+          name: loadedProduct?.name || "",
+          sku: loadedProduct?.sku || "",
+          serial: loadedProduct?.serial || "",
+          barcode: loadedProduct?.barcode || "",
+          costPrice: loadedProduct?.costPrice ?? "",
+          sellPrice: loadedProduct?.sellPrice ?? "",
+          minStockLevel: loadedProduct?.minStockLevel ?? "",
+          category: normalizedCategory,
+          subcategory: loadedProduct?.subcategory || "",
+          subcategoryOther: loadedProduct?.subcategoryOther || "",
+          brand: loadedProduct?.brand || "",
         });
 
-        setHasSerial(Boolean(String(p?.serial || "").trim()));
+        setHasSerial(Boolean(cleanString(loadedProduct?.serial)));
+        setActiveBranchLabel(activeBranchNameFromStorage());
       } catch (err) {
-        if (!cancelled) {
-          if (!handleSubscriptionBlockedError(err, { toastId: "inventory-edit-load-blocked" })) {
-            setError(err?.message || "Failed to load product");
-          }
+        if (!alive) return;
+
+        if (!handleSubscriptionBlockedError(err, { toastId: "inventory-edit-load-blocked" })) {
+          setError(err?.message || "Failed to load product");
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (alive) setLoading(false);
       }
     }
 
-    load();
+    run();
 
     return () => {
-      cancelled = true;
+      alive = false;
     };
+  }, [id]);
+
+  useEffect(() => {
+    function onBranchChanged() {
+      setActiveBranchLabel(activeBranchNameFromStorage());
+      loadProduct();
+    }
+
+    window.addEventListener("storvex:branch-changed", onBranchChanged);
+    window.addEventListener("storvex:workspace-refreshed", onBranchChanged);
+
+    return () => {
+      window.removeEventListener("storvex:branch-changed", onBranchChanged);
+      window.removeEventListener("storvex:workspace-refreshed", onBranchChanged);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   function setField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function onChangeCategory(nextRaw) {
-    const next = normCategory(nextRaw);
+  function handleCategoryChange(value) {
+    const nextCategory = normalizeCategory(value);
 
     setForm((prev) => {
-      const out = { ...prev, category: next };
-      if (next !== "Accessories") {
-        out.subcategory = "";
-        out.subcategoryOther = "";
+      const next = {
+        ...prev,
+        category: nextCategory,
+      };
+
+      if (nextCategory !== "Accessories") {
+        next.subcategory = "";
+        next.subcategoryOther = "";
       }
-      return out;
+
+      return next;
     });
   }
 
-  function onToggleSerial(v) {
-    const checked = Boolean(v);
-    setHasSerial(checked);
+  function handleSerialToggle(nextValue) {
+    const checked = Boolean(nextValue);
 
+    setHasSerial(checked);
     setForm((prev) => ({
       ...prev,
       serial: checked ? prev.serial : "",
     }));
   }
 
-  async function submit(e) {
-    e.preventDefault();
+  function validatePayload(payload) {
+    if (!payload.name) {
+      return "Product name is required";
+    }
+
+    if (!Number.isFinite(payload.costPrice) || payload.costPrice < 0) {
+      return "Cost price must be 0 or more";
+    }
+
+    if (!Number.isFinite(payload.sellPrice) || payload.sellPrice < 0) {
+      return "Sell price must be 0 or more";
+    }
+
+    if (
+      payload.minStockLevel !== null &&
+      (!Number.isFinite(payload.minStockLevel) || payload.minStockLevel < 0)
+    ) {
+      return "Low stock alert must be 0 or more";
+    }
+
+    if (hasSerial && !payload.serial) {
+      return "Serial / IMEI is required when single-item tracking is on";
+    }
+
+    if (
+      payload.category === "Accessories" &&
+      payload.subcategory === "Other" &&
+      !payload.subcategoryOther
+    ) {
+      return "Write the custom accessory type";
+    }
+
+    return "";
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+
     if (saving) return;
 
+    const payload = {
+      name: cleanString(form.name),
+      sku: cleanString(form.sku) || null,
+      serial: hasSerial ? cleanString(form.serial) || null : null,
+      barcode: cleanString(form.barcode) || null,
+      category: category || null,
+      subcategory: null,
+      subcategoryOther: null,
+      brand: cleanString(form.brand) || null,
+      minStockLevel: form.minStockLevel === "" ? null : parseStock(form.minStockLevel),
+      costPrice: parseMoney(form.costPrice),
+      sellPrice: parseMoney(form.sellPrice),
+    };
+
+    if (category === "Accessories") {
+      payload.subcategory = cleanString(form.subcategory) || null;
+      payload.subcategoryOther =
+        payload.subcategory === "Other" ? cleanString(form.subcategoryOther) || null : null;
+    }
+
+    const validationMessage = validatePayload(payload);
+
+    if (validationMessage) {
+      toast.error(validationMessage);
+      return;
+    }
+
     setSaving(true);
-    setError("");
 
     try {
-      const payload = {
-        name: String(form.name || "").trim(),
-        sku: String(form.sku || "").trim() || null,
-        serial: hasSerial ? String(form.serial || "").trim() || null : null,
-        barcode: String(form.barcode || "").trim() || null,
-        costPrice: Number(form.costPrice),
-        sellPrice: Number(form.sellPrice),
-        minStockLevel: form.minStockLevel === "" ? null : Number(form.minStockLevel),
-        category: category || null,
-        brand: String(form.brand || "").trim() || null,
-      };
-
-      if (category === "Accessories") {
-        payload.subcategory = String(form.subcategory || "").trim() || null;
-        payload.subcategoryOther =
-          payload.subcategory === "Other"
-            ? String(form.subcategoryOther || "").trim() || null
-            : null;
-      } else {
-        payload.subcategory = null;
-        payload.subcategoryOther = null;
-      }
-
-      if (!payload.name) {
-        toast.error("Product name is required");
-        return;
-      }
-
-      if (!Number.isFinite(payload.costPrice) || payload.costPrice < 0) {
-        toast.error("Buy price must be 0 or more");
-        return;
-      }
-
-      if (!Number.isFinite(payload.sellPrice) || payload.sellPrice < 0) {
-        toast.error("Sell price must be 0 or more");
-        return;
-      }
-
-      if (
-        payload.minStockLevel !== null &&
-        (!Number.isFinite(payload.minStockLevel) || payload.minStockLevel < 0)
-      ) {
-        toast.error("Minimum stock level must be 0 or more");
-        return;
-      }
-
-      if (hasSerial && !String(payload.serial || "").trim()) {
-        toast.error("Serial / IMEI is required when tracking is enabled");
-        return;
-      }
-
-      if (
-        category === "Accessories" &&
-        payload.subcategory === "Other" &&
-        !String(payload.subcategoryOther || "").trim()
-      ) {
-        toast.error("Custom accessory type is required");
-        return;
-      }
-
-      await updateProduct(String(id), payload);
+      await updateProduct(String(id || ""), payload);
 
       toast.success("Product updated");
       navigate("/app/inventory");
     } catch (err) {
-      const msg = err?.message || "Failed to update product";
-
       if (handleSubscriptionBlockedError(err, { toastId: "inventory-edit-save-blocked" })) {
         return;
       }
 
-      if (String(msg).toLowerCase().includes("serial")) {
-        setError("This Serial/IMEI is already used. Please change it.");
-      } else if (String(msg).toLowerCase().includes("barcode")) {
-        setError("This barcode is already used. Please change it.");
-      } else if (String(msg).toLowerCase().includes("sku")) {
-        setError("This item code is already used. Please change it.");
-      } else {
-        setError(msg);
-      }
+      toast.error(err?.message || "Failed to update product");
     } finally {
       setSaving(false);
     }
   }
 
   if (loading) {
-    return <FormPageSkeleton showSideCard={true} titleWidth="w-36" fieldPairs={5} />;
+    return <FormPageSkeleton />;
   }
 
-  if (error && !form?.name) {
+  if (error) {
     return (
-      <div className="rounded-[22px] bg-[rgba(219,80,74,0.10)] px-5 py-4 text-sm text-[var(--color-danger)]">
-        {error}
-      </div>
+      <ErrorState
+        message={error}
+        onRetry={loadProduct}
+        onBack={() => navigate("/app/inventory")}
+      />
     );
   }
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-5">
-        <div>
-          <h1 className={cx("text-4xl font-black tracking-tight sm:text-5xl", strongText())}>
-            Edit product
-          </h1>
-          <p className={cx("mt-3 max-w-3xl text-sm leading-6", mutedText())}>
-            Update catalog structure, pricing, category placement, and product tracking while
-            keeping stock control disciplined through stock-adjustment workflows.
-          </p>
-        </div>
+    <div className="space-y-5">
+      <section className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
+        <div className="pointer-events-none absolute -right-24 -top-24 h-[260px] w-[260px] rounded-full bg-[rgba(74,163,255,0.10)] blur-3xl" />
 
-        <section className="grid gap-4 lg:grid-cols-2">
-          <SummaryStat label="Current stock" value={currentStock} tone={stockTone} />
-          <SummaryStat
-            label="Unit margin"
-            value={formatMoney(projectedMargin)}
-            tone={projectedMargin > 0 ? "success" : projectedMargin < 0 ? "danger" : "warning"}
-          />
-          <SummaryStat label="Stock cost value" value={formatMoney(estimatedStockCost)} />
-          <SummaryStat
-            label="Stock retail value"
-            value={formatMoney(estimatedStockRetail)}
-            tone={stockTone}
-          />
-        </section>
+        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+              Stock control
+            </p>
+
+            <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-[var(--color-text)] sm:text-3xl">
+              Edit product
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+              Update the product details used by your team when selling in{" "}
+              <span className="font-black text-[var(--color-text)]">{activeBranchLabel}</span>.
+              Stock quantity is changed separately from the reorder or inventory pages.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row xl:justify-end">
+            <button
+              type="button"
+              onClick={() => navigate("/app/inventory")}
+              disabled={saving}
+              className={secondaryButton()}
+            >
+              <BackIcon />
+              Back
+            </button>
+
+            <AsyncButton
+              loading={saving}
+              onClick={submit}
+              className={primaryButton()}
+            >
+              <SaveIcon />
+              Save changes
+            </AsyncButton>
+          </div>
+        </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <form onSubmit={submit} className="space-y-5">
-          {error ? (
-            <div className="rounded-[22px] bg-[rgba(219,80,74,0.10)] px-4 py-3 text-sm text-[var(--color-danger)]">
-              {error}
-            </div>
-          ) : null}
-
+      <form onSubmit={submit} className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-5">
           <section className={cx(pageCard(), "p-5 sm:p-6")}>
-            <SectionHeading
-              eyebrow="Identity"
-              title="Product identity"
-              text="Refine the exact way this product should be recognized across search, inventory, and selling flows."
-            />
-
-            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <FormField
-                  label="Product name"
-                  hint="Keep the product name clean and exactly how staff should identify it."
-                >
-                  <input
-                    className={inputClass()}
-                    value={form.name}
-                    onChange={(e) => setField("name", e.target.value)}
-                    required
-                    disabled={saving}
-                  />
-                </FormField>
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[22px] bg-[rgba(74,163,255,0.12)] text-[var(--color-primary)] shadow-[var(--shadow-soft)]">
+                <ProductIcon />
               </div>
 
-              <FormField
-                label="Item code / SKU"
-                hint="Useful for search, reporting, and product discipline."
-              >
+              <div>
+                <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
+                  Product details
+                </h2>
+                <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+                  Keep the name, brand, category, and codes easy for staff to recognize.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <Field label="Product name" required>
                 <input
+                  value={form.name}
+                  onChange={(event) => setField("name", event.target.value)}
                   className={inputClass()}
-                  value={form.sku}
-                  onChange={(e) => setField("sku", e.target.value)}
+                  placeholder="Example: Dell Inspiron 15"
                   disabled={saving}
                 />
-              </FormField>
+              </Field>
 
-              <FormField
-                label="Brand"
-                hint="Use the commercial brand consistently across inventory."
-              >
+              <Field label="Brand">
                 <input
-                  className={inputClass()}
                   value={form.brand}
-                  onChange={(e) => setField("brand", e.target.value)}
+                  onChange={(event) => setField("brand", event.target.value)}
+                  className={inputClass()}
+                  placeholder="Example: Dell"
                   disabled={saving}
                 />
-              </FormField>
+              </Field>
 
-              <FormField
-                label="Barcode"
-                hint="Helpful for quick lookup and scanner-based workflows."
-              >
+              <Field label="Product code" hint="Optional. Use it if your shop already has product codes.">
                 <input
+                  value={form.sku}
+                  onChange={(event) => setField("sku", event.target.value)}
                   className={inputClass()}
-                  value={form.barcode}
-                  onChange={(e) => setField("barcode", e.target.value)}
+                  placeholder="Example: DEL-INS15"
                   disabled={saving}
                 />
-              </FormField>
+              </Field>
 
-              <FormField
-                label="Category"
-                hint="Use the category your team expects this product to sit under."
-              >
-                <select
+              <Field label="Barcode" hint="Optional. Useful when using barcode search or scanner.">
+                <input
+                  value={form.barcode}
+                  onChange={(event) => setField("barcode", event.target.value)}
                   className={inputClass()}
+                  placeholder="Barcode number"
+                  disabled={saving}
+                />
+              </Field>
+
+              <Field label="Category">
+                <select
                   value={category}
-                  onChange={(e) => onChangeCategory(e.target.value)}
+                  onChange={(event) => handleCategoryChange(event.target.value)}
+                  className={inputClass()}
                   disabled={saving}
                 >
-                  <option value="">Select category</option>
-                  {CATEGORY_OPTIONS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
+                  <option value="">Choose category</option>
+                  {CATEGORY_OPTIONS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
                     </option>
                   ))}
                 </select>
-              </FormField>
+              </Field>
 
               {isAccessories ? (
-                <>
-                  <FormField
-                    label="Accessory type"
-                    hint="This keeps accessory inventory structured and easier to filter."
+                <Field label="Accessory type">
+                  <select
+                    value={form.subcategory}
+                    onChange={(event) => setField("subcategory", event.target.value)}
+                    className={inputClass()}
+                    disabled={saving}
                   >
-                    <select
-                      className={inputClass()}
-                      value={form.subcategory}
-                      onChange={(e) => setField("subcategory", e.target.value)}
-                      disabled={saving}
-                    >
-                      <option value="">Select accessory type</option>
-                      {ACCESSORY_SUBCATEGORY_OPTIONS.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
+                    <option value="">Choose accessory type</option>
+                    {ACCESSORY_SUBCATEGORY_OPTIONS.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              ) : null}
 
-                  {isOtherAccessoryType ? (
-                    <FormField
-                      label="Custom accessory type"
-                      hint="Only fill this when no standard accessory option fits."
-                    >
-                      <input
-                        className={inputClass()}
-                        value={form.subcategoryOther}
-                        onChange={(e) => setField("subcategoryOther", e.target.value)}
-                        disabled={saving}
-                      />
-                    </FormField>
-                  ) : null}
-                </>
+              {isOtherAccessoryType ? (
+                <Field label="Custom accessory type" className="sm:col-span-2">
+                  <input
+                    value={form.subcategoryOther}
+                    onChange={(event) => setField("subcategoryOther", event.target.value)}
+                    className={inputClass()}
+                    placeholder="Write the accessory type"
+                    disabled={saving}
+                  />
+                </Field>
               ) : null}
             </div>
           </section>
 
           <section className={cx(pageCard(), "p-5 sm:p-6")}>
-            <SectionHeading
-              eyebrow="Tracking"
-              title="Tracking rules"
-              text="Control whether this product should remain bulk-managed or uniquely tracked by serial / IMEI."
-            />
-
-            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => onToggleSerial(false)}
-                className={chipCardClass(!hasSerial)}
-                disabled={saving}
-              >
-                <div className="text-sm font-semibold">No serial tracking</div>
-                <div className={cx("mt-2 text-sm leading-6", !hasSerial ? "text-white/80" : mutedText())}>
-                  Best for bulk stock and non-unique units.
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onToggleSerial(true)}
-                className={chipCardClass(hasSerial)}
-                disabled={saving}
-              >
-                <div className="text-sm font-semibold">Track by serial / IMEI</div>
-                <div className={cx("mt-2 text-sm leading-6", hasSerial ? "text-white/80" : mutedText())}>
-                  Best for high-control electronics with unique identity.
-                </div>
-              </button>
-
-              {hasSerial ? (
-                <div className="md:col-span-2">
-                  <FormField label="Serial / IMEI" hint="Required when unique tracking is enabled.">
-                    <input
-                      className={inputClass()}
-                      value={form.serial}
-                      onChange={(e) => setField("serial", e.target.value)}
-                      disabled={saving}
-                    />
-                  </FormField>
-                </div>
-              ) : null}
+            <div>
+              <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
+                Serial / IMEI
+              </h2>
+              <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+                Turn this on only when the item must be identified one by one, like phones and laptops.
+              </p>
             </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <ChoiceCard
+                active={!hasSerial}
+                title="No single-item tracking"
+                text="Best for normal stock where each unit does not need its own serial number."
+                disabled={saving}
+                onClick={() => handleSerialToggle(false)}
+              />
+
+              <ChoiceCard
+                active={hasSerial}
+                title="Use Serial / IMEI"
+                text="Best for phones, laptops, and devices where each unit must be identifiable."
+                disabled={saving}
+                onClick={() => handleSerialToggle(true)}
+              />
+            </div>
+
+            {hasSerial ? (
+              <div className="mt-5">
+                <Field label="Serial / IMEI" required>
+                  <input
+                    value={form.serial}
+                    onChange={(event) => setField("serial", event.target.value)}
+                    className={inputClass()}
+                    placeholder="Serial or IMEI number"
+                    disabled={saving}
+                  />
+                </Field>
+              </div>
+            ) : null}
           </section>
 
           <section className={cx(pageCard(), "p-5 sm:p-6")}>
-            <SectionHeading
-              eyebrow="Pricing"
-              title="Pricing setup"
-              text="Refine buy and sell prices without touching stock quantities directly."
-            />
+            <div>
+              <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
+                Price and stock alert
+              </h2>
+              <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+                Update price and when the system should warn you that stock is getting low.
+              </p>
+            </div>
 
-            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField label="Buy price" hint="Your current acquisition cost per unit.">
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <Field label="Cost price" required>
                 <input
                   type="number"
                   min="0"
-                  className={inputClass()}
                   value={form.costPrice}
-                  onChange={(e) => setField("costPrice", e.target.value)}
-                  required
+                  onChange={(event) => setField("costPrice", event.target.value)}
+                  className={inputClass()}
+                  placeholder="450000"
                   disabled={saving}
                 />
-              </FormField>
+              </Field>
 
-              <FormField label="Sell price" hint="The retail price used by the store when selling.">
+              <Field label="Sell price" required>
                 <input
                   type="number"
                   min="0"
-                  className={inputClass()}
                   value={form.sellPrice}
-                  onChange={(e) => setField("sellPrice", e.target.value)}
-                  required
+                  onChange={(event) => setField("sellPrice", event.target.value)}
+                  className={inputClass()}
+                  placeholder="529999"
                   disabled={saving}
                 />
-              </FormField>
+              </Field>
+
+              <Field label="Low stock alert" hint="The system will warn you when stock gets this low." className="sm:col-span-2">
+                <input
+                  type="number"
+                  min="0"
+                  value={form.minStockLevel}
+                  onChange={(event) => setField("minStockLevel", event.target.value)}
+                  className={inputClass()}
+                  placeholder="2"
+                  disabled={saving}
+                />
+              </Field>
+            </div>
+
+            <div className="mt-5 rounded-[24px] bg-[var(--color-surface-2)] p-4">
+              <p className="text-sm font-bold leading-6 text-[var(--color-text-muted)]">
+                To change the number of items available, use <span className="text-[var(--color-text)]">Change stock</span> from the inventory or reorder page. This keeps a clear record of who changed stock and why.
+              </p>
+            </div>
+          </section>
+        </div>
+
+        <aside className="space-y-5 xl:sticky xl:top-[96px] xl:self-start">
+          <section className={cx(pageCard(), "p-5")}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+                  Preview
+                </p>
+
+                <h2 className="mt-2 text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
+                  Current product health
+                </h2>
+              </div>
+
+              <StatusPill tone={stockTone}>{stockLabel}</StatusPill>
+            </div>
+
+            <div className="mt-5 grid gap-3">
+              <MetricCard
+                label="Available here"
+                value={formatNumber(availableHere)}
+                note={activeBranchLabel}
+                tone={stockTone}
+              />
+
+              <MetricCard
+                label="Profit per item"
+                value={formatRwf(profitPerItem)}
+                note="Sell price minus cost price"
+                tone={profitPerItem > 0 ? "success" : profitPerItem < 0 ? "danger" : "neutral"}
+              />
+
+              <MetricCard
+                label="Stock cost"
+                value={formatRwf(stockCost)}
+                note="Money tied in current stock here"
+                tone="neutral"
+              />
+
+              <MetricCard
+                label="Possible sales value"
+                value={formatRwf(stockSellValue)}
+                note="If all current stock here is sold"
+                tone="success"
+              />
             </div>
           </section>
 
-          <section className={cx(pageCard(), "p-5 sm:p-6")}>
-            <SectionHeading
-              eyebrow="Stock policy"
-              title="Minimum stock rule"
-              text="Keep the threshold realistic so the system flags replenishment risk early."
-            />
+          <section className={cx(pageCard(), "p-5")}>
+            <h3 className="text-base font-black text-[var(--color-text)]">
+              Product summary
+            </h3>
 
-            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                label="Minimum stock level"
-                hint="Use a realistic threshold for this item’s replenishment pressure."
-              >
-                <input
-                  type="number"
-                  min="0"
-                  className={inputClass()}
-                  value={form.minStockLevel}
-                  onChange={(e) => setField("minStockLevel", e.target.value)}
-                  disabled={saving}
-                />
-              </FormField>
+            <div className="mt-4 space-y-3">
+              <div className={cx(softPanel(), "p-4")}>
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                  Product
+                </p>
+                <p className="mt-2 truncate text-sm font-black text-[var(--color-text)]">
+                  {form.name || "Not named yet"}
+                </p>
+              </div>
 
-              <div className={cx(softPanel(), "p-5")}>
-                <div className={cx("text-sm font-semibold", strongText())}>Current stock rule</div>
-                <div className={cx("mt-2 text-sm leading-6", mutedText())}>
-                  Quantity changes are intentionally blocked here. Use stock adjustment tools so
-                  every movement stays logged and accountable.
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <StatusPill text={stockLabel} tone={stockTone} />
-                  <StatusPill text={`Current stock ${currentStock}`} tone={stockTone} />
-                </div>
+              <div className={cx(softPanel(), "p-4")}>
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                  Category
+                </p>
+                <p className="mt-2 truncate text-sm font-black text-[var(--color-text)]">
+                  {category || "Not selected"}
+                </p>
+              </div>
+
+              <div className={cx(softPanel(), "p-4")}>
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                  Branch
+                </p>
+                <p className="mt-2 truncate text-sm font-black text-[var(--color-text)]">
+                  {activeBranchLabel}
+                </p>
               </div>
             </div>
           </section>
 
-          <section className={cx(pageCard(), "p-5 sm:p-6")}>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <section className={cx(pageCard(), "p-5")}>
+            <div className="flex flex-col gap-2">
               <button
                 type="button"
                 onClick={() => navigate("/app/inventory")}
-                className={secondaryBtn()}
                 disabled={saving}
+                className={secondaryButton()}
               >
                 Cancel
               </button>
 
-              <AsyncButton type="submit" loading={saving} className={primaryBtn()}>
-                Update product
+              <AsyncButton
+                type="submit"
+                loading={saving}
+                className={primaryButton()}
+              >
+                <SaveIcon />
+                Save changes
               </AsyncButton>
             </div>
           </section>
-        </form>
-
-        <aside className="space-y-5">
-          <section className={cx(pageCard(), "p-5 sm:p-6")}>
-            <SectionHeading
-              eyebrow="Preview"
-              title="Live product snapshot"
-              text="A fast owner-level read of how this product currently sits inside the inventory system."
-            />
-
-            <div className="mt-6 space-y-4">
-              <div className={cx(softPanel(), "p-5")}>
-                <div className={cx("text-lg font-bold", strongText())}>
-                  {form.name || "Unnamed product"}
-                </div>
-                <div className={cx("mt-1 text-sm", mutedText())}>
-                  {form.brand || "No brand selected"}
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <StatusPill text={category || "No category"} />
-                  {isAccessories && form.subcategory ? (
-                    <StatusPill
-                      text={
-                        form.subcategory === "Other"
-                          ? form.subcategoryOther || "Other accessory"
-                          : form.subcategory
-                      }
-                    />
-                  ) : null}
-                  {hasSerial ? <StatusPill text="Serial tracked" tone="success" /> : <StatusPill text="Bulk tracked" />}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3">
-                <SummaryStat label="Current stock status" value={stockLabel} tone={stockTone} />
-                <SummaryStat label="Stock cost value" value={formatMoney(estimatedStockCost)} />
-                <SummaryStat
-                  label="Stock retail value"
-                  value={formatMoney(estimatedStockRetail)}
-                  tone={stockTone}
-                />
-                <SummaryStat
-                  label="Unit margin"
-                  value={formatMoney(projectedMargin)}
-                  tone={projectedMargin > 0 ? "success" : projectedMargin < 0 ? "danger" : "warning"}
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className={cx(pageCard(), "p-5 sm:p-6")}>
-            <SectionHeading
-              eyebrow="Control"
-              title="Stock discipline"
-              text="This keeps catalog editing separated from physical stock movement."
-            />
-
-            <div className="mt-5 space-y-3">
-              <div className={cx(softPanel(), "p-5")}>
-                <div className={cx("text-sm font-semibold", strongText())}>Current stock</div>
-                <div className={cx("mt-2 text-3xl font-black tracking-tight", strongText())}>
-                  {currentStock}
-                </div>
-                <div className={cx("mt-2 text-sm leading-6", mutedText())}>
-                  Use stock adjustment tools for restock, loss, theft, damage, and physical-count corrections.
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => navigate("/app/inventory/stock-history")}
-                className={secondaryBtn()}
-                disabled={saving}
-              >
-                View stock history
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/app/inventory/reorder")}
-                className={secondaryBtn()}
-                disabled={saving}
-              >
-                Open reorder list
-              </button>
-            </div>
-          </section>
         </aside>
-      </div>
+      </form>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import InterStoreDetail from "./pages/interstore/InterStoreDetail";
 import InventoryCreate from "./pages/inventory/InventoryCreate";
 import InventoryEdit from "./pages/inventory/InventoryEdit";
 import InventoryList from "./pages/inventory/InventoryList";
+import InventoryDetail from "./pages/inventory/InventoryDetail";
 import StockAdjustments from "./pages/inventory/StockAdjustments";
 import Reorder from "./pages/inventory/Reorder";
 
@@ -26,6 +27,10 @@ import RepairCreate from "./pages/repairs/RepairCreate";
 import Repairs from "./pages/repairs/Repairs";
 
 import Reports from "./pages/reports/Reports";
+import CashFlowReport from "./pages/reports/CashFlowReport";
+import IncomeStatement from "./pages/reports/IncomeStatement";
+import TrialBalance from "./pages/reports/TrialBalance";
+import ProfitTable from "./pages/reports/ProfitTable";
 
 import CustomerCreate from "./pages/customers/CustomerCreate";
 import CustomerEdit from "./pages/customers/CustomerEdit";
@@ -69,6 +74,7 @@ import WhatsAppBroadcasts from "./pages/whatsapp/WhatsAppBroadcasts";
 import DocumentsHome from "./pages/documents/DocumentsHome";
 import DocumentListPage from "./pages/documents/DocumentListPage";
 import DocumentPreviewRoute from "./pages/documents/DocumentPreviewRoute";
+import DocumentCenterPage from "./pages/documents/DocumentCenterPage";
 
 import { listReceipts } from "./services/receiptsApi";
 import { listInvoices } from "./services/invoicesApi";
@@ -103,7 +109,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/renew" element={<Renew />} />
 
-        <Route path="/app" element={<RequireTenantAuth />}>
+        <Route path="/dashboard" element={<RequireTenantAuth />}>
           <Route element={<GuardedStoreLayout />}>
             <Route
               index
@@ -136,6 +142,7 @@ export default function App() {
 
             <Route element={<RequireRole roles={["OWNER", "MANAGER", "STOREKEEPER"]} />}>
               <Route path="inventory" element={<InventoryList />} />
+              <Route path="/dashboard/inventory/:id" element={<InventoryDetail />} />
               <Route path="inventory/reorder" element={<Reorder />} />
               <Route path="inventory/stock-history" element={<StockAdjustments />} />
 
@@ -144,7 +151,7 @@ export default function App() {
             </Route>
 
             <Route element={<RequireRole roles={["OWNER", "MANAGER"]} />}>
-              <Route path="inventory/create" element={<InventoryCreate />} />
+              <Route path="inventory/new" element={<InventoryCreate />} />
               <Route path="inventory/:id/edit" element={<InventoryEdit />} />
 
               <Route path="suppliers/new" element={<SupplierCreate />} />
@@ -171,7 +178,7 @@ export default function App() {
                 />
               }
             >
-              <Route path="documents" element={<DocumentsHome />} />
+              <Route path="documents" element={<DocumentCenterPage />} />
 
               <Route
                 path="documents/receipts"
@@ -235,14 +242,14 @@ export default function App() {
 
               <Route path="documents/:resource/:id/preview" element={<DocumentPreviewRoute />} />
 
-              <Route path="receipts" element={<Navigate to="/app/documents/receipts" replace />} />
-              <Route path="invoices" element={<Navigate to="/app/documents/invoices" replace />} />
+              <Route path="receipts" element={<Navigate to="/dashboard/documents/receipts" replace />} />
+              <Route path="invoices" element={<Navigate to="/dashboard/documents/invoices" replace />} />
               <Route
                 path="delivery-notes"
-                element={<Navigate to="/app/documents/delivery-notes" replace />}
+                element={<Navigate to="/dashboard/documents/delivery-notes" replace />}
               />
-              <Route path="proformas" element={<Navigate to="/app/documents/proformas" replace />} />
-              <Route path="warranties" element={<Navigate to="/app/documents/warranties" replace />} />
+              <Route path="proformas" element={<Navigate to="/dashboard/documents/proformas" replace />} />
+              <Route path="warranties" element={<Navigate to="/dashboard/documents/warranties" replace />} />
             </Route>
 
             <Route element={<RequireRole roles={["OWNER", "MANAGER", "CASHIER", "SELLER"]} />}>
@@ -264,12 +271,17 @@ export default function App() {
                 <Route path="interstore" element={<InterStoreDeals />} />
                 <Route path="interstore/:id" element={<InterStoreDetail />} />
               </Route>
+              
+                <Route element={<RequireRole roles={["OWNER", "MANAGER"]} />}>
+                  <Route path="reports" element={<Reports />} />
+                  <Route path="reports/cash-flow" element={<CashFlowReport />} />
+                  <Route path="reports/income-statement" element={<IncomeStatement />} />
+                  <Route path="reports/trial-balance" element={<TrialBalance />} />
+                  <Route path="reports/profit-table" element={<ProfitTable />} />
 
-              <Route element={<RequireRole roles={["OWNER", "MANAGER"]} />}>
-                <Route path="reports" element={<Reports />} />
-                <Route path="whatsapp/activity" element={<WhatsAppActivity />} />
-                <Route path="whatsapp/broadcasts" element={<WhatsAppBroadcasts />} />
-              </Route>
+                  <Route path="whatsapp/activity" element={<WhatsAppActivity />} />
+                  <Route path="whatsapp/broadcasts" element={<WhatsAppBroadcasts />} />
+                </Route>
 
             <Route element={<RequireRole roles={["OWNER", "CASHIER", "TECHNICIAN"]} />}>
               <Route path="repairs" element={<Repairs />} />
@@ -279,7 +291,7 @@ export default function App() {
               <Route path="repairs/new" element={<RepairCreate />} />
             </Route>
 
-            <Route path="*" element={<Navigate to="/app" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Route>
 

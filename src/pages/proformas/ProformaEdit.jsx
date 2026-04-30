@@ -1,67 +1,48 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import { cn } from "../../lib/cn";
+import AsyncButton from "../../components/ui/AsyncButton";
 import { getProformaById, updateProforma } from "../../services/proformasApi";
 
-function cx(...xs) {
-  return xs.filter(Boolean).join(" ");
-}
-
-function shell() {
-  return "rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
-}
-
-function panel() {
-  return "rounded-[24px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]";
-}
-
-function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
-}
-
-function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
-}
-
-function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
-}
+const strong = () => "text-[var(--color-text)]";
+const muted = () => "text-[var(--color-text-muted)]";
+const soft = () => "text-[var(--color-text-soft)]";
+const shell = () => "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+const panel = () => "rounded-[24px] bg-[var(--color-surface-2)]";
 
 function labelClass() {
-  return "mb-2 block text-sm font-medium text-stone-900 dark:text-[rgb(var(--text))]";
+  return "mb-1.5 block text-sm font-medium text-[var(--color-text)]";
 }
 
 function inputClass() {
-  return "h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
+  return "app-input";
 }
 
 function textareaClass() {
-  return "w-full rounded-2xl border border-stone-300 bg-white px-3.5 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function primaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-stone-950 px-5 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl border border-stone-300 bg-white px-5 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return [
+    "w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]",
+    "px-4 py-3 text-sm leading-6 text-[var(--color-text)]",
+    "outline-none transition placeholder:text-[var(--color-text-muted)]",
+    "focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]",
+    "resize-y min-h-[120px]",
+    "shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
+  ].join(" ");
 }
 
 function smallBtn() {
-  return "inline-flex h-9 items-center justify-center rounded-xl border border-stone-300 bg-white px-3 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "inline-flex h-9 items-center justify-center rounded-xl bg-[var(--color-card)] px-3 text-sm font-medium text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function summaryRow(label, value, strong = false) {
+function summaryRow(label, value, strongValue = false) {
   return (
     <div className="flex items-center justify-between gap-4 py-2">
-      <span className="text-sm text-stone-600 dark:text-[rgb(var(--text-muted))]">
-        {label}
-      </span>
+      <span className={cn("text-sm", muted())}>{label}</span>
       <span
-        className={cx(
-          "text-sm text-right",
-          strong ? "font-semibold" : "font-medium",
-          strong ? strongText() : mutedText()
+        className={cn(
+          "text-right text-sm",
+          strongValue ? "font-semibold" : "font-medium",
+          strongValue ? strong() : muted()
         )}
       >
         {value}
@@ -152,6 +133,39 @@ function normalizeProforma(raw) {
   };
 }
 
+function EditSkeleton() {
+  return (
+    <div className="space-y-6">
+      <section className={cn(shell(), "p-5 md:p-6")}>
+        <div className="h-3 w-28 animate-pulse rounded-full bg-[var(--color-surface)]" />
+        <div className="mt-4 h-8 w-56 animate-pulse rounded-full bg-[var(--color-surface)]" />
+        <div className="mt-3 h-4 w-full max-w-[560px] animate-pulse rounded-full bg-[var(--color-surface)]" />
+      </section>
+
+      <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="space-y-5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <section key={i} className={cn(panel(), "p-4 md:p-5")}>
+              <div className="h-5 w-40 animate-pulse rounded-full bg-[var(--color-surface)]" />
+              <div className="mt-2 h-4 w-72 animate-pulse rounded-full bg-[var(--color-surface)]" />
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {Array.from({ length: 4 }).map((__, j) => (
+                  <div key={j}>
+                    <div className="mb-2 h-3 w-24 animate-pulse rounded-full bg-[var(--color-surface)]" />
+                    <div className="h-11 animate-pulse rounded-2xl bg-[var(--color-surface)]" />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <section className={cn(shell(), "h-[300px] p-4 md:p-5 animate-pulse")} />
+      </div>
+    </div>
+  );
+}
+
 export default function ProformaEdit() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -211,13 +225,11 @@ export default function ProformaEdit() {
         console.error(err);
         toast.error(err?.message || "Failed to load proforma");
       } finally {
-        if (mountedRef.current) {
-          setLoading(false);
-        }
+        if (mountedRef.current) setLoading(false);
       }
     }
 
-    load();
+    void load();
   }, [id]);
 
   function updateField(key, value) {
@@ -231,9 +243,7 @@ export default function ProformaEdit() {
           ? {
               ...item,
               [key]:
-                key === "quantity" || key === "unitPrice"
-                  ? Number(value || 0)
-                  : value,
+                key === "quantity" || key === "unitPrice" ? Number(value || 0) : value,
             }
           : item
       )
@@ -314,46 +324,34 @@ export default function ProformaEdit() {
   }
 
   if (loading) {
-    return (
-      <div className="space-y-5">
-        <section className={cx(shell(), "p-5 md:p-6")}>
-          <div className="h-6 w-40 animate-pulse rounded bg-stone-200 dark:bg-[rgb(var(--bg-muted))]" />
-          <div className="mt-3 h-4 w-80 max-w-full animate-pulse rounded bg-stone-200 dark:bg-[rgb(var(--bg-muted))]" />
-        </section>
-        <section className={cx(panel(), "p-4 md:p-5")}>
-          <div className="h-40 animate-pulse rounded-2xl bg-stone-100 dark:bg-[rgb(var(--bg-muted))]" />
-        </section>
-      </div>
-    );
+    return <EditSkeleton />;
   }
 
   return (
-    <div className="space-y-5">
-      <section className={cx(shell(), "relative overflow-hidden p-5 md:p-6")}>
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-stone-950 via-stone-800 to-stone-950 opacity-[0.03] dark:from-white dark:via-white dark:to-white dark:opacity-[0.04]" />
-
+    <div className="space-y-6">
+      <section className={cn(shell(), "relative overflow-hidden p-5 md:p-6")}>
         <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0">
-            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+            <div className={cn("text-[11px] font-semibold uppercase tracking-[0.16em]", soft())}>
               Document editing
             </div>
 
-            <h1 className={cx("mt-2 text-2xl font-semibold tracking-tight md:text-3xl", strongText())}>
+            <h1 className={cn("mt-2 text-2xl font-semibold tracking-tight md:text-3xl", strong())}>
               Edit Proforma
             </h1>
 
-            <p className={cx("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", mutedText())}>
+            <p className={cn("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", muted())}>
               Revise customer details, quotation items, validity, and commercial notes without losing the premium document flow.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link to="/app/documents/proformas" className={secondaryBtn()}>
+            <Link to="/app/documents/proformas" className={smallBtn()}>
               Back to Proformas
             </Link>
             <Link
               to={`/app/documents/proformas/${encodeURIComponent(id)}/preview`}
-              className={secondaryBtn()}
+              className={smallBtn()}
             >
               Preview
             </Link>
@@ -363,9 +361,9 @@ export default function ProformaEdit() {
 
       <form onSubmit={onSubmit} className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-5">
-          <section className={cx(panel(), "p-4 md:p-5")}>
-            <h2 className={cx("text-base font-semibold", strongText())}>Document summary</h2>
-            <p className={cx("mt-1 text-sm", mutedText())}>
+          <section className={cn(panel(), "p-4 md:p-5")}>
+            <h2 className={cn("text-base font-semibold", strong())}>Document summary</h2>
+            <p className={cn("mt-1 text-sm", muted())}>
               Review the quotation reference and current commercial state.
             </p>
 
@@ -380,7 +378,7 @@ export default function ProformaEdit() {
                   </div>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-emerald-700/80 dark:text-emerald-200/80">
                     <span>Date: {formatDate(documentData?.createdAt)}</span>
-                    {documentData?.convertedToSaleId ? <span>Converted: Yes</span> : <span>Converted: No</span>}
+                    <span>{documentData?.convertedToSaleId ? "Converted: Yes" : "Converted: No"}</span>
                   </div>
                 </div>
 
@@ -391,9 +389,9 @@ export default function ProformaEdit() {
             </div>
           </section>
 
-          <section className={cx(panel(), "p-4 md:p-5")}>
-            <h2 className={cx("text-base font-semibold", strongText())}>Customer and commercial details</h2>
-            <p className={cx("mt-1 text-sm", mutedText())}>
+          <section className={cn(panel(), "p-4 md:p-5")}>
+            <h2 className={cn("text-base font-semibold", strong())}>Customer and commercial details</h2>
+            <p className={cn("mt-1 text-sm", muted())}>
               Keep the quotation details clear, credible, and ready for approval.
             </p>
 
@@ -505,11 +503,11 @@ export default function ProformaEdit() {
             </div>
           </section>
 
-          <section className={cx(panel(), "p-4 md:p-5")}>
+          <section className={cn(panel(), "p-4 md:p-5")}>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className={cx("text-base font-semibold", strongText())}>Quotation items</h2>
-                <p className={cx("mt-1 text-sm", mutedText())}>
+                <h2 className={cn("text-base font-semibold", strong())}>Quotation items</h2>
+                <p className={cn("mt-1 text-sm", muted())}>
                   Keep the quotation clean, accurate, and easy to validate.
                 </p>
               </div>
@@ -523,14 +521,14 @@ export default function ProformaEdit() {
               {items.map((item, index) => (
                 <div
                   key={item.key}
-                  className="rounded-[20px] border border-stone-200 bg-stone-50 p-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]"
+                  className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-card)] p-4"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className={cx("text-sm font-semibold", strongText())}>
+                      <div className={cn("text-sm font-semibold", strong())}>
                         Item {index + 1}
                       </div>
-                      <div className={cx("mt-1 text-xs", softText())}>
+                      <div className={cn("mt-1 text-xs", soft())}>
                         This line appears on the proforma.
                       </div>
                     </div>
@@ -592,8 +590,11 @@ export default function ProformaEdit() {
 
                     <div>
                       <label className={labelClass()}>Line total</label>
-                      <div className="flex h-11 items-center rounded-2xl border border-stone-200 bg-white px-3.5 text-sm font-medium text-stone-900 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))]">
-                        {money(Number(item.quantity || 0) * Number(item.unitPrice || 0), form.currency || "RWF")}
+                      <div className="flex h-11 items-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3.5 text-sm font-medium text-[var(--color-text)]">
+                        {money(
+                          Number(item.quantity || 0) * Number(item.unitPrice || 0),
+                          form.currency || "RWF"
+                        )}
                       </div>
                     </div>
                   </div>
@@ -604,15 +605,15 @@ export default function ProformaEdit() {
         </div>
 
         <div className="space-y-5">
-          <section className={cx(shell(), "p-4 md:p-5 xl:sticky xl:top-5")}>
+          <section className={cn(shell(), "p-4 md:p-5 xl:sticky xl:top-5")}>
             <div>
-              <h2 className={cx("text-base font-semibold", strongText())}>Summary</h2>
-              <p className={cx("mt-1 text-sm", mutedText())}>
+              <h2 className={cn("text-base font-semibold", strong())}>Summary</h2>
+              <p className={cn("mt-1 text-sm", muted())}>
                 Review before saving proforma changes.
               </p>
             </div>
 
-            <div className="mt-5 divide-y divide-stone-200 dark:divide-[rgb(var(--border))]">
+            <div className="mt-5 divide-y divide-[var(--color-border)]">
               {summaryRow("Document", documentData?.number || "—")}
               {summaryRow("Customer", form.customerName || "—")}
               {summaryRow("Prepared by", form.preparedBy || "—")}
@@ -623,13 +624,13 @@ export default function ProformaEdit() {
             </div>
 
             <div className="mt-5 flex flex-col gap-2">
-              <button type="submit" className={primaryBtn()} disabled={saving}>
-                {saving ? "Saving..." : "Save Proforma"}
-              </button>
+              <AsyncButton type="submit" loading={saving} loadingText="Saving..." variant="primary">
+                Save Proforma
+              </AsyncButton>
 
               <Link
                 to={`/app/documents/proformas/${encodeURIComponent(id)}/preview`}
-                className={secondaryBtn()}
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-medium text-[var(--color-text)] transition hover:opacity-90"
               >
                 Cancel
               </Link>
@@ -639,4 +640,4 @@ export default function ProformaEdit() {
       </form>
     </div>
   );
-}     
+}

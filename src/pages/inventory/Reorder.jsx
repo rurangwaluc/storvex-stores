@@ -6,142 +6,284 @@ import AsyncButton from "../../components/ui/AsyncButton";
 import {
   adjustStock,
   downloadReorderPdf,
-  getStockAdjustments,
-  listProducts,
+  getProductStockAdjustments,
+  getProducts,
 } from "../../services/inventoryApi";
 import { handleSubscriptionBlockedError } from "../../utils/subscriptionError";
+
+const PAGE_SIZE = 10;
+
+const LOSS_REASONS = [
+  { value: "DAMAGED", label: "Damaged" },
+  { value: "STOLEN", label: "Stolen" },
+  { value: "LOST", label: "Lost" },
+  { value: "EXPIRED", label: "Expired" },
+  { value: "INTERNAL_USE", label: "Used inside the business" },
+  { value: "COUNTING_ERROR", label: "Counting mistake" },
+  { value: "OTHER", label: "Other reason" },
+];
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
-const formatMoney = (n) => `Rwf ${Number(n || 0).toLocaleString("en-US")}`;
-const PAGE_SIZE = 10;
+function formatRwf(value) {
+  const n = Number(value || 0);
 
-function strongText() {
-  return "text-[var(--color-text)]";
+  return new Intl.NumberFormat("en-RW", {
+    style: "currency",
+    currency: "RWF",
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(n) ? n : 0);
 }
 
-function mutedText() {
-  return "text-[var(--color-text-muted)]";
+function formatNumber(value) {
+  const n = Number(value || 0);
+  return new Intl.NumberFormat("en-RW").format(Number.isFinite(n) ? n : 0);
 }
 
-function softText() {
-  return "text-[var(--color-text-muted)]";
+function cleanString(value) {
+  const s = String(value || "").trim();
+  return s || "";
+}
+
+function productStock(product) {
+  return Number(product?.effectiveStockQty ?? product?.branchStockQty ?? product?.stockQty ?? 0);
+}
+
+function productCategory(product) {
+  return [product?.brand, product?.category].filter(Boolean).join(" • ") || "No category";
 }
 
 function pageCard() {
-  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+  return "rounded-[30px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
 function softPanel() {
-  return "rounded-[22px] bg-[var(--color-surface-2)]";
+  return "rounded-[24px] bg-[var(--color-surface-2)]";
 }
 
 function inputClass() {
-  return "app-input";
+  return "h-12 w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)]";
 }
 
-function secondaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
+function buttonBase() {
+  return "inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function primaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+function secondaryButton() {
+  return cx(
+    buttonBase(),
+    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
 }
 
-function dangerBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-danger)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+function primaryButton() {
+  return cx(
+    buttonBase(),
+    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
 }
 
-function warningBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[#d9a700] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+function successButton() {
+  return cx(
+    buttonBase(),
+    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
 }
 
-function successBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[#16a34a] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+function dangerButton() {
+  return cx(
+    buttonBase(),
+    "bg-red-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
 }
 
-function StatusBadge({ kind = "neutral", children }) {
-  const cls =
-    kind === "danger"
-      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
-      : kind === "warning"
-      ? "bg-[#fff1c9] text-[#b88900]"
-      : kind === "success"
-      ? "bg-[#dcfce7] text-[#15803d]"
-      : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
+function warningButton() {
+  return cx(
+    buttonBase(),
+    "bg-amber-500 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
+}
+
+function activeBranchNameFromStorage() {
+  const name = cleanString(localStorage.getItem("activeBranchName"));
+  const code = cleanString(localStorage.getItem("activeBranchCode"));
+
+  if (code && name) return `${code} • ${name}`;
+  if (name) return name;
+  if (code) return code;
+
+  return "this branch";
+}
+
+function stockChangeLabel(type) {
+  if (type === "RESTOCK") return "Stock added";
+  if (type === "LOSS") return "Stock removed";
+  if (type === "CORRECTION") return "Count corrected";
+  return "Stock changed";
+}
+
+function lossReasonLabel(value) {
+  return LOSS_REASONS.find((item) => item.value === value)?.label || "Other reason";
+}
+
+function StatusBadge({ tone = "neutral", children }) {
+  const classes =
+    tone === "success"
+      ? "bg-emerald-500/10 text-emerald-600"
+      : tone === "danger"
+        ? "bg-red-500/10 text-red-600"
+        : tone === "warning"
+          ? "bg-amber-500/10 text-amber-600"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
 
   return (
-    <span className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", cls)}>
+    <span
+      className={cx(
+        "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]",
+        classes,
+      )}
+    >
       {children}
     </span>
   );
 }
 
-function SectionHeading({ eyebrow, title, subtitle }) {
+function BackIcon() {
   return (
-    <div>
-      {eyebrow ? (
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
-          {eyebrow}
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 3v11" strokeLinecap="round" />
+      <path d="m7 10 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 21h14" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function EmptyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M21 8l-9-5-9 5 9 5 9-5Z" />
+      <path d="M3 11v8l9 5 9-5v-8" />
+      <path d="M12 13v8" />
+    </svg>
+  );
+}
+
+function StockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M21 8l-9-5-9 5 9 5 9-5Z" />
+      <path d="M3 11v8l9 5 9-5v-8" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SkeletonBlock({ className = "" }) {
+  return (
+    <div className={cx("animate-pulse rounded-[22px] bg-[var(--color-surface-2)]", className)} />
+  );
+}
+
+function PageSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className={cx(pageCard(), "p-5 sm:p-6")}>
+        <SkeletonBlock className="h-4 w-28" />
+        <SkeletonBlock className="mt-4 h-10 w-64 rounded-[18px]" />
+        <SkeletonBlock className="mt-3 h-4 w-full max-w-xl" />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {[1, 2, 3].map((item) => (
+          <div key={item} className={cx(pageCard(), "p-5")}>
+            <SkeletonBlock className="h-3.5 w-24" />
+            <SkeletonBlock className="mt-4 h-8 w-20" />
+          </div>
+        ))}
+      </div>
+
+      <div className={cx(pageCard(), "p-5")}>
+        <SkeletonBlock className="h-12 w-full rounded-[18px]" />
+        <div className="mt-5 grid gap-3">
+          {[1, 2, 3, 4].map((item) => (
+            <SkeletonBlock key={item} className="h-44 w-full rounded-[28px]" />
+          ))}
         </div>
-      ) : null}
-      <h2 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
-        {title}
-      </h2>
-      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
+      </div>
     </div>
   );
 }
 
 function MetricCard({ label, value, note, tone = "neutral" }) {
-  const iconTone =
-    tone === "danger"
-      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
-      : tone === "warning"
-      ? "bg-[#fff1c9] text-[#b88900]"
-      : tone === "success"
-      ? "bg-[#dcfce7] text-[#15803d]"
-      : "bg-[#dff1ff] text-[#4aa8ff]";
+  const dot =
+    tone === "success"
+      ? "bg-emerald-500"
+      : tone === "danger"
+        ? "bg-red-500"
+        : tone === "warning"
+          ? "bg-amber-500"
+          : "bg-[var(--color-primary)]";
 
   return (
-    <article className={cx(pageCard(), "p-5 sm:p-6")}>
-      <div className="flex items-start gap-4 sm:gap-5">
-        <div className={cx("flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] shadow-[var(--shadow-soft)]", iconTone)}>
-          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.9">
-            <path d="M4 16l5-5 4 4 7-8" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M16 7h4v4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+    <article className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
+      <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-[rgba(74,163,255,0.08)] blur-2xl" />
+
+      <div className="relative">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
+            {label}
+          </p>
+          <span className={cx("h-2.5 w-2.5 rounded-full", dot)} />
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className={cx("text-sm font-semibold", strongText())}>{label}</div>
-          <div className={cx("mt-2 text-[1.7rem] font-black leading-tight tracking-[-0.02em]", strongText())}>
-            {value}
-          </div>
-          {note ? <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div> : null}
+        <div className="mt-3 text-2xl font-black tracking-[-0.03em] text-[var(--color-text)]">
+          {value}
         </div>
+
+        {note ? (
+          <p className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
+            {note}
+          </p>
+        ) : null}
       </div>
     </article>
   );
 }
 
 function TabButton({ active, tone = "neutral", children, onClick }) {
-  const activeCls =
+  const activeClass =
     tone === "danger"
-      ? "bg-[var(--color-danger)] text-white"
+      ? "bg-red-600 text-white"
       : tone === "warning"
-      ? "bg-[#d9a700] text-white"
-      : "bg-[var(--color-primary)] text-white";
+        ? "bg-amber-500 text-white"
+        : "bg-[var(--color-primary)] text-white";
 
   return (
     <button
       type="button"
       onClick={onClick}
       className={cx(
-        "inline-flex h-11 items-center justify-center rounded-2xl px-5 text-sm font-semibold transition",
-        active ? activeCls : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
+        buttonBase(),
+        active
+          ? activeClass
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
       )}
     >
       {children}
@@ -149,449 +291,474 @@ function TabButton({ active, tone = "neutral", children, onClick }) {
   );
 }
 
-function EmptyState({ title, text }) {
-  return (
-    <div className="flex min-h-[280px] items-center justify-center">
-      <div className="max-w-md text-center">
-        <div className={cx("text-xl font-bold", strongText())}>{title}</div>
-        <div className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</div>
-      </div>
-    </div>
-  );
-}
-
-function AdjustmentTypeCard({ active, tone = "neutral", title, subtitle, onClick }) {
-  const activeCls =
+function AdjustmentTypeCard({ active, tone, title, subtitle, onClick }) {
+  const activeClass =
     tone === "success"
-      ? "bg-[#dcfce7] text-[#15803d]"
+      ? "bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20"
       : tone === "danger"
-      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
-      : "bg-[#fff1c9] text-[#b88900]";
+        ? "bg-red-500/10 text-red-700 ring-1 ring-red-500/20"
+        : "bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20";
 
   return (
     <button
       type="button"
       onClick={onClick}
       className={cx(
-        "rounded-[22px] p-4 text-left transition",
-        active ? activeCls : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
+        "rounded-[24px] p-4 text-left transition hover:-translate-y-0.5",
+        active
+          ? activeClass
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:shadow-[var(--shadow-soft)]",
       )}
     >
-      <div className="text-sm font-semibold">{title}</div>
-      <div className={cx("mt-2 text-sm leading-6", active ? "text-current/80" : mutedText())}>{subtitle}</div>
+      <div className="text-sm font-black">{title}</div>
+      <div className={cx("mt-2 text-xs font-semibold leading-5", active ? "text-current/80" : "text-[var(--color-text-muted)]")}>
+        {subtitle}
+      </div>
     </button>
   );
 }
 
 function InfoTile({ label, value, tone = "neutral" }) {
-  const toneCls =
+  const valueClass =
     tone === "success"
-      ? "bg-[#dcfce7]"
-      : tone === "warning"
-      ? "bg-[#fff1c9]"
+      ? "text-emerald-600"
       : tone === "danger"
-      ? "bg-[rgba(219,80,74,0.12)]"
-      : "bg-[var(--color-surface-2)]";
+        ? "text-red-600"
+        : tone === "warning"
+          ? "text-amber-600"
+          : "text-[var(--color-text)]";
 
   return (
-    <div className={cx("rounded-[22px] p-4 shadow-[var(--shadow-soft)]", toneCls)}>
-      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>{label}</div>
-      <div className={cx("mt-3 text-2xl font-black tracking-tight", strongText())}>{value}</div>
+    <div className={cx(softPanel(), "p-4 shadow-[var(--shadow-soft)]")}>
+      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+        {label}
+      </p>
+      <p className={cx("mt-2 text-xl font-black tracking-[-0.02em]", valueClass)}>
+        {value}
+      </p>
     </div>
   );
 }
 
-function reasonLabel(v) {
-  if (v === "STOLEN") return "Stolen";
-  if (v === "DAMAGED") return "Damaged";
-  if (v === "EXPIRED") return "Expired";
-  if (v === "MISSING") return "Missing";
-  if (v === "DEFECTIVE") return "Defective";
-  if (v === "OTHER") return "Other";
-  return v || "—";
-}
-
-function lossReasonOptions() {
-  return [
-    { value: "STOLEN", label: "Stolen" },
-    { value: "DAMAGED", label: "Damaged" },
-    { value: "EXPIRED", label: "Expired" },
-    { value: "MISSING", label: "Missing after count" },
-    { value: "DEFECTIVE", label: "Defective" },
-    { value: "OTHER", label: "Other" },
-  ];
-}
-
-function SkeletonBlock({ className = "" }) {
-  return <div className={cx("animate-pulse rounded-[20px] bg-[var(--color-surface-2)]", className)} />;
-}
-
-function ReorderListSkeleton() {
+function EmptyState({ title, text }) {
   return (
-    <div className="grid grid-cols-1 gap-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className={cx(pageCard(), "p-4 sm:p-5")}>
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1 space-y-3">
-              <SkeletonBlock className="h-5 w-48" />
-              <SkeletonBlock className="h-4 w-28" />
+    <div className="flex min-h-[280px] flex-col items-center justify-center rounded-[30px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)] p-8 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-[26px] bg-[var(--color-card)] text-[var(--color-primary)] shadow-[var(--shadow-soft)]">
+        <EmptyIcon />
+      </div>
+
+      <h3 className="mt-4 text-lg font-black text-[var(--color-text)]">
+        {title}
+      </h3>
+
+      <p className="mt-1 max-w-md text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function ReorderProductCard({ product, tab, onAdjust }) {
+  const qty = productStock(product);
+  const isOut = tab === "OUT";
+
+  return (
+    <article className={cx(pageCard(), "relative overflow-hidden p-4 sm:p-5")}>
+      <div
+        className={cx(
+          "absolute left-0 top-0 h-full w-1.5",
+          isOut ? "bg-red-500" : "bg-amber-500",
+        )}
+      />
+
+      <div className="pl-3">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="truncate text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
+                {product.name}
+              </h3>
+
+              {isOut ? (
+                <StatusBadge tone="danger">Out</StatusBadge>
+              ) : (
+                <StatusBadge tone="warning">Low</StatusBadge>
+              )}
             </div>
-            <SkeletonBlock className="h-8 w-16 rounded-full" />
+
+            <p className="mt-1 text-sm font-semibold text-[var(--color-text-muted)]">
+              {productCategory(product)}
+            </p>
+
+            {product.serial ? (
+              <p className="mt-1 break-all text-xs font-semibold text-[var(--color-text-muted)]">
+                Serial / IMEI: {product.serial}
+              </p>
+            ) : null}
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <SkeletonBlock className="h-20 w-full" />
-            <SkeletonBlock className="h-20 w-full" />
-            <SkeletonBlock className="h-20 w-full" />
-          </div>
-
-          <div className="mt-4 flex justify-end">
-            <SkeletonBlock className="h-11 w-36 rounded-2xl" />
-          </div>
+          <button
+            type="button"
+            onClick={() => onAdjust(product)}
+            className={primaryButton()}
+          >
+            <StockIcon />
+            Add stock
+          </button>
         </div>
-      ))}
-    </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <InfoTile label="Available here" value={formatNumber(qty)} tone={qty <= 0 ? "danger" : "warning"} />
+          <InfoTile label="Sell price" value={formatRwf(product.sellPrice)} />
+          <InfoTile label="Brand" value={product.brand || "Not set"} />
+        </div>
+      </div>
+    </article>
   );
 }
 
-function StockAdjustModal({
+function StockChangeModal({
   open,
   product,
-  stockType,
-  setStockType,
-  stockQty,
-  setStockQty,
-  stockNewQty,
-  setStockNewQty,
-  stockReason,
-  setStockReason,
-  stockNote,
-  setStockNote,
-  stockHistory,
-  stockHistoryLoading,
+  form,
+  setForm,
+  saving,
+  recentChanges,
+  recentLoading,
   preview,
-  stockBusy,
   onClose,
   onSubmit,
 }) {
   if (!open || !product) return null;
 
-  const isRestock = stockType === "RESTOCK";
-  const isLoss = stockType === "LOSS";
-  const isCorrection = stockType === "CORRECTION";
+  const isRestock = form.type === "RESTOCK";
+  const isLoss = form.type === "LOSS";
+  const isCorrection = form.type === "CORRECTION";
 
-  const submitClass = isRestock ? successBtn() : isLoss ? dangerBtn() : warningBtn();
-  const saveLabel = isRestock ? "Save restock" : isLoss ? "Record loss" : "Save correction";
+  function update(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  const saveClass = isRestock ? successButton() : isLoss ? dangerButton() : warningButton();
+  const saveLabel = isRestock ? "Save stock added" : isLoss ? "Save stock removed" : "Save correction";
 
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div className="absolute inset-0 bg-black/55 backdrop-blur-[3px]" onClick={stockBusy ? undefined : onClose} />
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-950/55 px-3 pb-3 pt-10 backdrop-blur-sm sm:items-center sm:p-6">
+      <div className="max-h-[94dvh] w-full max-w-5xl overflow-hidden rounded-[34px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[0_30px_100px_rgba(15,23,42,0.25)]">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+              Stock change
+            </p>
 
-      <div className="absolute inset-0 overflow-y-auto">
-        <div className="flex min-h-full items-center justify-center p-3 sm:p-5">
-          <div className={cx(pageCard(), "w-full max-w-5xl overflow-hidden")}>
-            <div className="border-b border-[var(--color-border)] px-5 py-5 md:px-6">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div className="max-w-3xl">
-                  <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
-                    Inventory movement
-                  </div>
-                  <h3 className={cx("mt-3 text-2xl font-black tracking-tight", strongText())}>Adjust stock</h3>
-                  <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                    Record a controlled stock movement with a clear reason, live impact preview, and audit-friendly notes.
-                  </p>
+            <h2 className="mt-1 truncate text-xl font-black tracking-[-0.03em] text-[var(--color-text)] sm:text-2xl">
+              {product.name}
+            </h2>
+
+            <p className="mt-1 text-sm font-medium text-[var(--color-text-muted)]">
+              Record what changed and keep the stock count clean.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-text)] transition hover:-translate-y-0.5 disabled:opacity-60"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+
+        <div className="max-h-[calc(94dvh-96px)] overflow-y-auto p-5 sm:p-6">
+          <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="space-y-5">
+              <section className={cx(softPanel(), "p-4 sm:p-5")}>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <AdjustmentTypeCard
+                    active={isRestock}
+                    tone="success"
+                    title="Stock arrived"
+                    subtitle="Use when new units came into this branch."
+                    onClick={() =>
+                      setForm({
+                        type: "RESTOCK",
+                        quantity: 1,
+                        newStockQty: productStock(product),
+                        lossReason: "DAMAGED",
+                        note: "",
+                      })
+                    }
+                  />
+
+                  <AdjustmentTypeCard
+                    active={isLoss}
+                    tone="danger"
+                    title="Stock removed"
+                    subtitle="Use for damage, theft, loss, expiry, or internal use."
+                    onClick={() =>
+                      setForm({
+                        type: "LOSS",
+                        quantity: 1,
+                        newStockQty: productStock(product),
+                        lossReason: "DAMAGED",
+                        note: "",
+                      })
+                    }
+                  />
+
+                  <AdjustmentTypeCard
+                    active={isCorrection}
+                    tone="warning"
+                    title="Correct count"
+                    subtitle="Use after physically counting the stock."
+                    onClick={() =>
+                      setForm({
+                        type: "CORRECTION",
+                        quantity: 1,
+                        newStockQty: productStock(product),
+                        lossReason: "DAMAGED",
+                        note: "",
+                      })
+                    }
+                  />
                 </div>
+              </section>
 
-                <button type="button" onClick={onClose} disabled={stockBusy} className={secondaryBtn()}>
-                  Close
-                </button>
-              </div>
-            </div>
-
-            <div className="grid gap-5 p-5 md:p-6 xl:grid-cols-[1.18fr_0.82fr]">
-              <div className="space-y-5 min-w-0">
-                <div className={cx(softPanel(), "p-5")}>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <AdjustmentTypeCard
-                      active={isRestock}
-                      tone="success"
-                      title="Restock"
-                      subtitle="Use this when new units arrive from a supplier or a replenishment delivery."
-                      onClick={() => {
-                        setStockType("RESTOCK");
-                        setStockQty("");
-                        setStockNewQty("");
-                        setStockReason("");
-                      }}
-                    />
-
-                    <AdjustmentTypeCard
-                      active={isLoss}
-                      tone="danger"
-                      title="Loss"
-                      subtitle="Use this for stolen, damaged, expired, defective, or missing units."
-                      onClick={() => {
-                        setStockType("LOSS");
-                        setStockQty("");
-                        setStockNewQty("");
-                      }}
-                    />
-
-                    <AdjustmentTypeCard
-                      active={isCorrection}
-                      tone="warning"
-                      title="Correction"
-                      subtitle="Use this only after a real count to set the exact physical stock quantity."
-                      onClick={() => {
-                        setStockType("CORRECTION");
-                        setStockQty("");
-                        setStockNewQty("");
-                        setStockReason("");
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className={cx(pageCard(), "p-5")}>
-                  <div className="grid gap-5 lg:grid-cols-2">
-                    <div>
-                      <label className={cx("text-sm font-medium", strongText())}>
-                        {isCorrection ? "Correct stock to" : "Quantity"}
-                      </label>
+              <section className={cx(pageCard(), "p-5")}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {isCorrection ? (
+                    <label className="block">
+                      <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                        Correct count to
+                      </span>
                       <input
                         type="number"
-                        min={isCorrection ? "0" : "1"}
-                        value={isCorrection ? stockNewQty : stockQty}
-                        onChange={(e) =>
-                          isCorrection ? setStockNewQty(e.target.value) : setStockQty(e.target.value)
-                        }
-                        className={cx(inputClass(), "mt-2")}
-                        placeholder={isCorrection ? "Enter the real counted quantity" : "How many units are moving?"}
+                        min="0"
+                        value={form.newStockQty}
+                        onChange={(event) => update("newStockQty", event.target.value)}
+                        className={inputClass()}
+                        placeholder="Enter the real count"
                       />
-                      <p className={cx("mt-2 text-xs leading-5", softText())}>
-                        {isCorrection ? "This sets the final stock quantity directly." : "Enter the number of units to add or remove."}
-                      </p>
-                    </div>
-
-                    {isLoss ? (
-                      <div>
-                        <label className={cx("text-sm font-medium", strongText())}>Loss reason</label>
-                        <select
-                          value={stockReason}
-                          onChange={(e) => setStockReason(e.target.value)}
-                          className={cx(inputClass(), "mt-2")}
-                        >
-                          <option value="">Select a reason</option>
-                          {lossReasonOptions().map((item) => (
-                            <option key={item.value} value={item.value}>
-                              {item.label}
-                            </option>
-                          ))}
-                        </select>
-                        <p className={cx("mt-2 text-xs leading-5", softText())}>
-                          Loss entries should always carry a clear reason for review.
-                        </p>
-                      </div>
-                    ) : (
-                      <div>
-                        <label className={cx("text-sm font-medium", strongText())}>Movement summary</label>
-                        <input
-                          value={stockNote}
-                          onChange={(e) => setStockNote(e.target.value)}
-                          className={cx(inputClass(), "mt-2")}
-                          placeholder={isRestock ? "Example: supplier delivery received" : "Example: physical count correction"}
-                        />
-                        <p className={cx("mt-2 text-xs leading-5", softText())}>
-                          Keep it short and operationally useful.
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="lg:col-span-2">
-                      <label className={cx("text-sm font-medium", strongText())}>
-                        Audit note {isLoss ? "(required)" : "(optional)"}
-                      </label>
-                      <textarea
-                        value={stockNote}
-                        onChange={(e) => setStockNote(e.target.value)}
-                        className="mt-2 min-h-[110px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)]"
-                        placeholder={
-                          isLoss
-                            ? "Describe what happened, when it was discovered, and any accountability details."
-                            : isRestock
-                            ? "Optional details about this replenishment."
-                            : "Optional explanation for the counted correction."
-                        }
+                    </label>
+                  ) : (
+                    <label className="block">
+                      <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                        Quantity
+                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={form.quantity}
+                        onChange={(event) => update("quantity", event.target.value)}
+                        className={inputClass()}
+                        placeholder="How many?"
                       />
-                    </div>
+                    </label>
+                  )}
+
+                  {isLoss ? (
+                    <label className="block">
+                      <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                        Reason
+                      </span>
+                      <select
+                        value={form.lossReason}
+                        onChange={(event) => update("lossReason", event.target.value)}
+                        className={inputClass()}
+                      >
+                        {LOSS_REASONS.map((reason) => (
+                          <option key={reason.value} value={reason.value}>
+                            {reason.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+
+                  <label className={cx("block", isLoss ? "sm:col-span-2" : "sm:col-span-2")}>
+                    <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                      Note
+                    </span>
+                    <textarea
+                      value={form.note}
+                      onChange={(event) => update("note", event.target.value)}
+                      className="min-h-[110px] w-full rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)]"
+                      placeholder={
+                        isLoss
+                          ? "Example: damaged during delivery check"
+                          : isRestock
+                            ? "Example: received supplier delivery"
+                            : "Example: corrected after physical count"
+                      }
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className={cx(pageCard(), "p-5")}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="text-base font-black text-[var(--color-text)]">
+                      Recent changes for this product
+                    </h3>
+                    <p className="mt-1 text-sm font-medium text-[var(--color-text-muted)]">
+                      Helpful before making another change.
+                    </p>
                   </div>
+
+                  {recentLoading ? (
+                    <span className="text-sm font-bold text-[var(--color-text-muted)]">
+                      Loading...
+                    </span>
+                  ) : null}
                 </div>
 
-                <div className={cx(pageCard(), "p-5")}>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <div className={cx("text-base font-bold", strongText())}>Recent changes</div>
-                      <div className={cx("mt-1 text-sm", mutedText())}>Latest movements for this product.</div>
-                    </div>
-                    {stockHistoryLoading ? <div className={cx("text-sm", mutedText())}>Loading…</div> : null}
+                {recentLoading ? (
+                  <div className="mt-4 grid gap-2">
+                    {[1, 2, 3].map((item) => (
+                      <SkeletonBlock key={item} className="h-20 w-full" />
+                    ))}
                   </div>
-
-                  {stockHistoryLoading ? (
-                    <div className="mt-4 grid gap-2">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <SkeletonBlock key={i} className="h-20 w-full" />
-                      ))}
-                    </div>
-                  ) : stockHistory.length === 0 ? (
-                    <div className="mt-4 rounded-[20px] border border-dashed border-[var(--color-border)] px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
-                      No stock history yet for this product.
-                    </div>
-                  ) : (
-                    <div className="mt-4 space-y-2">
-                      {stockHistory.slice(0, 6).map((h) => (
-                        <div key={h.id} className={cx(softPanel(), "p-4")}>
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="min-w-0">
-                              <div className={cx("text-sm font-semibold", strongText())}>
-                                {h.type} • {h.beforeQty} → {h.afterQty}
-                              </div>
-                              <div className={cx("mt-1 text-xs", mutedText())}>
-                                {new Date(h.createdAt).toLocaleString()}
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                              {h.type === "RESTOCK" ? <StatusBadge kind="success">Restock</StatusBadge> : null}
-                              {h.type === "LOSS" ? <StatusBadge kind="danger">Loss</StatusBadge> : null}
-                              {h.type === "CORRECTION" ? <StatusBadge kind="warning">Correction</StatusBadge> : null}
-                            </div>
+                ) : recentChanges.length === 0 ? (
+                  <div className="mt-4 rounded-[24px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-8 text-center text-sm font-medium text-[var(--color-text-muted)]">
+                    No recent stock changes for this product.
+                  </div>
+                ) : (
+                  <div className="mt-4 space-y-2">
+                    {recentChanges.slice(0, 6).map((item) => (
+                      <div key={item.id} className={cx(softPanel(), "p-4")}>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-sm font-black text-[var(--color-text)]">
+                              {stockChangeLabel(item.type)} • {formatNumber(item.beforeQty)} → {formatNumber(item.afterQty)}
+                            </p>
+                            <p className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
+                              {item.createdAt ? new Date(item.createdAt).toLocaleString("en-RW") : "—"}
+                            </p>
                           </div>
 
-                          {h.note ? <div className={cx("mt-2 break-words text-xs leading-5", mutedText())}>Note: {h.note}</div> : null}
+                          <StatusBadge
+                            tone={
+                              item.type === "RESTOCK"
+                                ? "success"
+                                : item.type === "LOSS"
+                                  ? "danger"
+                                  : "warning"
+                            }
+                          >
+                            {stockChangeLabel(item.type)}
+                          </StatusBadge>
                         </div>
-                      ))}
-                    </div>
+
+                        {item.note ? (
+                          <p className="mt-2 break-words text-xs font-medium leading-5 text-[var(--color-text-muted)]">
+                            {item.note}
+                          </p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
+
+            <aside className="space-y-5">
+              <section className={cx(pageCard(), "p-5")}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-lg font-black text-[var(--color-text)]">
+                      {product.name}
+                    </h3>
+                    <p className="mt-1 text-sm font-semibold text-[var(--color-text-muted)]">
+                      {productCategory(product)}
+                    </p>
+                  </div>
+
+                  {productStock(product) <= 0 ? (
+                    <StatusBadge tone="danger">Out</StatusBadge>
+                  ) : (
+                    <StatusBadge tone="warning">Review</StatusBadge>
                   )}
                 </div>
-              </div>
 
-              <aside className="space-y-5 min-w-0">
-                <div className={cx(pageCard(), "p-5")}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className={cx("truncate text-lg font-bold", strongText())}>{product.name}</div>
-                      <div className={cx("mt-1 text-sm", mutedText())}>{product.brand || "No brand set"}</div>
-                    </div>
-
-                    <div className="shrink-0">
-                      {product.stockQty <= 0 ? <StatusBadge kind="danger">Out</StatusBadge> : <StatusBadge kind="success">Tracked</StatusBadge>}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid gap-3">
-                    <InfoTile label="Current stock" value={Number(product.stockQty || 0)} />
-                    <InfoTile label="Sell price" value={formatMoney(product.sellPrice)} />
-                  </div>
+                <div className="mt-5 grid gap-3">
+                  <InfoTile label="Current stock here" value={formatNumber(productStock(product))} />
+                  <InfoTile label="Sell price" value={formatRwf(product.sellPrice)} />
                 </div>
+              </section>
 
-                <div className={cx(pageCard(), "p-5")}>
-                  <div className={cx("text-base font-bold", strongText())}>Live preview</div>
-                  <div className={cx("mt-1 text-sm", mutedText())}>Review the exact stock result before saving this movement.</div>
+              <section className={cx(pageCard(), "p-5")}>
+                <h3 className="text-base font-black text-[var(--color-text)]">
+                  Before saving
+                </h3>
+                <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+                  Check the result so the owner can trust the numbers.
+                </p>
 
-                  <div className="mt-5 grid gap-3">
-                    <InfoTile label="Before" value={Number(product.stockQty || 0)} />
-                    <InfoTile
-                      label="Change"
-                      value={preview ? (preview.delta > 0 ? `+${preview.delta}` : String(preview.delta)) : "—"}
-                      tone={!preview ? "neutral" : preview.delta > 0 ? "success" : preview.delta < 0 ? "danger" : "warning"}
-                    />
-                    <InfoTile
-                      label="After"
-                      value={preview ? preview.after : "—"}
-                      tone={!preview ? "neutral" : preview.after === 0 ? "danger" : "success"}
-                    />
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {!preview ? <StatusBadge>Enter values</StatusBadge> : null}
-                    {isLoss && stockReason ? <StatusBadge kind="danger">{reasonLabel(stockReason)}</StatusBadge> : null}
-                    {isCorrection ? <StatusBadge kind="warning">Count-based set</StatusBadge> : null}
-                    {isRestock ? <StatusBadge kind="success">Inbound units</StatusBadge> : null}
-                  </div>
+                <div className="mt-5 grid gap-3">
+                  <InfoTile
+                    label="Before"
+                    value={formatNumber(preview?.before ?? productStock(product))}
+                  />
+                  <InfoTile
+                    label="Change"
+                    value={
+                      preview
+                        ? preview.change > 0
+                          ? `+${formatNumber(preview.change)}`
+                          : formatNumber(preview.change)
+                        : "—"
+                    }
+                    tone={
+                      !preview
+                        ? "neutral"
+                        : preview.change > 0
+                          ? "success"
+                          : preview.change < 0
+                            ? "danger"
+                            : "warning"
+                    }
+                  />
+                  <InfoTile
+                    label="After"
+                    value={preview ? formatNumber(preview.after) : "—"}
+                    tone={!preview ? "neutral" : preview.after <= 0 ? "danger" : "success"}
+                  />
                 </div>
+              </section>
 
-                <div className={cx(pageCard(), "p-5")}>
-                  <div className={cx("text-base font-bold", strongText())}>Discipline</div>
-                  <div className={cx("mt-3 space-y-3 text-sm leading-6", mutedText())}>
-                    <div>Use <span className={cx("font-semibold", strongText())}>RESTOCK</span> for incoming units.</div>
-                    <div>Use <span className={cx("font-semibold", strongText())}>LOSS</span> for stolen, damaged, expired, defective, or missing units.</div>
-                    <div>Use <span className={cx("font-semibold", strongText())}>CORRECTION</span> only after a real physical count.</div>
-                  </div>
+              <section className={cx(pageCard(), "p-5")}>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={saving}
+                    className={secondaryButton()}
+                  >
+                    Cancel
+                  </button>
+
+                  <AsyncButton
+                    loading={saving}
+                    onClick={onSubmit}
+                    disabled={!preview}
+                    className={saveClass}
+                  >
+                    {saveLabel}
+                  </AsyncButton>
                 </div>
-
-                <div className={cx(pageCard(), "p-5")}>
-                  <div className="flex flex-col gap-2">
-                    <button type="button" onClick={onClose} disabled={stockBusy} className={secondaryBtn()}>
-                      Cancel
-                    </button>
-
-                    <AsyncButton loading={stockBusy} onClick={onSubmit} disabled={!preview} className={submitClass}>
-                      {saveLabel}
-                    </AsyncButton>
-                  </div>
-                </div>
-              </aside>
-            </div>
+              </section>
+            </aside>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function ReorderProductCard({ product, onAdjust, tab }) {
-  return (
-    <div className={cx(pageCard(), "p-4 sm:p-5")}>
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className={cx("truncate text-lg font-bold", strongText())}>{product.name}</div>
-          <div className={cx("mt-1 text-sm", mutedText())}>{product.category || "—"}</div>
-          {product.serial ? <div className={cx("mt-1 break-all text-xs", mutedText())}>Serial: {product.serial}</div> : null}
-        </div>
-
-        <div className="shrink-0">
-          {tab === "OUT" ? <StatusBadge kind="danger">Out of stock</StatusBadge> : <StatusBadge kind="warning">Low stock</StatusBadge>}
-        </div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className={cx(softPanel(), "p-4")}>
-          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>Current stock</div>
-          <div className={cx("mt-2 text-2xl font-black", strongText())}>{product.stockQty}</div>
-        </div>
-
-        <div className={cx(softPanel(), "p-4")}>
-          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>Sell price</div>
-          <div className={cx("mt-2 text-base font-bold", strongText())}>{formatMoney(product.sellPrice)}</div>
-        </div>
-
-        <div className={cx(softPanel(), "p-4")}>
-          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>Brand</div>
-          <div className={cx("mt-2 text-base font-bold", strongText())}>{product.brand || "—"}</div>
-        </div>
-      </div>
-
-      <div className="mt-4 flex justify-end">
-        <button type="button" onClick={() => onAdjust(product)} className={primaryBtn()}>
-          Adjust stock
-        </button>
       </div>
     </div>
   );
 }
 
 export default function Reorder() {
-  const nav = useNavigate();
+  const navigate = useNavigate();
 
   const [threshold, setThreshold] = useState(5);
   const [loading, setLoading] = useState(true);
@@ -599,31 +766,41 @@ export default function Reorder() {
   const [lowRows, setLowRows] = useState([]);
   const [tab, setTab] = useState("OUT");
   const [downloading, setDownloading] = useState(false);
-
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [activeBranchLabel, setActiveBranchLabel] = useState(() => activeBranchNameFromStorage());
 
   const [stockOpen, setStockOpen] = useState(false);
   const [stockProduct, setStockProduct] = useState(null);
-  const [stockBusy, setStockBusy] = useState(false);
-  const [stockType, setStockType] = useState("RESTOCK");
-  const [stockQty, setStockQty] = useState("");
-  const [stockNewQty, setStockNewQty] = useState("");
-  const [stockReason, setStockReason] = useState("");
-  const [stockNote, setStockNote] = useState("");
-  const [stockHistory, setStockHistory] = useState([]);
-  const [stockHistoryLoading, setStockHistoryLoading] = useState(false);
+  const [stockSaving, setStockSaving] = useState(false);
+  const [stockForm, setStockForm] = useState({
+    type: "RESTOCK",
+    quantity: 1,
+    newStockQty: 0,
+    lossReason: "DAMAGED",
+    note: "",
+  });
+  const [recentChanges, setRecentChanges] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
 
   async function load() {
     setLoading(true);
+
     try {
-      const th = Number(threshold || 5);
-      const safeTh = Number.isFinite(th) && th >= 0 ? Math.floor(th) : 5;
+      const safeThreshold =
+        Number.isFinite(Number(threshold)) && Number(threshold) >= 0
+          ? Math.floor(Number(threshold))
+          : 5;
 
       const [outRes, lowRes] = await Promise.all([
-        listProducts({ outOfStock: true, active: true, limit: 200, sort: "name" }),
-        listProducts({
+        getProducts({
+          outOfStock: true,
+          active: true,
+          limit: 200,
+          sort: "name",
+        }),
+        getProducts({
           lowStock: true,
-          threshold: safeTh,
+          threshold: safeThreshold,
           active: true,
           limit: 200,
           sort: "stock_low",
@@ -632,9 +809,12 @@ export default function Reorder() {
 
       setOutRows(Array.isArray(outRes?.products) ? outRes.products : []);
       setLowRows(Array.isArray(lowRes?.products) ? lowRes.products : []);
-    } catch (err) {
-      if (handleSubscriptionBlockedError(err, { toastId: "reorder-load-blocked" })) return;
-      toast.error(err?.message || "Failed to load reorder list");
+    } catch (error) {
+      if (handleSubscriptionBlockedError(error, { toastId: "reorder-load-blocked" })) {
+        return;
+      }
+
+      toast.error(error?.message || "Failed to load reorder list");
       setOutRows([]);
       setLowRows([]);
     } finally {
@@ -643,35 +823,46 @@ export default function Reorder() {
   }
 
   useEffect(() => {
-    const t = setTimeout(load, 250);
-    return () => clearTimeout(t);
+    const timer = window.setTimeout(load, 250);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threshold]);
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [tab, threshold, outRows.length, lowRows.length]);
 
+  useEffect(() => {
+    function onBranchChanged() {
+      setActiveBranchLabel(activeBranchNameFromStorage());
+      setVisibleCount(PAGE_SIZE);
+      load();
+    }
+
+    window.addEventListener("storvex:branch-changed", onBranchChanged);
+    window.addEventListener("storvex:workspace-refreshed", onBranchChanged);
+
+    return () => {
+      window.removeEventListener("storvex:branch-changed", onBranchChanged);
+      window.removeEventListener("storvex:workspace-refreshed", onBranchChanged);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleDownloadPdf() {
     if (downloading) return;
 
     setDownloading(true);
+
     try {
-      const blobData = await downloadReorderPdf({ threshold });
-      const blob = new Blob([blobData], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
+      await downloadReorderPdf({ threshold });
+      toast.success("Reorder list downloaded");
+    } catch (error) {
+      if (handleSubscriptionBlockedError(error, { toastId: "reorder-pdf-blocked" })) {
+        return;
+      }
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "storvex-reorder-list.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      window.URL.revokeObjectURL(url);
-      toast.success("PDF downloaded");
-    } catch (err) {
-      if (handleSubscriptionBlockedError(err, { toastId: "reorder-pdf-blocked" })) return;
-      toast.error(err?.message || "Failed to download PDF");
+      toast.error(error?.message || "Failed to download reorder list");
     } finally {
       setDownloading(false);
     }
@@ -679,94 +870,125 @@ export default function Reorder() {
 
   async function openStockModal(product) {
     setStockProduct(product);
-    setStockType("RESTOCK");
-    setStockQty("");
-    setStockNewQty("");
-    setStockReason("");
-    setStockNote("");
-    setStockHistory([]);
+    setStockForm({
+      type: "RESTOCK",
+      quantity: 1,
+      newStockQty: productStock(product),
+      lossReason: "DAMAGED",
+      note: "",
+    });
+    setRecentChanges([]);
     setStockOpen(true);
 
-    setStockHistoryLoading(true);
+    setRecentLoading(true);
+
     try {
-      const data = await getStockAdjustments(product.id);
-      const rows = Array.isArray(data?.adjustments) ? data.adjustments : [];
-      setStockHistory(rows.slice(0, 10));
-    } catch (err) {
-      if (!handleSubscriptionBlockedError(err, { toastId: "stock-history-blocked" })) {
-        setStockHistory([]);
+      const data = await getProductStockAdjustments(product.id);
+      setRecentChanges(Array.isArray(data?.adjustments) ? data.adjustments : []);
+    } catch (error) {
+      if (!handleSubscriptionBlockedError(error, { toastId: "product-stock-history-blocked" })) {
+        setRecentChanges([]);
       }
     } finally {
-      setStockHistoryLoading(false);
+      setRecentLoading(false);
     }
   }
 
   function closeStockModal() {
-    if (stockBusy) return;
+    if (stockSaving) return;
+
     setStockOpen(false);
     setStockProduct(null);
   }
 
-  function calcPreview() {
-    const current = Number(stockProduct?.stockQty || 0);
+  function getPreview() {
     if (!stockProduct) return null;
 
-    if (stockType === "CORRECTION") {
-      const n = Number(stockNewQty);
-      if (!Number.isFinite(n) || n < 0) return null;
+    const before = productStock(stockProduct);
 
-      const after = Math.floor(n);
-      return { before: current, after, delta: after - current };
+    if (stockForm.type === "CORRECTION") {
+      const after = Number(stockForm.newStockQty);
+
+      if (!Number.isFinite(after) || after < 0) return null;
+
+      const cleanAfter = Math.floor(after);
+
+      return {
+        before,
+        after: cleanAfter,
+        change: cleanAfter - before,
+      };
     }
 
-    const qty = Number(stockQty);
-    if (!Number.isFinite(qty) || qty <= 0) return null;
+    const quantity = Number(stockForm.quantity);
 
-    const normalizedQty = Math.floor(qty);
+    if (!Number.isFinite(quantity) || quantity <= 0) return null;
 
-    if (stockType === "RESTOCK") {
-      return { before: current, after: current + normalizedQty, delta: normalizedQty };
+    const cleanQuantity = Math.floor(quantity);
+
+    if (stockForm.type === "RESTOCK") {
+      return {
+        before,
+        after: before + cleanQuantity,
+        change: cleanQuantity,
+      };
     }
 
-    if (stockType === "LOSS") {
-      const after = current - normalizedQty;
+    if (stockForm.type === "LOSS") {
+      const after = before - cleanQuantity;
+
       if (after < 0) return null;
-      return { before: current, after, delta: -normalizedQty };
+
+      return {
+        before,
+        after,
+        change: -cleanQuantity,
+      };
     }
 
     return null;
   }
 
-  async function submitStock() {
+  async function submitStockChange() {
     if (!stockProduct) return;
 
-    const preview = calcPreview();
+    const preview = getPreview();
+
     if (!preview) {
-      toast.error("Please enter a valid stock value");
+      toast.error("Please enter a valid stock number");
       return;
     }
 
-    if (stockType === "LOSS" && !stockReason) {
-      toast.error("Loss reason is required");
+    if (stockForm.type === "LOSS" && !stockForm.lossReason) {
+      toast.error("Choose why stock was removed");
       return;
     }
 
-    if (stockType === "LOSS" && !String(stockNote || "").trim()) {
-      toast.error("Audit note is required for loss");
+    if (
+      stockForm.type === "LOSS" &&
+      (stockForm.lossReason === "STOLEN" || stockForm.lossReason === "OTHER") &&
+      !cleanString(stockForm.note)
+    ) {
+      toast.error("Add a note for this stock removal");
       return;
     }
 
-    setStockBusy(true);
+    setStockSaving(true);
+
     try {
-      const composedNote =
-        stockType === "LOSS"
-          ? `[${reasonLabel(stockReason)}] ${String(stockNote || "").trim()}`
-          : String(stockNote || "").trim() || null;
-
       const payload =
-        stockType === "CORRECTION"
-          ? { type: "CORRECTION", newStockQty: preview.after, note: composedNote }
-          : { type: stockType, quantity: Math.abs(preview.delta), note: composedNote };
+        stockForm.type === "CORRECTION"
+          ? {
+              type: "CORRECTION",
+              newStockQty: preview.after,
+              note: cleanString(stockForm.note),
+            }
+          : {
+              type: stockForm.type,
+              quantity: Math.abs(preview.change),
+              lossReason: stockForm.type === "LOSS" ? stockForm.lossReason : undefined,
+              note: cleanString(stockForm.note),
+            };
 
       await adjustStock(stockProduct.id, payload);
 
@@ -774,192 +996,202 @@ export default function Reorder() {
       setStockOpen(false);
       setStockProduct(null);
       await load();
-    } catch (err) {
-      if (handleSubscriptionBlockedError(err, { toastId: "stock-adjust-blocked" })) return;
-      toast.error(err?.message || "Failed to update stock");
+    } catch (error) {
+      if (handleSubscriptionBlockedError(error, { toastId: "reorder-stock-change-blocked" })) {
+        return;
+      }
+
+      toast.error(error?.message || "Failed to update stock");
     } finally {
-      setStockBusy(false);
+      setStockSaving(false);
     }
   }
 
   const rows = tab === "OUT" ? outRows : lowRows;
-  const preview = calcPreview();
   const visibleRows = rows.slice(0, visibleCount);
   const hasMore = visibleCount < rows.length;
+  const preview = getPreview();
 
   const summaryCards = useMemo(
     () => [
-      { label: "Out of stock", value: outRows.length, note: "Immediate replenishment needed", tone: "danger" },
-      { label: "Low stock", value: lowRows.length, note: "At risk of missed sales", tone: "warning" },
-      { label: "Threshold", value: threshold, note: "Default low-stock trigger", tone: "neutral" },
+      {
+        label: "Out of stock",
+        value: formatNumber(outRows.length),
+        note: "Needs action now",
+        tone: "danger",
+      },
+      {
+        label: "Low stock",
+        value: formatNumber(lowRows.length),
+        note: "May run out soon",
+        tone: "warning",
+      },
+      {
+        label: "Alert level",
+        value: formatNumber(threshold),
+        note: "Used to find low stock",
+        tone: "neutral",
+      },
     ],
-    [outRows.length, lowRows.length, threshold]
+    [outRows.length, lowRows.length, threshold],
   );
 
+  if (loading && outRows.length === 0 && lowRows.length === 0) {
+    return <PageSkeleton />;
+  }
+
   return (
-    <div className="space-y-6">
-      <StockAdjustModal
+    <div className="space-y-5">
+      <StockChangeModal
         open={stockOpen}
         product={stockProduct}
-        stockType={stockType}
-        setStockType={setStockType}
-        stockQty={stockQty}
-        setStockQty={setStockQty}
-        stockNewQty={stockNewQty}
-        setStockNewQty={setStockNewQty}
-        stockReason={stockReason}
-        setStockReason={setStockReason}
-        stockNote={stockNote}
-        setStockNote={setStockNote}
-        stockHistory={stockHistory}
-        stockHistoryLoading={stockHistoryLoading}
+        form={stockForm}
+        setForm={setStockForm}
+        saving={stockSaving}
+        recentChanges={recentChanges}
+        recentLoading={recentLoading}
         preview={preview}
-        stockBusy={stockBusy}
         onClose={closeStockModal}
-        onSubmit={submitStock}
+        onSubmit={submitStockChange}
       />
 
-      <section className="space-y-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <section className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
+        <div className="pointer-events-none absolute -right-24 -top-24 h-[260px] w-[260px] rounded-full bg-[rgba(74,163,255,0.10)] blur-3xl" />
+
+        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
-            <SectionHeading
-              eyebrow="Inventory"
-              title="Reorder command center"
-              subtitle="Act on stock risk before it becomes lost revenue. Review stock-outs, low-stock items, and launch controlled adjustments with full accountability."
-            />
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+              Stock control
+            </p>
+
+            <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-[var(--color-text)] sm:text-3xl">
+              Reorder list
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+              See products that need attention in{" "}
+              <span className="font-black text-[var(--color-text)]">{activeBranchLabel}</span>.
+              The first 10 items are shown first. Use the buttons below to review more.
+            </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => nav("/app/inventory")} className={secondaryBtn()}>
-              Back to inventory
+          <div className="flex flex-col gap-3 sm:flex-row xl:justify-end">
+            <button
+              type="button"
+              onClick={() => navigate("/app/inventory")}
+              className={secondaryButton()}
+            >
+              <BackIcon />
+              Back
             </button>
 
-            <button type="button" onClick={load} className={secondaryBtn()}>
+            <AsyncButton
+              loading={loading}
+              onClick={load}
+              className="bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
+            >
               Refresh
-            </button>
+            </AsyncButton>
 
-            <button type="button" onClick={handleDownloadPdf} disabled={downloading} className={primaryBtn()}>
-              {downloading ? "Downloading..." : "Download PDF"}
-            </button>
+            <AsyncButton
+              loading={downloading}
+              onClick={handleDownloadPdf}
+              className={primaryButton()}
+            >
+              <DownloadIcon />
+              Download
+            </AsyncButton>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        {summaryCards.map((card) => (
+          <MetricCard key={card.label} {...card} />
+        ))}
+      </section>
+
+      <section className={cx(pageCard(), "p-4 sm:p-5")}>
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
+            <label className="block">
+              <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                Low stock alert
+              </span>
+              <input
+                type="number"
+                min="0"
+                value={threshold}
+                onChange={(event) => setThreshold(event.target.value)}
+                className={inputClass()}
+              />
+            </label>
+
+            <div className="flex items-end gap-2 overflow-x-auto pb-0.5">
+              <TabButton active={tab === "OUT"} tone="danger" onClick={() => setTab("OUT")}>
+                Out of stock
+              </TabButton>
+
+              <TabButton active={tab === "LOW"} tone="warning" onClick={() => setTab("LOW")}>
+                Low stock
+              </TabButton>
+            </div>
+          </div>
+
+          <div className="rounded-[24px] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-bold text-[var(--color-text-muted)]">
+            {tab === "OUT"
+              ? "Products unavailable for sale"
+              : "Products close to running out"}
           </div>
         </div>
 
-        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          {summaryCards.map((card) => (
-            <MetricCard key={card.label} label={card.label} value={card.value} note={card.note} tone={card.tone} />
-          ))}
-        </section>
-      </section>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-        <aside className={cx(pageCard(), "p-5 sm:p-6")}>
-          <div className={cx("text-base font-bold", strongText())}>Filters & focus</div>
-          <div className={cx("mt-2 text-sm leading-6", mutedText())}>
-            Tighten what counts as low stock and switch between urgent risk buckets.
-          </div>
-
-          <div className="mt-5">
-            <label className={cx("text-sm font-medium", strongText())}>Default low-stock threshold</label>
-            <input
-              type="number"
-              min="0"
-              className={cx(inputClass(), "mt-2")}
-              value={threshold}
-              onChange={(e) => setThreshold(Number(e.target.value || 5))}
+        <div className="mt-5">
+          {rows.length === 0 ? (
+            <EmptyState
+              title={tab === "OUT" ? "Nothing is out of stock" : "No low stock items"}
+              text={
+                tab === "OUT"
+                  ? "Good. This branch currently has no products fully out of stock."
+                  : "Good. With the current alert level, nothing is close to running out."
+              }
             />
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            <TabButton active={tab === "OUT"} tone="danger" onClick={() => setTab("OUT")}>
-              Out of stock
-            </TabButton>
-
-            <TabButton active={tab === "LOW"} tone="warning" onClick={() => setTab("LOW")}>
-              Low stock
-            </TabButton>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            <div className={cx(softPanel(), "p-4")}>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
-                Current view
-              </div>
-              <div className={cx("mt-3 text-sm leading-6", strongText())}>
-                {tab === "OUT" ? "Products already unavailable for sale." : "Products still selling, but approaching risk."}
-              </div>
-            </div>
-
-            <div className={cx(softPanel(), "p-4")}>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
-                Adjustment discipline
-              </div>
-              <div className={cx("mt-3 space-y-3 text-sm leading-6", mutedText())}>
-                <div>Use <span className={cx("font-semibold", strongText())}>RESTOCK</span> for incoming units.</div>
-                <div>Use <span className={cx("font-semibold", strongText())}>LOSS</span> for stolen or damaged items.</div>
-                <div>Use <span className={cx("font-semibold", strongText())}>CORRECTION</span> only for count fixes.</div>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <section className={cx(pageCard(), "overflow-hidden")}>
-          <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <div className={cx("text-xl font-bold", strongText())}>
-                  {tab === "OUT" ? "Out-of-stock items" : "Low-stock items"}
-                </div>
-                <div className={cx("mt-2 text-sm leading-6", mutedText())}>
-                  {tab === "OUT"
-                    ? "These products are already unavailable and need immediate replenishment."
-                    : "These products are below their low-stock threshold and should be reviewed before revenue is lost."}
-                </div>
+          ) : (
+            <>
+              <div className="grid gap-3">
+                {visibleRows.map((product) => (
+                  <ReorderProductCard
+                    key={product.id}
+                    product={product}
+                    tab={tab}
+                    onAdjust={openStockModal}
+                  />
+                ))}
               </div>
 
-              <div className="shrink-0">
-                {tab === "OUT" ? <StatusBadge kind="danger">{rows.length} items</StatusBadge> : <StatusBadge kind="warning">{rows.length} items</StatusBadge>}
+              <div className="mt-6 flex flex-col items-center justify-between gap-3 rounded-[26px] bg-[var(--color-surface-2)] px-4 py-4 sm:flex-row">
+                <p className="text-center text-sm font-bold text-[var(--color-text-muted)] sm:text-left">
+                  Showing {formatNumber(visibleRows.length)} of {formatNumber(rows.length)} item
+                  {rows.length === 1 ? "" : "s"}.
+                </p>
+
+                {hasMore ? (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                    className="inline-flex h-11 w-full items-center justify-center rounded-2xl bg-[var(--color-card)] px-5 text-sm font-black text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 sm:w-auto"
+                  >
+                    Load 10 more
+                  </button>
+                ) : (
+                  <span className="rounded-full bg-[var(--color-card)] px-3 py-2 text-xs font-black text-[var(--color-text-muted)] shadow-[var(--shadow-soft)]">
+                    End of list
+                  </span>
+                )}
               </div>
-            </div>
-          </div>
-
-          <div className="p-5 sm:p-6">
-            {loading ? (
-              <ReorderListSkeleton />
-            ) : rows.length === 0 ? (
-              <EmptyState
-                title={tab === "OUT" ? "No products are out of stock" : "No products are currently low stock"}
-                text={
-                  tab === "OUT"
-                    ? "Good. Nothing is fully unavailable right now."
-                    : "Good. Your current threshold is not flagging any immediate low-stock risk."
-                }
-              />
-            ) : (
-              <>
-                <div className="grid grid-cols-1 gap-3">
-                  {visibleRows.map((p) => (
-                    <ReorderProductCard key={p.id} product={p} onAdjust={openStockModal} tab={tab} />
-                  ))}
-                </div>
-
-                <div className="mt-5 flex justify-center">
-                  {hasMore ? (
-                    <button
-                      type="button"
-                      onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
-                      className={secondaryBtn()}
-                    >
-                      Load 10 more
-                    </button>
-                  ) : (
-                    <div className={cx("text-sm", mutedText())}>All matching items loaded</div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </section>
-      </div>
+            </>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

@@ -1,70 +1,48 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import {
-  getDeliveryNoteById,
-  updateDeliveryNote,
-} from "../../services/deliveryNotesApi";
+import { cn } from "../../lib/cn";
+import AsyncButton from "../../components/ui/AsyncButton";
+import { getDeliveryNoteById, updateDeliveryNote } from "../../services/deliveryNotesApi";
 
-function cx(...xs) {
-  return xs.filter(Boolean).join(" ");
-}
-
-function shell() {
-  return "rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
-}
-
-function panel() {
-  return "rounded-[24px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]";
-}
-
-function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
-}
-
-function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
-}
-
-function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
-}
+const strong = () => "text-[var(--color-text)]";
+const muted = () => "text-[var(--color-text-muted)]";
+const soft = () => "text-[var(--color-text-soft)]";
+const shell = () => "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+const panel = () => "rounded-[24px] bg-[var(--color-surface-2)]";
 
 function labelClass() {
-  return "mb-2 block text-sm font-medium text-stone-900 dark:text-[rgb(var(--text))]";
+  return "mb-1.5 block text-sm font-medium text-[var(--color-text)]";
 }
 
 function inputClass() {
-  return "h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
+  return "app-input";
 }
 
 function textareaClass() {
-  return "w-full rounded-2xl border border-stone-300 bg-white px-3.5 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function primaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-stone-950 px-5 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl border border-stone-300 bg-white px-5 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return [
+    "w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]",
+    "px-4 py-3 text-sm leading-6 text-[var(--color-text)]",
+    "outline-none transition placeholder:text-[var(--color-text-muted)]",
+    "focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]",
+    "resize-y min-h-[132px]",
+    "shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
+  ].join(" ");
 }
 
 function smallBtn() {
-  return "inline-flex h-9 items-center justify-center rounded-xl border border-stone-300 bg-white px-3 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "inline-flex h-9 items-center justify-center rounded-xl bg-[var(--color-card)] px-3 text-sm font-medium text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function summaryRow(label, value, strong = false) {
+function summaryRow(label, value, strongValue = false) {
   return (
     <div className="flex items-center justify-between gap-4 py-2">
-      <span className="text-sm text-stone-600 dark:text-[rgb(var(--text-muted))]">
-        {label}
-      </span>
+      <span className={cn("text-sm", muted())}>{label}</span>
       <span
-        className={cx(
-          "text-sm text-right",
-          strong ? "font-semibold" : "font-medium",
-          strong ? strongText() : mutedText()
+        className={cn(
+          "text-right text-sm",
+          strongValue ? "font-semibold" : "font-medium",
+          strongValue ? strong() : muted()
         )}
       >
         {value}
@@ -127,6 +105,39 @@ function emptyItem() {
   };
 }
 
+function EditSkeleton() {
+  return (
+    <div className="space-y-6">
+      <section className={cn(shell(), "p-5 md:p-6")}>
+        <div className="h-3 w-28 animate-pulse rounded-full bg-[var(--color-surface)]" />
+        <div className="mt-4 h-8 w-56 animate-pulse rounded-full bg-[var(--color-surface)]" />
+        <div className="mt-3 h-4 w-full max-w-[560px] animate-pulse rounded-full bg-[var(--color-surface)]" />
+      </section>
+
+      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="space-y-5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <section key={i} className={cn(panel(), "p-4 md:p-5")}>
+              <div className="h-5 w-40 animate-pulse rounded-full bg-[var(--color-surface)]" />
+              <div className="mt-2 h-4 w-72 animate-pulse rounded-full bg-[var(--color-surface)]" />
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {Array.from({ length: 6 }).map((__, j) => (
+                  <div key={j}>
+                    <div className="mb-2 h-3 w-24 animate-pulse rounded-full bg-[var(--color-surface)]" />
+                    <div className="h-11 animate-pulse rounded-2xl bg-[var(--color-surface)]" />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <section className={cn(shell(), "h-[320px] animate-pulse p-4 md:p-5")} />
+      </div>
+    </div>
+  );
+}
+
 export default function DeliveryNoteEdit() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -180,13 +191,11 @@ export default function DeliveryNoteEdit() {
         console.error(err);
         toast.error(err?.message || "Failed to load delivery note");
       } finally {
-        if (mountedRef.current) {
-          setLoading(false);
-        }
+        if (mountedRef.current) setLoading(false);
       }
     }
 
-    load();
+    void load();
   }, [id]);
 
   function updateField(key, value) {
@@ -269,46 +278,34 @@ export default function DeliveryNoteEdit() {
   }
 
   if (loading) {
-    return (
-      <div className="space-y-5">
-        <section className={cx(shell(), "p-5 md:p-6")}>
-          <div className="h-6 w-40 animate-pulse rounded bg-stone-200 dark:bg-[rgb(var(--bg-muted))]" />
-          <div className="mt-3 h-4 w-80 max-w-full animate-pulse rounded bg-stone-200 dark:bg-[rgb(var(--bg-muted))]" />
-        </section>
-        <section className={cx(panel(), "p-4 md:p-5")}>
-          <div className="h-40 animate-pulse rounded-2xl bg-stone-100 dark:bg-[rgb(var(--bg-muted))]" />
-        </section>
-      </div>
-    );
+    return <EditSkeleton />;
   }
 
   return (
-    <div className="space-y-5">
-      <section className={cx(shell(), "relative overflow-hidden p-5 md:p-6")}>
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-stone-950 via-stone-800 to-stone-950 opacity-[0.03] dark:from-white dark:via-white dark:to-white dark:opacity-[0.04]" />
-
+    <div className="space-y-6">
+      <section className={cn(shell(), "relative overflow-hidden p-5 md:p-6")}>
         <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0">
-            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+            <div className={cn("text-[11px] font-semibold uppercase tracking-[0.16em]", soft())}>
               Document editing
             </div>
 
-            <h1 className={cx("mt-2 text-2xl font-semibold tracking-tight md:text-3xl", strongText())}>
+            <h1 className={cn("mt-2 text-2xl font-semibold tracking-tight md:text-3xl", strong())}>
               Edit Delivery Note
             </h1>
 
-            <p className={cx("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", mutedText())}>
+            <p className={cn("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", muted())}>
               Update the handover details and delivered items while keeping the document clean and print-ready.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link to="/app/documents/delivery-notes" className={secondaryBtn()}>
+            <Link to="/app/documents/delivery-notes" className={smallBtn()}>
               Back to Delivery Notes
             </Link>
             <Link
               to={`/app/documents/delivery-notes/${encodeURIComponent(id)}/preview`}
-              className={secondaryBtn()}
+              className={smallBtn()}
             >
               Preview
             </Link>
@@ -316,11 +313,11 @@ export default function DeliveryNoteEdit() {
         </div>
       </section>
 
-      <form onSubmit={onSubmit} className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+      <form onSubmit={onSubmit} className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-5">
-          <section className={cx(panel(), "p-4 md:p-5")}>
-            <h2 className={cx("text-base font-semibold", strongText())}>Document summary</h2>
-            <p className={cx("mt-1 text-sm", mutedText())}>
+          <section className={cn(panel(), "p-4 md:p-5")}>
+            <h2 className={cn("text-base font-semibold", strong())}>Document summary</h2>
+            <p className={cn("mt-1 text-sm", muted())}>
               Review the delivery reference before saving changes.
             </p>
 
@@ -335,7 +332,7 @@ export default function DeliveryNoteEdit() {
                   </div>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-emerald-700/80 dark:text-emerald-200/80">
                     <span>Date: {formatDate(documentData?.date || documentData?.createdAt)}</span>
-                    {documentData?.saleId ? <span>Linked sale: Yes</span> : <span>Linked sale: No</span>}
+                    <span>{documentData?.saleId ? "Linked sale: Yes" : "Linked sale: No"}</span>
                   </div>
                 </div>
 
@@ -344,14 +341,14 @@ export default function DeliveryNoteEdit() {
             </div>
           </section>
 
-          <section className={cx(panel(), "p-4 md:p-5")}>
-            <h2 className={cx("text-base font-semibold", strongText())}>Recipient details</h2>
-            <p className={cx("mt-1 text-sm", mutedText())}>
+          <section className={cn(panel(), "p-4 md:p-5")}>
+            <h2 className={cn("text-base font-semibold", strong())}>Recipient details</h2>
+            <p className={cn("mt-1 text-sm", muted())}>
               Keep the handover information accurate and customer-friendly.
             </p>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div>
+              <div className="md:col-span-2">
                 <label className={labelClass()}>Customer name</label>
                 <input
                   value={form.customerName}
@@ -372,7 +369,7 @@ export default function DeliveryNoteEdit() {
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div>
                 <label className={labelClass()}>Customer address</label>
                 <input
                   value={form.customerAddress}
@@ -419,17 +416,17 @@ export default function DeliveryNoteEdit() {
                   onChange={(e) => updateField("notes", e.target.value)}
                   className={textareaClass()}
                   placeholder="Optional delivery note comments"
-                  rows={4}
+                  rows={5}
                 />
               </div>
             </div>
           </section>
 
-          <section className={cx(panel(), "p-4 md:p-5")}>
+          <section className={cn(panel(), "p-4 md:p-5")}>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className={cx("text-base font-semibold", strongText())}>Delivered items</h2>
-                <p className={cx("mt-1 text-sm", mutedText())}>
+                <h2 className={cn("text-base font-semibold", strong())}>Delivered items</h2>
+                <p className={cn("mt-1 text-sm", muted())}>
                   Keep the delivery items accurate so the printed document matches reality.
                 </p>
               </div>
@@ -443,14 +440,12 @@ export default function DeliveryNoteEdit() {
               {items.map((item, index) => (
                 <div
                   key={item.key}
-                  className="rounded-[20px] border border-stone-200 bg-stone-50 p-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]"
+                  className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-card)] p-4"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className={cx("text-sm font-semibold", strongText())}>
-                        Item {index + 1}
-                      </div>
-                      <div className={cx("mt-1 text-xs", softText())}>
+                      <div className={cn("text-sm font-semibold", strong())}>Item {index + 1}</div>
+                      <div className={cn("mt-1 text-xs", soft())}>
                         This row appears on the delivery note.
                       </div>
                     </div>
@@ -488,7 +483,7 @@ export default function DeliveryNoteEdit() {
                       />
                     </div>
 
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-3">
                       <label className={labelClass()}>Serial / Identifier</label>
                       <input
                         value={item.serial}
@@ -505,15 +500,15 @@ export default function DeliveryNoteEdit() {
         </div>
 
         <div className="space-y-5">
-          <section className={cx(shell(), "p-4 md:p-5 xl:sticky xl:top-5")}>
+          <section className={cn(shell(), "p-4 md:p-5 xl:sticky xl:top-5")}>
             <div>
-              <h2 className={cx("text-base font-semibold", strongText())}>Summary</h2>
-              <p className={cx("mt-1 text-sm", mutedText())}>
+              <h2 className={cn("text-base font-semibold", strong())}>Summary</h2>
+              <p className={cn("mt-1 text-sm", muted())}>
                 Review before saving delivery note changes.
               </p>
             </div>
 
-            <div className="mt-5 divide-y divide-stone-200 dark:divide-[rgb(var(--border))]">
+            <div className="mt-5 divide-y divide-[var(--color-border)]">
               {summaryRow("Document", documentData?.number || "—")}
               {summaryRow("Customer", form.customerName || "—")}
               {summaryRow("Delivered by", form.deliveredBy || "—")}
@@ -524,13 +519,13 @@ export default function DeliveryNoteEdit() {
             </div>
 
             <div className="mt-5 flex flex-col gap-2">
-              <button type="submit" className={primaryBtn()} disabled={saving}>
-                {saving ? "Saving..." : "Save Delivery Note"}
-              </button>
+              <AsyncButton type="submit" loading={saving} loadingText="Saving..." variant="primary">
+                Save Delivery Note
+              </AsyncButton>
 
               <Link
                 to={`/app/documents/delivery-notes/${encodeURIComponent(id)}/preview`}
-                className={secondaryBtn()}
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-medium text-[var(--color-text)] transition hover:opacity-90"
               >
                 Cancel
               </Link>

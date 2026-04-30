@@ -1,133 +1,199 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+
+import AsyncButton from "../../components/ui/AsyncButton";
+import { cn } from "../../lib/cn";
 import { createWarranty } from "../../services/warrantiesApi";
 import { getSale, listSales } from "../../services/posApi";
+import { handleSubscriptionBlockedError } from "../../utils/subscriptionError";
+
+const PAGE_SIZE = 10;
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
-function shell() {
-  return "rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
+function cleanString(value) {
+  const s = String(value || "").trim();
+  return s || "";
 }
 
-function panel() {
-  return "rounded-[24px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]";
+function formatMoney(value) {
+  const n = Number(value || 0);
+  const safe = Number.isFinite(n) ? n : 0;
+
+  return `Rwf ${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+  }).format(safe)}`;
 }
 
-function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
-}
+function formatNumber(value) {
+  const n = Number(value || 0);
 
-function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
-}
-
-function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
-}
-
-function labelClass() {
-  return "mb-2 block text-sm font-medium text-stone-900 dark:text-[rgb(var(--text))]";
-}
-
-function inputClass() {
-  return "h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function textareaClass() {
-  return "w-full rounded-2xl border border-stone-300 bg-white px-3.5 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
-}
-
-function primaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-stone-950 px-5 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl border border-stone-300 bg-white px-5 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
-}
-
-function smallBtn() {
-  return "inline-flex h-9 items-center justify-center rounded-xl border border-stone-300 bg-white px-3 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
-}
-
-function summaryRow(label, value, strong = false) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-2">
-      <span className="text-sm text-stone-600 dark:text-[rgb(var(--text-muted))]">{label}</span>
-      <span
-        className={cx(
-          "text-sm text-right",
-          strong ? "font-semibold" : "font-medium",
-          strong ? strongText() : mutedText()
-        )}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function money(n, currency = "RWF") {
-  return `${currency} ${Number(n || 0).toLocaleString()}`;
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(n) ? n : 0);
 }
 
 function formatDate(value) {
   if (!value) return "—";
+
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString();
+
+  return d.toLocaleDateString("en-RW", {
+    dateStyle: "medium",
+  });
 }
 
-function badgeClass(kind = "neutral") {
-  if (kind === "success") {
-    return "inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300";
-  }
-  if (kind === "warning") {
-    return "inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300";
-  }
-  if (kind === "danger") {
-    return "inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300";
-  }
-  return "inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-700 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))] dark:text-[rgb(var(--text-muted))]";
+function todayInputDate() {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function statusKind(status) {
-  const s = String(status || "").toUpperCase();
-  if (["PAID", "COMPLETED", "ACTIVE"].includes(s)) return "success";
-  if (["PARTIAL", "UNPAID", "PENDING"].includes(s)) return "warning";
-  if (["CANCELLED", "EXPIRED", "OVERDUE"].includes(s)) return "danger";
-  return "neutral";
+function addMonthsToDate(dateText, months) {
+  const d = dateText ? new Date(dateText) : new Date();
+
+  if (Number.isNaN(d.getTime())) return "";
+
+  d.setMonth(d.getMonth() + Number(months || 0));
+
+  return d.toISOString().slice(0, 10);
+}
+
+function addDaysToDate(dateText, days) {
+  const d = dateText ? new Date(dateText) : new Date();
+
+  if (Number.isNaN(d.getTime())) return "";
+
+  d.setDate(d.getDate() + Number(days || 0));
+
+  return d.toISOString().slice(0, 10);
+}
+
+function activeBranchNameFromStorage() {
+  const name = cleanString(localStorage.getItem("activeBranchName"));
+  const code = cleanString(localStorage.getItem("activeBranchCode"));
+
+  if (code && name) return `${code} • ${name}`;
+  if (name) return name;
+  if (code) return code;
+
+  return "this branch";
+}
+
+function pageCard() {
+  return "rounded-[30px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function softPanel() {
+  return "rounded-[24px] bg-[var(--color-surface-2)]";
+}
+
+function inputClass() {
+  return "h-12 w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function textareaClass() {
+  return "min-h-[132px] w-full rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function buttonBase() {
+  return "inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function primaryBtn() {
+  return cx(
+    buttonBase(),
+    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
+}
+
+function secondaryBtn() {
+  return cx(
+    buttonBase(),
+    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
+}
+
+function successBtn() {
+  return cx(
+    buttonBase(),
+    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
 }
 
 function saleReferenceLabel(sale) {
-  return sale?.receiptNumber || sale?.invoiceNumber || sale?.id || "Sale";
+  return (
+    cleanString(sale?.receiptNumber) ||
+    cleanString(sale?.invoiceNumber) ||
+    cleanString(sale?.number) ||
+    "Sale"
+  );
 }
 
-function saleCaption(sale) {
-  const customer = sale?.customer?.name || sale?.customer?.phone || "Walk-in Customer";
-  const cashier = sale?.cashier?.name || "—";
-  return `${customer} • Cashier: ${cashier}`;
+function customerName(sale) {
+  return (
+    cleanString(sale?.customer?.name) ||
+    cleanString(sale?.customerName) ||
+    "Walk-in customer"
+  );
+}
+
+function customerPhone(sale) {
+  return (
+    cleanString(sale?.customer?.phone) ||
+    cleanString(sale?.customerPhone) ||
+    "No phone saved"
+  );
+}
+
+function cashierName(sale) {
+  return (
+    cleanString(sale?.cashier?.name) ||
+    cleanString(sale?.cashierName) ||
+    "—"
+  );
+}
+
+function branchLabel(sale) {
+  const code = cleanString(sale?.branch?.code);
+  const name = cleanString(sale?.branch?.name);
+
+  if (code && name) return `${code} • ${name}`;
+  if (name) return name;
+  if (code) return code;
+
+  return activeBranchNameFromStorage();
+}
+
+function saleStatusTone(status) {
+  const s = String(status || "").toUpperCase();
+
+  if (["PAID", "COMPLETED", "ACTIVE"].includes(s)) return "success";
+  if (["PARTIAL", "UNPAID", "PENDING"].includes(s)) return "warning";
+  if (["CANCELLED", "EXPIRED", "OVERDUE"].includes(s)) return "danger";
+
+  return "neutral";
 }
 
 function matchesSaleQuery(sale, query) {
-  const q = String(query || "").trim().toLowerCase();
+  const q = query.trim().toLowerCase();
   if (!q) return true;
 
   const haystack = [
-    sale?.id,
     sale?.receiptNumber,
     sale?.invoiceNumber,
-    sale?.customer?.name,
-    sale?.customer?.phone,
-    sale?.cashier?.name,
+    sale?.number,
+    customerName(sale),
+    customerPhone(sale),
+    cashierName(sale),
     sale?.saleType,
     sale?.status,
+    branchLabel(sale),
   ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+    .map((item) => String(item || "").toLowerCase())
+    .join(" ");
 
   return haystack.includes(q);
 }
@@ -137,6 +203,7 @@ function normalizeSaleDetail(raw) {
   const items = Array.isArray(sale?.items) ? sale.items : [];
 
   return {
+    ...sale,
     id: sale?.id || null,
     receiptNumber: sale?.receiptNumber || null,
     invoiceNumber: sale?.invoiceNumber || null,
@@ -146,40 +213,354 @@ function normalizeSaleDetail(raw) {
     status: sale?.status || null,
     customer: sale?.customer || null,
     cashier: sale?.cashier || (sale?.cashierName ? { name: sale.cashierName } : null),
+    branch: sale?.branch || null,
     items,
   };
+}
+
+function itemKey(item, index) {
+  return cleanString(item?.id) || `${cleanString(item?.productId) || "product"}-${index}`;
+}
+
+function itemProductId(item) {
+  return cleanString(item?.productId || item?.product?.id);
+}
+
+function itemName(item) {
+  return (
+    cleanString(item?.product?.name) ||
+    cleanString(item?.productName) ||
+    cleanString(item?.name) ||
+    "Covered product"
+  );
+}
+
+function itemSerial(item) {
+  return (
+    cleanString(item?.product?.serial) ||
+    cleanString(item?.serial) ||
+    ""
+  );
+}
+
+function itemQuantity(item) {
+  return Number(item?.quantity || 1);
+}
+
+function itemPrice(item) {
+  return Number(item?.price ?? item?.unitPrice ?? item?.sellPrice ?? 0);
 }
 
 function buildSelectableItemsFromSaleDetail(detail) {
   const items = Array.isArray(detail?.items) ? detail.items : [];
 
   return items.map((item, index) => ({
-    key: item?.id || `${item?.productId || "product"}-${index}`,
+    key: itemKey(item, index),
     checked: true,
     saleItemId: item?.id ? String(item.id) : "",
-    productId: item?.productId ? String(item.productId) : "",
-    unitLabel: item?.product?.name || item?.productName || "Covered Unit",
-    serial: item?.product?.serial || item?.serial || "",
-    imei1: item?.imei1 || "",
-    imei2: item?.imei2 || "",
-    quantity: Number(item?.quantity || 1),
+    productId: itemProductId(item),
+    unitLabel: itemName(item),
+    serial: itemSerial(item),
+    imei1: cleanString(item?.imei1),
+    imei2: cleanString(item?.imei2),
+    quantity: itemQuantity(item),
+    price: itemPrice(item),
   }));
+}
+
+function StatusBadge({ tone = "neutral", children }) {
+  const cls =
+    tone === "danger"
+      ? "bg-red-500/10 text-red-600"
+      : tone === "warning"
+        ? "bg-amber-500/10 text-amber-600"
+        : tone === "success"
+          ? "bg-emerald-500/10 text-emerald-600"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
+
+  return (
+    <span
+      className={cx(
+        "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]",
+        cls,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function SkeletonBlock({ className = "" }) {
+  return (
+    <div className={cx("animate-pulse rounded-[22px] bg-[var(--color-surface-2)]", className)} />
+  );
+}
+
+function CreateSkeleton() {
+  return (
+    <div className="space-y-5">
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <SkeletonBlock className="h-4 w-28" />
+        <SkeletonBlock className="mt-4 h-10 w-72 max-w-full rounded-[18px]" />
+        <SkeletonBlock className="mt-3 h-4 w-full max-w-xl" />
+      </section>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-5">
+          {[1, 2, 3].map((item) => (
+            <section key={item} className={cx(pageCard(), "p-5")}>
+              <SkeletonBlock className="h-7 w-44" />
+              <SkeletonBlock className="mt-3 h-4 w-72 max-w-full" />
+              <SkeletonBlock className="mt-5 h-12 w-full" />
+            </section>
+          ))}
+        </div>
+
+        <section className={cx(pageCard(), "p-5")}>
+          <SkeletonBlock className="h-7 w-32" />
+          <SkeletonBlock className="mt-5 h-44 w-full" />
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-3Z" />
+      <path d="m9 12 2 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SummaryCard({ label, value, note, tone = "neutral" }) {
+  const dot =
+    tone === "danger"
+      ? "bg-red-500"
+      : tone === "warning"
+        ? "bg-amber-500"
+        : tone === "success"
+          ? "bg-emerald-500"
+          : "bg-[var(--color-primary)]";
+
+  return (
+    <article className={cx(pageCard(), "relative overflow-hidden p-5")}>
+      <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-[rgba(74,163,255,0.08)] blur-2xl" />
+
+      <div className="relative">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
+            {label}
+          </p>
+          <span className={cx("h-2.5 w-2.5 rounded-full", dot)} />
+        </div>
+
+        <p className="mt-3 truncate text-2xl font-black tracking-[-0.03em] text-[var(--color-text)]">
+          {value}
+        </p>
+
+        {note ? (
+          <p className="mt-1 text-xs font-semibold leading-5 text-[var(--color-text-muted)]">
+            {note}
+          </p>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function InfoTile({ label, value, tone = "neutral" }) {
+  const valueClass =
+    tone === "danger"
+      ? "text-red-600"
+      : tone === "warning"
+        ? "text-amber-600"
+        : tone === "success"
+          ? "text-emerald-600"
+          : "text-[var(--color-text)]";
+
+  return (
+    <div className={cx(softPanel(), "p-4 shadow-[var(--shadow-soft)]")}>
+      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+        {label}
+      </p>
+      <p className={cx("mt-2 break-words text-sm font-black leading-6", valueClass)}>
+        {value || "—"}
+      </p>
+    </div>
+  );
+}
+
+function SaleOption({ sale, selected, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "w-full border-b border-[var(--color-border)] px-4 py-4 text-left transition last:border-b-0",
+        selected ? "bg-[var(--color-surface-2)]" : "hover:bg-[var(--color-surface-2)]",
+      )}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="truncate text-sm font-black text-[var(--color-text)]">
+              {saleReferenceLabel(sale)}
+            </div>
+
+            <StatusBadge tone={saleStatusTone(sale?.status)}>
+              {sale?.status || "Sale"}
+            </StatusBadge>
+          </div>
+
+          <p className="mt-1 truncate text-sm font-semibold text-[var(--color-text-muted)]">
+            {customerName(sale)} • {customerPhone(sale)}
+          </p>
+
+          <p className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">
+            {formatDate(sale?.createdAt)} • Cashier: {cashierName(sale)}
+          </p>
+        </div>
+
+        <div className="shrink-0 text-sm font-black text-[var(--color-text)]">
+          {formatMoney(sale?.total || 0)}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function EmptyState({ title, text }) {
+  return (
+    <div className="rounded-[28px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)] p-8 text-center">
+      <h3 className="text-base font-black text-[var(--color-text)]">{title}</h3>
+      <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function CoveredItemCard({ item, index, onChange }) {
+  return (
+    <article
+      className={cx(
+        "rounded-[24px] border p-4 transition",
+        item.checked
+          ? "border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-soft)]"
+          : "border-[var(--color-border)] bg-[var(--color-surface-2)] opacity-75",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={item.checked}
+          onChange={(event) => onChange(index, "checked", event.target.checked)}
+          className="mt-1 h-4 w-4 rounded border-[var(--color-border)]"
+        />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-black text-[var(--color-text)]">
+              {item.unitLabel || `Sold product ${index + 1}`}
+            </h3>
+
+            <StatusBadge tone={item.checked ? "success" : "neutral"}>
+              {item.checked ? "Covered" : "Not covered"}
+            </StatusBadge>
+          </div>
+
+          <p className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">
+            Qty: {formatNumber(item.quantity || 1)} • Sold for {formatMoney(item.price || 0)}
+          </p>
+
+          {item.checked ? (
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                  Product label
+                </span>
+                <input
+                  value={item.unitLabel}
+                  onChange={(event) => onChange(index, "unitLabel", event.target.value)}
+                  className={inputClass()}
+                  placeholder="Product name"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                  Serial
+                </span>
+                <input
+                  value={item.serial}
+                  onChange={(event) => onChange(index, "serial", event.target.value)}
+                  className={inputClass()}
+                  placeholder="Serial number"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                  IMEI 1
+                </span>
+                <input
+                  value={item.imei1}
+                  onChange={(event) => onChange(index, "imei1", event.target.value)}
+                  className={inputClass()}
+                  placeholder="Optional"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                  IMEI 2
+                </span>
+                <input
+                  value={item.imei2}
+                  onChange={(event) => onChange(index, "imei2", event.target.value)}
+                  className={inputClass()}
+                  placeholder="Optional"
+                />
+              </label>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm font-medium text-[var(--color-text-muted)]">
+              This product will not appear on the warranty certificate.
+            </p>
+          )}
+        </div>
+      </div>
+    </article>
+  );
 }
 
 export default function WarrantyCreate() {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
+  const mountedRef = useRef(true);
+
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
     saleRef: "",
     policy: "",
-    startsAt: "",
+    startsAt: todayInputDate(),
     endsAt: "",
-    durationMonths: "",
+    durationMonths: "12",
     durationDays: "",
   });
-
-  const [saving, setSaving] = useState(false);
 
   const [saleQuery, setSaleQuery] = useState("");
   const [allSales, setAllSales] = useState([]);
@@ -190,38 +571,88 @@ export default function WarrantyCreate() {
   const [selectedSaleLoading, setSelectedSaleLoading] = useState(false);
   const [selectableItems, setSelectableItems] = useState([]);
 
+  const [activeBranchLabel, setActiveBranchLabel] = useState(() => activeBranchNameFromStorage());
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   function updateSelectableItem(index, key, value) {
     setSelectableItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [key]: value } : item))
+      prev.map((item, i) => (i === index ? { ...item, [key]: value } : item)),
     );
   }
 
-  async function loadSales() {
+  function toggleAllCovered(nextChecked) {
+    setSelectableItems((prev) => prev.map((item) => ({ ...item, checked: nextChecked })));
+  }
+
+  async function loadSales({ silent = false } = {}) {
     try {
+      if (!silent) setInitialLoading(true);
       setSalesLoading(true);
+
       const data = await listSales();
-      const rows = Array.isArray(data?.sales) ? data.sales : [];
+      if (!mountedRef.current) return;
+
+      const rows = Array.isArray(data?.sales)
+        ? data.sales
+        : Array.isArray(data)
+          ? data
+          : [];
+
       setAllSales(rows);
-    } catch (err) {
-      console.error(err);
-      toast.error(err?.message || "Failed to load sales");
+      setActiveBranchLabel(activeBranchNameFromStorage());
+    } catch (error) {
+      if (!mountedRef.current) return;
+
+      console.error(error);
+
+      if (!handleSubscriptionBlockedError(error, { toastId: "warranty-sales-load-blocked" })) {
+        toast.error(error?.message || "Failed to load sales");
+      }
+
       setAllSales([]);
     } finally {
+      if (!mountedRef.current) return;
       setSalesLoading(false);
+      setInitialLoading(false);
     }
   }
 
   useEffect(() => {
-    loadSales();
+    void loadSales();
+
+    function onBranchChanged() {
+      setActiveBranchLabel(activeBranchNameFromStorage());
+      setSelectedSale(null);
+      setSelectableItems([]);
+      setSaleQuery("");
+      setForm((prev) => ({ ...prev, saleRef: "" }));
+      void loadSales({ silent: true });
+    }
+
+    window.addEventListener("storvex:branch-changed", onBranchChanged);
+    window.addEventListener("storvex:workspace-refreshed", onBranchChanged);
+
+    return () => {
+      window.removeEventListener("storvex:branch-changed", onBranchChanged);
+      window.removeEventListener("storvex:workspace-refreshed", onBranchChanged);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    function onDocClick(e) {
-      if (!dropdownRef.current?.contains(e.target)) {
+    function onDocClick(event) {
+      if (!dropdownRef.current?.contains(event.target)) {
         setShowDropdown(false);
       }
     }
@@ -230,21 +661,36 @@ export default function WarrantyCreate() {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
+  useEffect(() => {
+    if (!form.startsAt) return;
+
+    if (form.durationMonths) {
+      updateField("endsAt", addMonthsToDate(form.startsAt, form.durationMonths));
+      return;
+    }
+
+    if (form.durationDays) {
+      updateField("endsAt", addDaysToDate(form.startsAt, form.durationDays));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.startsAt, form.durationMonths, form.durationDays]);
+
   const filteredSales = useMemo(() => {
-    return allSales.filter((sale) => matchesSaleQuery(sale, saleQuery)).slice(0, 12);
+    return allSales.filter((sale) => matchesSaleQuery(sale, saleQuery)).slice(0, PAGE_SIZE);
   }, [allSales, saleQuery]);
 
   const selectedCoveredItems = useMemo(() => {
     return selectableItems.filter(
       (item) =>
         item.checked &&
-        String(item.saleItemId || "").trim() &&
-        String(item.productId || "").trim()
+        cleanString(item.saleItemId) &&
+        cleanString(item.productId),
     );
   }, [selectableItems]);
 
   const totalSoldItems = selectableItems.length;
   const totalCoveredItems = selectedCoveredItems.length;
+  const excludedItems = Math.max(0, totalSoldItems - totalCoveredItems);
 
   async function applySelectedSale(saleRow) {
     try {
@@ -252,52 +698,53 @@ export default function WarrantyCreate() {
 
       const detailRaw = await getSale(saleRow.id);
       const detail = normalizeSaleDetail(detailRaw);
-      const ref = detail?.receiptNumber || detail?.invoiceNumber || detail?.id || "";
+      const ref = saleReferenceLabel(detail);
 
       setSelectedSale(detail);
       setSelectableItems(buildSelectableItemsFromSaleDetail(detail));
-      setForm((prev) => ({
-        ...prev,
-        saleRef: ref,
-      }));
+      setForm((prev) => ({ ...prev, saleRef: ref }));
       setSaleQuery(ref);
       setShowDropdown(false);
-    } catch (err) {
-      console.error(err);
-      toast.error(err?.message || "Failed to load selected sale");
+    } catch (error) {
+      console.error(error);
+
+      if (!handleSubscriptionBlockedError(error, { toastId: "warranty-sale-detail-blocked" })) {
+        toast.error(error?.message || "Failed to load selected sale");
+      }
     } finally {
       setSelectedSaleLoading(false);
     }
   }
 
-  function toggleAllCovered(nextChecked) {
-    setSelectableItems((prev) => prev.map((item) => ({ ...item, checked: nextChecked })));
-  }
+  async function onSubmit(event) {
+    event.preventDefault();
 
-  async function onSubmit(e) {
-    e.preventDefault();
-
-    if (!form.saleRef.trim()) {
-      toast.error("Select a sale first");
+    if (!cleanString(form.saleRef)) {
+      toast.error("Choose a sale first");
       return;
     }
 
-    if (!form.policy.trim()) {
-      toast.error("Warranty policy is required");
+    if (!selectedSale?.id) {
+      toast.error("Choose a valid sale first");
+      return;
+    }
+
+    if (!cleanString(form.policy)) {
+      toast.error("Add the warranty terms");
       return;
     }
 
     if (!selectedCoveredItems.length) {
-      toast.error("Select at least one sold item to cover");
+      toast.error("Choose at least one sold product to cover");
       return;
     }
 
-    try {
-      setSaving(true);
+    setSaving(true);
 
+    try {
       const payload = {
-        saleRef: form.saleRef.trim(),
-        policy: form.policy.trim(),
+        saleRef: cleanString(form.saleRef),
+        policy: cleanString(form.policy),
         startsAt: form.startsAt || undefined,
         endsAt: form.endsAt || undefined,
         durationMonths: form.durationMonths ? Number(form.durationMonths) : undefined,
@@ -305,15 +752,15 @@ export default function WarrantyCreate() {
         units: selectedCoveredItems.map((item) => ({
           saleItemId: String(item.saleItemId),
           productId: String(item.productId),
-          unitLabel: item.unitLabel?.trim() || undefined,
-          serial: item.serial?.trim() || undefined,
-          imei1: item.imei1?.trim() || undefined,
-          imei2: item.imei2?.trim() || undefined,
+          unitLabel: cleanString(item.unitLabel) || undefined,
+          serial: cleanString(item.serial) || undefined,
+          imei1: cleanString(item.imei1) || undefined,
+          imei2: cleanString(item.imei2) || undefined,
         })),
       };
 
       const result = await createWarranty(payload);
-      const createdId = result?.warranty?.id;
+      const createdId = result?.warranty?.id || result?.id;
 
       toast.success("Warranty created");
 
@@ -323,150 +770,167 @@ export default function WarrantyCreate() {
       }
 
       navigate("/app/documents/warranties");
-    } catch (err) {
-      console.error(err);
-      toast.error(err?.message || "Failed to create warranty");
+    } catch (error) {
+      console.error(error);
+
+      if (handleSubscriptionBlockedError(error, { toastId: "warranty-create-blocked" })) {
+        return;
+      }
+
+      toast.error(error?.response?.data?.message || error?.message || "Failed to create warranty");
     } finally {
       setSaving(false);
     }
   }
 
+  if (initialLoading) {
+    return <CreateSkeleton />;
+  }
+
   return (
     <div className="space-y-5">
-      <section className={cx(shell(), "relative overflow-hidden p-5 md:p-6")}>
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-stone-950 via-stone-800 to-stone-950 opacity-[0.03] dark:from-white dark:via-white dark:to-white dark:opacity-[0.04]" />
+      <section className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
+        <div className="pointer-events-none absolute -right-24 -top-24 h-[260px] w-[260px] rounded-full bg-[rgba(74,163,255,0.10)] blur-3xl" />
 
         <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div className="min-w-0">
-            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-              Document creation
-            </div>
+          <div className="max-w-3xl">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+              Warranty
+            </p>
 
-            <h1 className={cx("mt-2 text-2xl font-semibold tracking-tight md:text-3xl", strongText())}>
-              Create Warranty
+            <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-[var(--color-text)] sm:text-3xl">
+              Create warranty
             </h1>
 
-            <p className={cx("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", mutedText())}>
-              Select a real sale, confirm the sold items to cover, then issue a clean branded warranty certificate.
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+              Choose a real sale from{" "}
+              <span className="font-black text-[var(--color-text)]">{activeBranchLabel}</span>,
+              select the sold products to cover, and issue a clean warranty certificate.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row xl:justify-end">
             <Link to="/app/documents/warranties" className={secondaryBtn()}>
-              Back to Warranties
+              Warranties
             </Link>
+
             <Link to="/app/documents" className={secondaryBtn()}>
-              Document Center
+              Documents
+            </Link>
+
+            <Link to="/app/pos/sales" className={primaryBtn()}>
+              Sales list
             </Link>
           </div>
         </div>
       </section>
 
-      <form onSubmit={onSubmit} className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard
+          label="Selected sale"
+          value={selectedSale ? saleReferenceLabel(selectedSale) : "None"}
+          note={selectedSale ? `${customerName(selectedSale)} • ${customerPhone(selectedSale)}` : "Choose a sale first"}
+          tone={selectedSale ? "success" : "warning"}
+        />
+
+        <SummaryCard
+          label="Sold products"
+          value={formatNumber(totalSoldItems)}
+          note="Products loaded from the sale"
+        />
+
+        <SummaryCard
+          label="Covered"
+          value={formatNumber(totalCoveredItems)}
+          note="Products that will appear on warranty"
+          tone={totalCoveredItems > 0 ? "success" : "warning"}
+        />
+
+        <SummaryCard
+          label="Excluded"
+          value={formatNumber(excludedItems)}
+          note="Products not covered"
+          tone={excludedItems > 0 ? "warning" : "neutral"}
+        />
+      </section>
+
+      <form onSubmit={onSubmit} className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-5">
-          <section className={cx(panel(), "p-4 md:p-5")}>
-            <h2 className={cx("text-base font-semibold", strongText())}>Select sale</h2>
-            <p className={cx("mt-1 text-sm", mutedText())}>
-              Search by receipt number, invoice number, customer name, or phone.
-            </p>
-
-            <div className="mt-5" ref={dropdownRef}>
-              <label className={labelClass()}>Sale search</label>
-
-              <div className="relative">
-                <input
-                  value={saleQuery}
-                  onChange={(e) => {
-                    setSaleQuery(e.target.value);
-                    setShowDropdown(true);
-                  }}
-                  onFocus={() => setShowDropdown(true)}
-                  className={inputClass()}
-                  placeholder="Search receipt, invoice, customer, or phone"
-                />
-
-                {showDropdown ? (
-                  <div className="absolute z-30 mt-2 max-h-80 w-full overflow-auto rounded-2xl border border-stone-200 bg-white shadow-xl dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]">
-                    {salesLoading ? (
-                      <div className={cx("p-3 text-sm", mutedText())}>Loading sales...</div>
-                    ) : filteredSales.length === 0 ? (
-                      <div className={cx("p-3 text-sm", mutedText())}>No sales found</div>
-                    ) : (
-                      filteredSales.map((sale) => {
-                        const selected = selectedSale?.id === sale?.id;
-
-                        return (
-                          <button
-                            key={sale.id}
-                            type="button"
-                            onClick={() => applySelectedSale(sale)}
-                            className={cx(
-                              "flex w-full items-start justify-between gap-3 border-b border-stone-100 px-3 py-3 text-left transition last:border-b-0 dark:border-[rgb(var(--border))]",
-                              selected
-                                ? "bg-stone-50 dark:bg-[rgb(var(--bg-muted))]"
-                                : "hover:bg-stone-50 dark:hover:bg-[rgb(var(--bg-muted))]"
-                            )}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <div className={cx("truncate text-sm font-semibold", strongText())}>
-                                  {saleReferenceLabel(sale)}
-                                </div>
-                                <span className={badgeClass(statusKind(sale?.status))}>
-                                  {sale?.status || "SALE"}
-                                </span>
-                              </div>
-
-                              <div className={cx("mt-1 truncate text-sm", mutedText())}>
-                                {saleCaption(sale)}
-                              </div>
-
-                              <div className={cx("mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs", softText())}>
-                                {sale?.invoiceNumber ? <span>Invoice: {sale.invoiceNumber}</span> : null}
-                                {sale?.receiptNumber ? <span>Receipt: {sale.receiptNumber}</span> : null}
-                                <span>Date: {formatDate(sale?.createdAt)}</span>
-                              </div>
-                            </div>
-
-                            <div className={cx("shrink-0 text-sm font-semibold", strongText())}>
-                              {money(sale?.total || 0, "RWF")}
-                            </div>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                ) : null}
-              </div>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
+            <div>
+              <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
+                1. Choose sale
+              </h2>
+              <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+                Search by receipt, customer, phone, cashier, or branch.
+              </p>
             </div>
 
-            {selectedSaleLoading ? (
-              <div className={cx("mt-4 text-sm", mutedText())}>Loading sale details...</div>
-            ) : null}
+            <div className="relative mt-5" ref={dropdownRef}>
+              <span className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--color-text-muted)]">
+                <SearchIcon />
+              </span>
+
+              <input
+                value={saleQuery}
+                onChange={(event) => {
+                  setSaleQuery(event.target.value);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => setShowDropdown(true)}
+                className={cx(inputClass(), "pl-11")}
+                placeholder="Search sale, customer, phone, or receipt..."
+              />
+
+              {showDropdown ? (
+                <div className="absolute z-40 mt-2 max-h-96 w-full overflow-auto rounded-[24px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[0_22px_70px_rgba(15,23,42,0.18)]">
+                  {salesLoading || selectedSaleLoading ? (
+                    <div className="p-4 text-sm font-bold text-[var(--color-text-muted)]">
+                      Loading sales...
+                    </div>
+                  ) : filteredSales.length === 0 ? (
+                    <div className="p-4 text-sm font-bold text-[var(--color-text-muted)]">
+                      No sales found.
+                    </div>
+                  ) : (
+                    filteredSales.map((sale) => (
+                      <SaleOption
+                        key={sale.id}
+                        sale={sale}
+                        selected={selectedSale?.id === sale.id}
+                        onClick={() => applySelectedSale(sale)}
+                      />
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
 
             {selectedSale ? (
-              <div className="mt-4 rounded-[20px] border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+              <div className="mt-5 rounded-[26px] border border-emerald-500/20 bg-emerald-500/10 p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                      Selected sale
-                    </div>
-                    <div className="mt-1 text-sm text-emerald-700 dark:text-emerald-200">
+                    <p className="text-sm font-black text-emerald-700 dark:text-emerald-300">
+                      Sale selected
+                    </p>
+
+                    <h3 className="mt-1 text-base font-black text-[var(--color-text)]">
                       {saleReferenceLabel(selectedSale)}
-                    </div>
-                    <div className="mt-1 text-sm text-emerald-700/90 dark:text-emerald-200/90">
-                      {saleCaption(selectedSale)}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-emerald-700/80 dark:text-emerald-200/80">
-                      <span>Date: {formatDate(selectedSale?.createdAt)}</span>
-                      <span>Total: {money(selectedSale?.total || 0, "RWF")}</span>
-                      <span>Sale Type: {selectedSale?.saleType || "—"}</span>
-                    </div>
+                    </h3>
+
+                    <p className="mt-1 text-sm font-semibold text-[var(--color-text-muted)]">
+                      {customerName(selectedSale)} • {customerPhone(selectedSale)}
+                    </p>
+
+                    <p className="mt-2 text-xs font-bold text-[var(--color-text-muted)]">
+                      {formatDate(selectedSale?.createdAt)} • {formatMoney(selectedSale?.total)} • Cashier:{" "}
+                      {cashierName(selectedSale)}
+                    </p>
                   </div>
 
                   <button
                     type="button"
-                    className={smallBtn()}
+                    className={secondaryBtn()}
                     onClick={() => {
                       setSelectedSale(null);
                       setSelectableItems([]);
@@ -474,99 +938,107 @@ export default function WarrantyCreate() {
                       setForm((prev) => ({ ...prev, saleRef: "" }));
                     }}
                   >
-                    Clear
+                    Change sale
                   </button>
                 </div>
               </div>
             ) : null}
           </section>
 
-          <section className={cx(panel(), "p-4 md:p-5")}>
-            <h2 className={cx("text-base font-semibold", strongText())}>Warranty setup</h2>
-            <p className={cx("mt-1 text-sm", mutedText())}>
-              Define the coverage period and the policy shown on the certificate.
-            </p>
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
+            <div>
+              <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
+                2. Warranty terms
+              </h2>
+              <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+                Choose coverage dates and write clear terms the customer can understand.
+              </p>
+            </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div>
-                <label className={labelClass()}>Starts at</label>
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                  Starts
+                </span>
                 <input
                   value={form.startsAt}
-                  onChange={(e) => updateField("startsAt", e.target.value)}
+                  onChange={(event) => updateField("startsAt", event.target.value)}
                   className={inputClass()}
                   type="date"
                 />
-              </div>
+              </label>
 
-              <div>
-                <label className={labelClass()}>Ends at</label>
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                  Ends
+                </span>
                 <input
                   value={form.endsAt}
-                  onChange={(e) => updateField("endsAt", e.target.value)}
+                  onChange={(event) => updateField("endsAt", event.target.value)}
                   className={inputClass()}
                   type="date"
                 />
-              </div>
+              </label>
 
-              <div>
-                <label className={labelClass()}>Duration months</label>
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                  Months
+                </span>
                 <input
                   value={form.durationMonths}
-                  onChange={(e) => updateField("durationMonths", e.target.value)}
+                  onChange={(event) => updateField("durationMonths", event.target.value.replace(/[^\d]/g, ""))}
                   className={inputClass()}
-                  type="number"
-                  min="0"
+                  inputMode="numeric"
+                  placeholder="Example: 12"
                 />
-              </div>
+              </label>
 
-              <div>
-                <label className={labelClass()}>Duration days</label>
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                  Extra days
+                </span>
                 <input
                   value={form.durationDays}
-                  onChange={(e) => updateField("durationDays", e.target.value)}
+                  onChange={(event) => updateField("durationDays", event.target.value.replace(/[^\d]/g, ""))}
                   className={inputClass()}
-                  type="number"
-                  min="0"
+                  inputMode="numeric"
+                  placeholder="Optional"
                 />
-              </div>
+              </label>
 
-              <div className="md:col-span-2">
-                <label className={labelClass()}>Warranty policy</label>
+              <label className="block md:col-span-2">
+                <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                  Warranty terms
+                </span>
                 <textarea
                   value={form.policy}
-                  onChange={(e) => updateField("policy", e.target.value)}
+                  onChange={(event) => updateField("policy", event.target.value)}
                   className={textareaClass()}
-                  placeholder="Describe the warranty coverage clearly"
-                  rows={5}
+                  placeholder="Example: Covers factory faults only. Physical damage, water damage, software issues, and unauthorized repair are not covered."
                   required
                 />
-              </div>
+              </label>
             </div>
           </section>
 
-          <section className={cx(panel(), "p-4 md:p-5")}>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <h2 className={cx("text-base font-semibold", strongText())}>Covered sold items</h2>
-                <p className={cx("mt-1 text-sm", mutedText())}>
-                  Sold items are preselected. Uncheck any item that should not be covered.
+                <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
+                  3. Covered products
+                </h2>
+                <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+                  Keep checked only the products that should be covered by this warranty.
                 </p>
               </div>
 
               {selectedSale && selectableItems.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => toggleAllCovered(true)}
-                    className={smallBtn()}
-                  >
+                  <button type="button" onClick={() => toggleAllCovered(true)} className={secondaryBtn()}>
                     Select all
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleAllCovered(false)}
-                    className={smallBtn()}
-                  >
+
+                  <button type="button" onClick={() => toggleAllCovered(false)} className={secondaryBtn()}>
                     Clear all
                   </button>
                 </div>
@@ -574,173 +1046,82 @@ export default function WarrantyCreate() {
             </div>
 
             {!selectedSale ? (
-              <div className={cx("mt-5 rounded-[20px] border border-dashed border-stone-300 p-5 text-sm", mutedText())}>
-                Select a sale first to load sold items.
+              <div className="mt-5">
+                <EmptyState
+                  title="Choose a sale first"
+                  text="Sold products from the selected sale will appear here."
+                />
               </div>
             ) : selectableItems.length === 0 ? (
-              <div className={cx("mt-5 rounded-[20px] border border-dashed border-stone-300 p-5 text-sm", mutedText())}>
-                This sale has no loaded items available for warranty.
+              <div className="mt-5">
+                <EmptyState
+                  title="No sold products found"
+                  text="This sale did not return products that can be covered."
+                />
               </div>
             ) : (
-              <div className="mt-5 space-y-4">
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className={cx(shell(), "p-4")}>
-                    <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-                      Sold items
-                    </div>
-                    <div className={cx("mt-2 text-2xl font-semibold", strongText())}>
-                      {totalSoldItems}
-                    </div>
-                  </div>
-
-                  <div className={cx(shell(), "p-4")}>
-                    <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-                      Covered now
-                    </div>
-                    <div className={cx("mt-2 text-2xl font-semibold", strongText())}>
-                      {totalCoveredItems}
-                    </div>
-                  </div>
-
-                  <div className={cx(shell(), "p-4")}>
-                    <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
-                      Excluded
-                    </div>
-                    <div className={cx("mt-2 text-2xl font-semibold", strongText())}>
-                      {Math.max(0, totalSoldItems - totalCoveredItems)}
-                    </div>
-                  </div>
-                </div>
-
+              <div className="mt-5 space-y-3">
                 {selectableItems.map((item, index) => (
-                  <div
+                  <CoveredItemCard
                     key={item.key}
-                    className={cx(
-                      "rounded-[20px] border p-4 transition",
-                      item.checked
-                        ? "border-stone-200 bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]"
-                        : "border-stone-200/80 bg-white opacity-80 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={item.checked}
-                        onChange={(e) => updateSelectableItem(index, "checked", e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400"
-                      />
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className={cx("text-sm font-semibold", strongText())}>
-                            {item.unitLabel || `Sold item ${index + 1}`}
-                          </div>
-                          <span className={badgeClass(item.checked ? "success" : "neutral")}>
-                            {item.checked ? "Covered" : "Excluded"}
-                          </span>
-                        </div>
-
-                        <div className={cx("mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs", softText())}>
-                          <span>Qty: {item.quantity || 1}</span>
-                          <span>Sold item linked</span>
-                        </div>
-
-                        {item.checked ? (
-                          <div className="mt-4 grid gap-4 md:grid-cols-3">
-                            <div>
-                              <label className={labelClass()}>Label</label>
-                              <input
-                                value={item.unitLabel}
-                                onChange={(e) => updateSelectableItem(index, "unitLabel", e.target.value)}
-                                className={inputClass()}
-                                placeholder="Product name / covered unit"
-                              />
-                            </div>
-
-                            <div>
-                              <label className={labelClass()}>Serial</label>
-                              <input
-                                value={item.serial}
-                                onChange={(e) => updateSelectableItem(index, "serial", e.target.value)}
-                                className={inputClass()}
-                                placeholder="Serial number"
-                              />
-                            </div>
-
-                            <div>
-                              <label className={labelClass()}>IMEI 1</label>
-                              <input
-                                value={item.imei1}
-                                onChange={(e) => updateSelectableItem(index, "imei1", e.target.value)}
-                                className={inputClass()}
-                                placeholder="IMEI 1"
-                              />
-                            </div>
-
-                            <div className="md:col-span-3">
-                              <label className={labelClass()}>IMEI 2</label>
-                              <input
-                                value={item.imei2}
-                                onChange={(e) => updateSelectableItem(index, "imei2", e.target.value)}
-                                className={inputClass()}
-                                placeholder="IMEI 2"
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className={cx("mt-3 text-sm", mutedText())}>
-                            This sold item will not be included in the warranty.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    item={item}
+                    index={index}
+                    onChange={updateSelectableItem}
+                  />
                 ))}
               </div>
             )}
           </section>
         </div>
 
-        <div className="space-y-5">
-          <section className={cx(shell(), "p-4 md:p-5 xl:sticky xl:top-5")}>
-            <div>
-              <h2 className={cx("text-base font-semibold", strongText())}>Summary</h2>
-              <p className={cx("mt-1 text-sm", mutedText())}>
-                Review before issuing the warranty certificate.
-              </p>
-            </div>
+        <aside className="space-y-5">
+          <section className={cx(pageCard(), "p-5 sm:p-6 xl:sticky xl:top-[96px]")}>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+              Review
+            </p>
 
-            <div className="mt-5 divide-y divide-stone-200 dark:divide-[rgb(var(--border))]">
-              {summaryRow("Sale reference", form.saleRef || "—")}
-              {summaryRow(
-                "Selected sale",
-                selectedSale ? saleReferenceLabel(selectedSale) : "Not selected"
-              )}
-              {summaryRow(
-                "Customer",
-                selectedSale
-                  ? selectedSale?.customer?.name || selectedSale?.customer?.phone || "Walk-in Customer"
-                  : "—"
-              )}
-              {summaryRow("Covered items", String(totalCoveredItems))}
-              {summaryRow("Months", form.durationMonths || "0")}
-              {summaryRow("Days", form.durationDays || "0")}
-              {summaryRow("Starts", form.startsAt || "—")}
-              {summaryRow("Ends", form.endsAt || "Auto / derived")}
-              {summaryRow("Policy", form.policy ? "Provided" : "Missing", true)}
+            <h2 className="mt-2 text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
+              Warranty summary
+            </h2>
+
+            <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+              Check everything before creating the certificate.
+            </p>
+
+            <div className="mt-5 grid gap-3">
+              <InfoTile
+                label="Sale"
+                value={selectedSale ? saleReferenceLabel(selectedSale) : "Not selected"}
+                tone={selectedSale ? "success" : "warning"}
+              />
+
+              <InfoTile
+                label="Customer"
+                value={selectedSale ? `${customerName(selectedSale)} • ${customerPhone(selectedSale)}` : "—"}
+              />
+
+              <InfoTile label="Covered products" value={formatNumber(totalCoveredItems)} />
+              <InfoTile label="Starts" value={form.startsAt || "—"} />
+              <InfoTile label="Ends" value={form.endsAt || "Auto / derived"} />
+              <InfoTile label="Terms" value={cleanString(form.policy) ? "Provided" : "Missing"} tone={cleanString(form.policy) ? "success" : "warning"} />
             </div>
 
             <div className="mt-5 flex flex-col gap-2">
-              <button type="submit" className={primaryBtn()} disabled={saving}>
-                {saving ? "Creating..." : "Create Warranty"}
-              </button>
+              <AsyncButton
+                type="submit"
+                loading={saving}
+                className={successBtn()}
+              >
+                <ShieldIcon />
+                Create warranty
+              </AsyncButton>
 
               <Link to="/app/documents/warranties" className={secondaryBtn()}>
                 Cancel
               </Link>
             </div>
           </section>
-        </div>
+        </aside>
       </form>
     </div>
   );

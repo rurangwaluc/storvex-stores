@@ -1,62 +1,54 @@
-// src/pages/proformas/ProformaCreate.jsx
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { cn } from "../../lib/cn";
+import AsyncButton from "../../components/ui/AsyncButton";
 import { createProforma } from "../../services/proformasApi";
 
-function cx(...xs) {
-  return xs.filter(Boolean).join(" ");
-}
-
-function shell() {
-  return "rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]";
-}
-
-function panel() {
-  return "rounded-[24px] border border-stone-200 bg-white shadow-sm dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))]";
-}
-
-function strongText() {
-  return "text-stone-950 dark:text-[rgb(var(--text))]";
-}
-
-function mutedText() {
-  return "text-stone-600 dark:text-[rgb(var(--text-muted))]";
-}
-
-function softText() {
-  return "text-stone-500 dark:text-[rgb(var(--text-soft))]";
-}
+const strong = () => "text-[var(--color-text)]";
+const muted = () => "text-[var(--color-text-muted)]";
+const soft = () => "text-[var(--color-text-soft)]";
+const shell = () => "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+const panel = () => "rounded-[24px] bg-[var(--color-surface-2)]";
 
 function inputClass() {
-  return "h-11 w-full rounded-2xl border border-stone-300 bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
+  return "app-input";
 }
 
 function textareaClass() {
-  return "w-full rounded-2xl border border-stone-300 bg-white px-3.5 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:placeholder:text-[rgb(var(--text-soft))] dark:focus:border-[rgb(var(--text-soft))] dark:focus:ring-[rgb(var(--border))]";
+  return [
+    "w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]",
+    "px-4 py-3 text-sm leading-6 text-[var(--color-text)]",
+    "outline-none transition placeholder:text-[var(--color-text-muted)]",
+    "focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]",
+    "resize-y min-h-[120px]",
+    "shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
+  ].join(" ");
 }
 
 function labelClass() {
-  return "mb-2 block text-sm font-medium text-stone-900 dark:text-[rgb(var(--text))]";
-}
-
-function primaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-stone-950 px-5 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgb(var(--text))] dark:text-[rgb(var(--bg-elevated))] dark:hover:opacity-90";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl border border-stone-300 bg-white px-5 text-sm font-medium text-stone-900 transition hover:bg-stone-50 disabled:opacity-60 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "mb-1.5 block text-sm font-medium text-[var(--color-text)]";
 }
 
 function smallBtn() {
-  return "inline-flex h-9 items-center justify-center rounded-xl border border-stone-300 bg-white px-3 text-sm font-medium text-stone-900 transition hover:bg-stone-50 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))] dark:hover:bg-[rgb(var(--bg-muted))]";
+  return "inline-flex h-9 items-center justify-center rounded-xl bg-[var(--color-card)] px-3 text-sm font-medium text-[var(--color-text)] transition hover:opacity-90";
 }
 
-function summaryRow(label, value, strong = false) {
+function money(n, currency = "RWF") {
+  return `${currency} ${Number(n || 0).toLocaleString()}`;
+}
+
+function summaryRow(label, value, strongValue = false) {
   return (
     <div className="flex items-center justify-between gap-4 py-2">
-      <span className="text-sm text-stone-600 dark:text-[rgb(var(--text-muted))]">{label}</span>
-      <span className={cx("text-sm", strong ? "font-semibold" : "font-medium", strong ? strongText() : mutedText())}>
+      <span className={cn("text-sm", muted())}>{label}</span>
+      <span
+        className={cn(
+          "text-right text-sm",
+          strongValue ? "font-semibold" : "font-medium",
+          strongValue ? strong() : muted()
+        )}
+      >
         {value}
       </span>
     </div>
@@ -65,6 +57,7 @@ function summaryRow(label, value, strong = false) {
 
 function makeEmptyItem() {
   return {
+    key: `new-${Math.random().toString(36).slice(2, 10)}`,
     productName: "",
     serial: "",
     quantity: 1,
@@ -75,10 +68,6 @@ function makeEmptyItem() {
 function toNumber(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
-}
-
-function money(n, currency = "RWF") {
-  return `${currency} ${Number(n || 0).toLocaleString()}`;
 }
 
 export default function ProformaCreate() {
@@ -198,31 +187,28 @@ export default function ProformaCreate() {
   }
 
   return (
-    <div className="space-y-5">
-      <section className={cx(shell(), "relative overflow-hidden p-5 md:p-6")}>
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-stone-950 via-stone-800 to-stone-950 opacity-[0.03] dark:from-white dark:via-white dark:to-white dark:opacity-[0.04]" />
-
+    <div className="space-y-6">
+      <section className={cn(shell(), "relative overflow-hidden p-5 md:p-6")}>
         <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0">
-            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.16em]", softText())}>
+            <div className={cn("text-[11px] font-semibold uppercase tracking-[0.16em]", soft())}>
               Document creation
             </div>
 
-            <h1 className={cx("mt-2 text-2xl font-semibold tracking-tight md:text-3xl", strongText())}>
+            <h1 className={cn("mt-2 text-2xl font-semibold tracking-tight md:text-3xl", strong())}>
               Create Proforma
             </h1>
 
-            <p className={cx("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", mutedText())}>
-              Build a branded proforma that can be previewed, printed, and shared with a customer
-              before final payment.
+            <p className={cn("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", muted())}>
+              Build a branded proforma that can be previewed, printed, and shared with a customer before final payment.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link to="/app/documents/proformas" className={secondaryBtn()}>
+            <Link to="/app/documents/proformas" className={smallBtn()}>
               Back to Proformas
             </Link>
-            <Link to="/app/documents" className={secondaryBtn()}>
+            <Link to="/app/documents" className={smallBtn()}>
               Document Center
             </Link>
           </div>
@@ -231,9 +217,9 @@ export default function ProformaCreate() {
 
       <form onSubmit={onSubmit} className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-5">
-          <section className={cx(panel(), "p-4 md:p-5")}>
-            <h2 className={cx("text-base font-semibold", strongText())}>Customer details</h2>
-            <p className={cx("mt-1 text-sm", mutedText())}>
+          <section className={cn(panel(), "p-4 md:p-5")}>
+            <h2 className={cn("text-base font-semibold", strong())}>Customer details</h2>
+            <p className={cn("mt-1 text-sm", muted())}>
               Add only the details that matter for the document.
             </p>
 
@@ -293,11 +279,11 @@ export default function ProformaCreate() {
             </div>
           </section>
 
-          <section className={cx(panel(), "p-4 md:p-5")}>
+          <section className={cn(panel(), "p-4 md:p-5")}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className={cx("text-base font-semibold", strongText())}>Items</h2>
-                <p className={cx("mt-1 text-sm", mutedText())}>
+                <h2 className={cn("text-base font-semibold", strong())}>Items</h2>
+                <p className={cn("mt-1 text-sm", muted())}>
                   Build the quotation lines clearly and cleanly.
                 </p>
               </div>
@@ -310,11 +296,12 @@ export default function ProformaCreate() {
             <div className="mt-5 space-y-4">
               {normalizedItems.map((item, index) => (
                 <div
-                  key={index}
-                  className="rounded-[20px] border border-stone-200 bg-stone-50 p-4 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-elevated))]"
+                  key={item.key || index}
+                  className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-card)] p-4"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div className={cx("text-sm font-semibold", strongText())}>Item {index + 1}</div>
+                    <div className={cn("text-sm font-semibold", strong())}>Item {index + 1}</div>
+
                     <button
                       type="button"
                       onClick={() => removeItem(index)}
@@ -372,7 +359,7 @@ export default function ProformaCreate() {
 
                     <div>
                       <label className={labelClass()}>Line total</label>
-                      <div className="flex h-11 items-center rounded-2xl border border-stone-200 bg-white px-3.5 text-sm font-medium text-stone-900 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg))] dark:text-[rgb(var(--text))]">
+                      <div className="flex h-11 items-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3.5 text-sm font-medium text-[var(--color-text)]">
                         {money(item.total, form.currency || "RWF")}
                       </div>
                     </div>
@@ -382,9 +369,9 @@ export default function ProformaCreate() {
             </div>
           </section>
 
-          <section className={cx(panel(), "p-4 md:p-5")}>
-            <h2 className={cx("text-base font-semibold", strongText())}>Document details</h2>
-            <p className={cx("mt-1 text-sm", mutedText())}>
+          <section className={cn(panel(), "p-4 md:p-5")}>
+            <h2 className={cn("text-base font-semibold", strong())}>Document details</h2>
+            <p className={cn("mt-1 text-sm", muted())}>
               These fields help owners and staff track context cleanly.
             </p>
 
@@ -447,15 +434,15 @@ export default function ProformaCreate() {
         </div>
 
         <div className="space-y-5">
-          <section className={cx(shell(), "p-4 md:p-5 xl:sticky xl:top-5")}>
+          <section className={cn(shell(), "p-4 md:p-5 xl:sticky xl:top-5")}>
             <div>
-              <h2 className={cx("text-base font-semibold", strongText())}>Summary</h2>
-              <p className={cx("mt-1 text-sm", mutedText())}>
+              <h2 className={cn("text-base font-semibold", strong())}>Summary</h2>
+              <p className={cn("mt-1 text-sm", muted())}>
                 Review before creating the proforma.
               </p>
             </div>
 
-            <div className="mt-5 divide-y divide-stone-200 dark:divide-[rgb(var(--border))]">
+            <div className="mt-5 divide-y divide-[var(--color-border)]">
               {summaryRow("Items", String(normalizedItems.filter((x) => x.productName.trim()).length))}
               {summaryRow("Currency", form.currency || "RWF")}
               {summaryRow("Prepared by", form.preparedBy || "—")}
@@ -466,11 +453,14 @@ export default function ProformaCreate() {
             </div>
 
             <div className="mt-5 flex flex-col gap-2">
-              <button type="submit" className={primaryBtn()} disabled={saving}>
-                {saving ? "Creating..." : "Create Proforma"}
-              </button>
+              <AsyncButton type="submit" loading={saving} loadingText="Creating..." variant="primary">
+                Create Proforma
+              </AsyncButton>
 
-              <Link to="/app/documents/proformas" className={secondaryBtn()}>
+              <Link
+                to="/app/documents/proformas"
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-medium text-[var(--color-text)] transition hover:opacity-90"
+              >
                 Cancel
               </Link>
             </div>

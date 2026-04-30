@@ -1,7 +1,9 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { useMemo, useState } from "react";
-import LogoMark from "../ui/LogoMark";
+import { clearActiveBranchId } from "../../services/apiClient";
+
+const LOGO_SRC = "/logo.webp";
 
 function cn(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -18,7 +20,10 @@ function getDecodedRoles(token) {
     const decoded = jwtDecode(token);
 
     if (decoded?.role) return [normalizeRole(decoded.role)];
-    if (Array.isArray(decoded?.roles)) return decoded.roles.map(normalizeRole).filter(Boolean);
+
+    if (Array.isArray(decoded?.roles)) {
+      return decoded.roles.map(normalizeRole).filter(Boolean);
+    }
 
     return [];
   } catch {
@@ -28,12 +33,14 @@ function getDecodedRoles(token) {
 
 function roleLabel(role) {
   const r = normalizeRole(role);
+
   if (r === "OWNER") return "Owner";
   if (r === "MANAGER") return "Manager";
   if (r === "CASHIER") return "Cashier";
   if (r === "SELLER") return "Seller";
   if (r === "STOREKEEPER") return "Storekeeper";
   if (r === "TECHNICIAN") return "Technician";
+
   return "Staff";
 }
 
@@ -103,34 +110,13 @@ function Icon({ type }) {
         </svg>
       );
 
-    case "chat":
+    case "whatsapp":
       return (
         <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
-          <path d="M6 18l-2 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z" />
-        </svg>
-      );
-
-    case "chat-plus":
-      return (
-        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
-          <path d="M6 18l-2 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z" />
-          <path d="M12 8v6M9 11h6" strokeLinecap="round" />
-        </svg>
-      );
-
-    case "chat-activity":
-      return (
-        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
-          <path d="M6 18l-2 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z" />
-          <path d="M8 14l2-2 2 1 4-5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      );
-
-    case "chat-broadcast":
-      return (
-        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
-          <path d="M6 18l-2 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z" />
-          <path d="M8 10h8M8 13h8M8 16h5" strokeLinecap="round" />
+          <path
+            d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+            strokeLinejoin="round"
+          />
         </svg>
       );
 
@@ -143,13 +129,7 @@ function Icon({ type }) {
 
     case "expenses":
       return (
-        <svg
-          viewBox="0 0 24 24"
-          className={common}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.9"
-        >
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
           <rect x="3" y="6" width="18" height="12" rx="2.5" />
           <path d="M7 12h4M15 12h2M12 9v6" strokeLinecap="round" />
         </svg>
@@ -160,6 +140,32 @@ function Icon({ type }) {
         <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
           <circle cx="12" cy="12" r="3" />
           <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-.4-1.1 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2.8a2 2 0 1 1 0-4H2.9a1.7 1.7 0 0 0 1.1-.4 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V2.8a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.1.4 1.7 1.7 0 0 0-.6 1Z" />
+        </svg>
+      );
+
+    case "billing":
+      return (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
+          <rect x="3" y="5" width="18" height="14" rx="3" />
+          <path d="M3 10h18M7 15h4" strokeLinecap="round" />
+        </svg>
+      );
+
+    case "audit":
+      return (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
+          <path d="M7 3h10a2 2 0 0 1 2 2v16l-4-2-3 2-3-2-4 2V5a2 2 0 0 1 2-2Z" />
+          <path d="M8 8h8M8 12h8M8 16h5" strokeLinecap="round" />
+        </svg>
+      );
+
+    case "employees":
+      return (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
+          <circle cx="8" cy="8" r="3" />
+          <path d="M3.5 19a4.5 4.5 0 0 1 9 0" />
+          <circle cx="17" cy="9" r="2.5" />
+          <path d="M14.5 19a3.7 3.7 0 0 1 6.8-2" />
         </svg>
       );
 
@@ -203,20 +209,20 @@ const NAV_ITEMS = [
     section: "Core",
     items: [
       {
-        to: "/app",
+        to: "/dashboard",
         label: "Dashboard",
         icon: "dashboard",
         roles: ["OWNER", "MANAGER", "CASHIER", "SELLER", "STOREKEEPER", "TECHNICIAN"],
         end: true,
       },
       {
-        to: "/app/pos",
+        to: "/dashboard/pos",
         label: "POS",
         icon: "pos",
         roles: ["OWNER", "MANAGER", "CASHIER", "SELLER"],
       },
       {
-        to: "/app/interstore",
+        to: "/dashboard/interstore",
         label: "Inter-Store",
         icon: "transfer",
         roles: ["OWNER", "MANAGER", "CASHIER"],
@@ -227,25 +233,25 @@ const NAV_ITEMS = [
     section: "Stock",
     items: [
       {
-        to: "/app/inventory",
+        to: "/dashboard/inventory",
         label: "Inventory",
         icon: "inventory",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
       },
       {
-        to: "/app/inventory/reorder",
+        to: "/dashboard/inventory/reorder",
         label: "Reorder list",
         icon: "inventory",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
       },
       {
-        to: "/app/inventory/stock-history",
+        to: "/dashboard/inventory/stock-history",
         label: "Stock history",
         icon: "inventory",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
       },
       {
-        to: "/app/suppliers",
+        to: "/dashboard/suppliers",
         label: "Suppliers",
         icon: "suppliers",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
@@ -256,40 +262,16 @@ const NAV_ITEMS = [
     section: "Customers",
     items: [
       {
-        to: "/app/customers",
+        to: "/dashboard/customers",
         label: "Customers",
         icon: "customers",
         roles: ["OWNER", "MANAGER", "CASHIER", "SELLER", "TECHNICIAN"],
       },
       {
-        to: "/app/whatsapp/inbox",
-        label: "WhatsApp inbox",
-        icon: "chat",
+        to: "/dashboard/whatsapp/inbox",
+        label: "WhatsApp",
+        icon: "whatsapp",
         roles: ["OWNER", "MANAGER", "CASHIER"],
-      },
-      {
-        to: "/app/whatsapp/drafts",
-        label: "WhatsApp drafts",
-        icon: "chat",
-        roles: ["OWNER", "MANAGER", "CASHIER"],
-      },
-      {
-        to: "/app/whatsapp/accounts",
-        label: "WhatsApp accounts",
-        icon: "chat-plus",
-        roles: ["OWNER", "MANAGER"],
-      },
-      {
-        to: "/app/whatsapp/activity",
-        label: "WhatsApp activity",
-        icon: "chat-activity",
-        roles: ["OWNER", "MANAGER"],
-      },
-      {
-        to: "/app/whatsapp/broadcasts",
-        label: "WhatsApp broadcasts",
-        icon: "chat-broadcast",
-        roles: ["OWNER", "MANAGER"],
       },
     ],
   },
@@ -297,31 +279,54 @@ const NAV_ITEMS = [
     section: "Operations",
     items: [
       {
-        to: "/app/documents",
-        label: "Document Center",
+        to: "/dashboard/documents",
+        label: "Documents",
         icon: "documents",
         roles: ["OWNER", "MANAGER", "STOREKEEPER", "SELLER", "CASHIER", "TECHNICIAN"],
       },
       {
-        to: "/app/repairs",
+        to: "/dashboard/repairs",
         label: "Repairs",
         icon: "repairs",
         roles: ["OWNER", "CASHIER", "TECHNICIAN"],
       },
       {
-        to: "/app/reports",
+        to: "/dashboard/reports",
         label: "Reports",
         icon: "reports",
         roles: ["OWNER", "MANAGER"],
       },
       {
-        to: "/app/expenses",
+        to: "/dashboard/expenses",
         label: "Expenses",
         icon: "expenses",
         roles: ["OWNER"],
       },
+    ],
+  },
+  {
+    section: "Control",
+    items: [
       {
-        to: "/app/settings",
+        to: "/dashboard/employees",
+        label: "Employees",
+        icon: "employees",
+        roles: ["OWNER", "MANAGER"],
+      },
+      {
+        to: "/dashboard/billing",
+        label: "Billing",
+        icon: "billing",
+        roles: ["OWNER"],
+      },
+      {
+        to: "/dashboard/audit",
+        label: "Audit logs",
+        icon: "audit",
+        roles: ["OWNER", "MANAGER"],
+      },
+      {
+        to: "/dashboard/settings",
         label: "Settings",
         icon: "settings",
         roles: ["OWNER", "MANAGER"],
@@ -331,8 +336,16 @@ const NAV_ITEMS = [
 ];
 
 function isItemActive(pathname, to, end) {
-  if (to === "/app") return pathname === "/app";
   if (end) return pathname === to;
+
+  if (to === "/dashboard/whatsapp/inbox") {
+    return pathname === to || pathname.startsWith("/dashboard/whatsapp");
+  }
+
+  if (to === "/dashboard/inventory") {
+    return pathname === to;
+  }
+
   return pathname === to || pathname.startsWith(`${to}/`);
 }
 
@@ -345,24 +358,198 @@ function filterNavByRoles(groups, roles) {
     .filter((group) => group.items.length > 0);
 }
 
+function readWorkspaceCache() {
+  try {
+    const raw =
+      sessionStorage.getItem("storvex_me_cache_v2") ||
+      localStorage.getItem("storvex_me_cache_v2");
+
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function cleanString(value) {
+  return String(value || "").trim();
+}
+
+function getWorkspaceName() {
+  const workspace = readWorkspaceCache();
+
+  return (
+    cleanString(workspace?.tenant?.name) ||
+    cleanString(localStorage.getItem("tenantName")) ||
+    "Storvex"
+  );
+}
+
+function getActiveBranchLabel() {
+  const workspace = readWorkspaceCache();
+  const activeBranch =
+    workspace?.activeBranch ||
+    workspace?.defaultBranch ||
+    workspace?.mainBranch ||
+    null;
+
+  const name =
+    cleanString(activeBranch?.name) ||
+    cleanString(localStorage.getItem("activeBranchName")) ||
+    "Active branch";
+
+  const code =
+    cleanString(activeBranch?.code) ||
+    cleanString(localStorage.getItem("activeBranchCode"));
+
+  return code ? `${code} • ${name}` : name;
+}
+
+function clearAuthStorage() {
+  try {
+    [
+      "tenantToken",
+      "token",
+      "userRole",
+      "tenantId",
+      "userId",
+      "tenantName",
+      "userName",
+      "userEmail",
+      "activeBranchName",
+      "activeBranchCode",
+      "workspaceLocation",
+      "storvex_me_cache_v2",
+    ].forEach((key) => localStorage.removeItem(key));
+
+    sessionStorage.removeItem("storvex_me_cache_v2");
+    clearActiveBranchId();
+  } catch {}
+}
+
+function LogoBlock({ collapsed, onClose }) {
+  if (collapsed) {
+    return (
+      <Link
+        to="/dashboard"
+        onClick={onClose}
+        className="group mx-auto flex h-12 w-12 items-center justify-center overflow-hidden rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_44px_rgba(15,23,42,0.16)]"
+        aria-label="Go to dashboard"
+      >
+        <img
+          src={LOGO_SRC}
+          alt="Storvex"
+          className="h-9 w-9 object-contain transition duration-300 group-hover:scale-105"
+          draggable="false"
+        />
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      to="/dashboard"
+      onClick={onClose}
+      className="group flex min-w-0 items-center rounded-[26px] border border-transparent p-1.5 transition hover:border-[var(--color-border)] hover:bg-[var(--color-card)]"
+      aria-label="Go to dashboard"
+    >
+      <span className="flex h-[52px] w-[164px] shrink-0 items-center justify-start overflow-hidden rounded-[22px] px-2">
+        <img
+          src={LOGO_SRC}
+          alt="Storvex"
+          className="h-11 max-w-full object-contain transition duration-300 group-hover:scale-[1.02]"
+          draggable="false"
+        />
+      </span>
+    </Link>
+  );
+}
+
+function WorkspaceCard({ collapsed, primaryRole }) {
+  const workspaceName = getWorkspaceName();
+  const branchLabel = getActiveBranchLabel();
+
+  if (collapsed) {
+    return (
+      <div className="px-3 pb-3">
+        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-[20px] border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 shadow-[var(--shadow-soft)]">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,0.12)]" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 pb-4">
+      <div className="relative overflow-hidden rounded-[26px] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-soft)]">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-[rgba(74,163,255,0.12)] blur-2xl" />
+
+        <div className="relative flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+              Workspace
+            </div>
+
+            <div className="mt-1 truncate text-[14px] font-black tracking-[-0.01em] text-[var(--color-text)]">
+              {workspaceName}
+            </div>
+
+            <div className="mt-1 truncate text-[11px] font-semibold text-[var(--color-text-muted)]">
+              {branchLabel}
+            </div>
+          </div>
+
+          <div className="shrink-0 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-600">
+            Active
+          </div>
+        </div>
+
+        <div className="relative mt-3 flex items-center justify-between gap-3 rounded-[18px] bg-[var(--color-surface-2)] px-3 py-2">
+          <span className="text-[11px] font-bold text-[var(--color-text-muted)]">
+            Signed in as
+          </span>
+          <span className="truncate text-[12px] font-black text-[var(--color-text)]">
+            {roleLabel(primaryRole)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NavItemButton({ item, active, collapsed, onClick }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex w-full items-center gap-3 rounded-[22px] text-left transition",
-        collapsed ? "justify-center px-0 py-3" : "px-4 py-3",
+        "group relative flex w-full items-center gap-3 rounded-[22px] text-left transition duration-200",
+        collapsed ? "justify-center px-0 py-3" : "px-3.5 py-3",
         active
-          ? "bg-[var(--color-surface-2)] text-[var(--color-primary)]"
-          : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
+          ? "bg-[rgba(74,163,255,0.12)] text-[var(--color-primary)] shadow-[inset_0_0_0_1px_rgba(74,163,255,0.16)]"
+          : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]",
       )}
       title={collapsed ? item.label : undefined}
     >
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
+      {active ? (
+        <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-[var(--color-primary)]" />
+      ) : null}
+
+      <span
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl transition",
+          active
+            ? "bg-[var(--color-primary)] text-white shadow-sm"
+            : "bg-transparent text-current group-hover:bg-[var(--color-card)]",
+        )}
+      >
         <Icon type={item.icon} />
       </span>
-      {!collapsed ? <span className="truncate text-[15px] font-medium">{item.label}</span> : null}
+
+      {!collapsed ? (
+        <span className="min-w-0 flex-1 truncate text-[14px] font-bold">
+          {item.label}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -395,14 +582,7 @@ export default function AppSidebar({
   }
 
   function handleLogout() {
-    try {
-      localStorage.removeItem("tenantToken");
-      localStorage.removeItem("token");
-      localStorage.removeItem("userRole");
-      localStorage.removeItem("tenantId");
-      localStorage.removeItem("userId");
-    } catch {}
-
+    clearAuthStorage();
     onLogout?.();
     onClose?.();
     navigate("/login", { replace: true });
@@ -412,18 +592,18 @@ export default function AppSidebar({
     <>
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-black/40 transition md:hidden",
-          mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+          "fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm transition md:hidden",
+          mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
         )}
         onClick={onClose}
       />
 
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-screen flex-col bg-[var(--color-surface)] shadow-[var(--shadow-card)] transition-all duration-300",
-          effectiveCollapsed ? "w-[88px]" : "w-[272px]",
+          "fixed left-0 top-0 z-50 flex h-[100dvh] flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_24px_80px_rgba(15,23,42,0.18)] transition-all duration-300",
+          effectiveCollapsed ? "w-[92px]" : "w-[292px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
-          "md:translate-x-0"
+          "md:translate-x-0",
         )}
         onMouseEnter={() => {
           if (collapsed) setHoverOpen(true);
@@ -432,77 +612,63 @@ export default function AppSidebar({
           if (collapsed) setHoverOpen(false);
         }}
       >
-        <div className="flex h-[68px] items-center justify-between px-4">
-          <Link to="/app" className="min-w-0" onClick={onClose}>
-            <LogoMark compact={effectiveCollapsed} />
-          </Link>
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -left-24 top-[-120px] h-[260px] w-[260px] rounded-full bg-[rgba(74,163,255,0.08)] blur-3xl" />
+          <div className="absolute bottom-[-160px] right-[-160px] h-[300px] w-[300px] rounded-full bg-[rgba(34,197,94,0.06)] blur-3xl" />
+        </div>
 
-          <div className="flex items-center gap-2">
+        <div className="relative flex min-h-[84px] items-center justify-between gap-3 px-4 py-4">
+          <LogoBlock collapsed={effectiveCollapsed} onClose={onClose} />
+
+          {!effectiveCollapsed ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="hidden h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:opacity-95 md:inline-flex"
+                aria-label="Collapse sidebar"
+              >
+                <Icon type="collapse-left" />
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:opacity-95 md:hidden"
+                aria-label="Close sidebar"
+              >
+                <Icon type="close" />
+              </button>
+            </div>
+          ) : (
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="hidden h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-text)] transition hover:opacity-90 md:inline-flex"
-              aria-label={effectiveCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className="absolute -right-4 top-7 hidden h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:opacity-95 md:inline-flex"
+              aria-label="Expand sidebar"
             >
-              <Icon type={effectiveCollapsed ? "collapse-right" : "collapse-left"} />
+              <Icon type="collapse-right" />
             </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-text)] transition hover:opacity-90 md:hidden"
-              aria-label="Close sidebar"
-            >
-              <Icon type="close" />
-            </button>
-          </div>
+          )}
         </div>
 
-        <div className={cn("px-3", effectiveCollapsed ? "pb-3" : "pb-4")}>
-          <div
-            className={cn(
-              "rounded-[18px] bg-[var(--color-surface-2)] px-3 py-2.5",
-              effectiveCollapsed && "flex justify-center px-2"
-            )}
-          >
-            {effectiveCollapsed ? (
-              <div className="inline-flex items-center gap-2 rounded-full bg-[var(--color-card)] px-3 py-1.5 text-xs text-[var(--color-text)]">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                OK
-              </div>
-            ) : (
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
-                    Workspace
-                  </div>
-                  <div className="mt-1 text-sm font-medium text-[var(--color-text)]">
-                    {roleLabel(primaryRole)}
-                  </div>
-                </div>
-
-                <div className="inline-flex items-center gap-2 rounded-full bg-[var(--color-card)] px-3 py-1.5 text-xs text-[var(--color-text)]">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Active
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="relative">
+          <WorkspaceCard collapsed={effectiveCollapsed} primaryRole={primaryRole} />
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 pb-3">
+        <nav className="relative min-h-0 flex-1 overflow-y-auto px-3 pb-3 [scrollbar-width:thin]">
           {filteredNav.map((group) => (
-            <div key={group.section} className="mb-3.5">
+            <div key={group.section} className="mb-4">
               <div
                 className={cn(
-                  "px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-muted)]",
-                  effectiveCollapsed && "text-center"
+                  "px-3 pb-2 text-[10px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]",
+                  effectiveCollapsed && "text-center",
                 )}
               >
                 {effectiveCollapsed ? "•" : group.section}
               </div>
 
-              <ul className="space-y-1">
+              <ul className="space-y-1.5">
                 {group.items.map((item) => {
                   const active = isItemActive(location.pathname, item.to, item.end);
 
@@ -520,21 +686,27 @@ export default function AppSidebar({
               </ul>
             </div>
           ))}
-        </div>
+        </nav>
 
-        <div className="p-3 md:p-4">
+        <div className="relative border-t border-[var(--color-border)]/70 p-3 md:p-4">
           <button
             type="button"
             onClick={handleLogout}
             className={cn(
-              "flex w-full items-center gap-3 rounded-[22px] bg-[var(--color-surface-2)] text-[var(--color-danger)] transition hover:opacity-90",
-              effectiveCollapsed ? "justify-center px-0 py-3.5" : "px-4 py-3.5"
+              "group flex w-full items-center gap-3 rounded-[24px] border border-transparent bg-[var(--color-surface-2)] text-[var(--color-danger)] transition hover:-translate-y-0.5 hover:border-red-500/20 hover:bg-red-500/10",
+              effectiveCollapsed ? "justify-center px-0 py-3.5" : "px-4 py-3.5",
             )}
+            title={effectiveCollapsed ? "Sign out" : undefined}
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl">
+            <span className="flex h-8 w-8 items-center justify-center rounded-2xl transition group-hover:bg-red-500/10">
               <Icon type="logout" />
             </span>
-            {!effectiveCollapsed ? <span className="text-[15px] font-medium">Sign out</span> : null}
+
+            {!effectiveCollapsed ? (
+              <span className="text-[14px] font-black">
+                Sign out
+              </span>
+            ) : null}
           </button>
         </div>
       </aside>

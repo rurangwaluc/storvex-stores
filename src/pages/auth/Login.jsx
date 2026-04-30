@@ -1,40 +1,141 @@
 import { useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { jwtDecode } from "jwt-decode";
-import apiClient from "../../services/apiClient";
-import AuthShell from "../../components/auth/AuthShell";
+
+import PublicLayout from "../../components/layout/PublicLayout";
 import PasswordField from "../../components/auth/PasswordField";
 import AsyncButton from "../../components/ui/AsyncButton";
+import apiClient from "../../services/apiClient";
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-function clearOnboardingState() {
-  localStorage.removeItem("storvex_onboarding");
-  localStorage.removeItem("storvex_intentId");
-  localStorage.removeItem("storvex_ownerPhone");
-  localStorage.removeItem("storvex_ownerEmail");
-  localStorage.removeItem("storvex_storeName");
-  localStorage.removeItem("storvex_ownerName");
-  localStorage.removeItem("storvex_emailVerified");
-  localStorage.removeItem("storvex_phoneVerified");
-  localStorage.removeItem("storvex_signupMode");
-  localStorage.removeItem("storvex_planKey");
+function cx(...items) {
+  return items.filter(Boolean).join(" ");
 }
 
-function persistAuthSession(token) {
+function clearOnboardingState() {
+  [
+    "storvex_onboarding",
+    "storvex_intentId",
+    "storvex_ownerPhone",
+    "storvex_ownerEmail",
+    "storvex_storeName",
+    "storvex_ownerName",
+    "storvex_shopType",
+    "storvex_district",
+    "storvex_sector",
+    "storvex_address",
+    "storvex_deviceId",
+    "storvex_emailVerified",
+    "storvex_phoneVerified",
+    "storvex_signupMode",
+    "storvex_planKey",
+  ].forEach((key) => localStorage.removeItem(key));
+}
+
+function clearOldWorkspaceCache() {
+  sessionStorage.removeItem("storvex_me_cache_v2");
+}
+
+function saveBranchSession(activeBranch, allowedBranches = []) {
+  if (activeBranch?.id) {
+    localStorage.setItem("activeBranchId", activeBranch.id);
+    localStorage.setItem("storvex_activeBranchId", activeBranch.id);
+  }
+
+  if (activeBranch?.name) {
+    localStorage.setItem("activeBranchName", activeBranch.name);
+    localStorage.setItem("storvex_activeBranchName", activeBranch.name);
+  }
+
+  if (activeBranch?.code) {
+    localStorage.setItem("activeBranchCode", activeBranch.code);
+    localStorage.setItem("storvex_activeBranchCode", activeBranch.code);
+  }
+
+  if (typeof activeBranch?.isMain === "boolean") {
+    localStorage.setItem("activeBranchIsMain", String(activeBranch.isMain));
+  }
+
+  localStorage.setItem("allowedBranches", JSON.stringify(allowedBranches));
+}
+
+function persistAuthSession(data) {
+  const token = data?.token || "";
+
+  if (!token) {
+    throw new Error("Missing login token");
+  }
+
   localStorage.setItem("tenantToken", token);
   localStorage.setItem("token", token);
 
-  const decoded = jwtDecode(token);
+  let decoded = {};
+  try {
+    decoded = jwtDecode(token) || {};
+  } catch {
+    decoded = {};
+  }
 
-  localStorage.setItem("userRole", decoded?.role || "");
-  localStorage.setItem("tenantId", decoded?.tenantId || "");
-  localStorage.setItem("userId", decoded?.userId || decoded?.id || "");
+  const user = data?.user || {};
+  const tenant = data?.tenant || {};
+  const activeBranch = data?.activeBranch || data?.mainBranch || null;
+  const allowedBranches = Array.isArray(data?.allowedBranches)
+    ? data.allowedBranches
+    : activeBranch
+      ? [activeBranch]
+      : [];
 
-  return decoded;
+  const userId = user?.id || decoded?.userId || decoded?.id || "";
+  const userRole = user?.role || decoded?.role || "";
+  const tenantId = user?.tenantId || tenant?.id || data?.tenantId || decoded?.tenantId || "";
+
+  if (userId) localStorage.setItem("userId", userId);
+  if (userRole) localStorage.setItem("userRole", userRole);
+  if (tenantId) localStorage.setItem("tenantId", tenantId);
+
+  if (tenant?.id) {
+    localStorage.setItem("activeTenantId", tenant.id);
+  }
+
+  if (tenant?.name) {
+    localStorage.setItem("activeTenantName", tenant.name);
+  }
+
+  saveBranchSession(activeBranch, allowedBranches);
+  clearOldWorkspaceCache();
+
+  return {
+    decoded,
+    user,
+    tenant,
+    activeBranch,
+    allowedBranches,
+  };
+}
+
+function surfaceCard() {
+  return "rounded-[34px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function DetailTile({ label, value }) {
+  return (
+    <div className="rounded-[24px] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
+        {label}
+      </p>
+      <p className="mt-2 break-words text-sm font-black text-[var(--color-text)]">
+        {value || "—"}
+      </p>
+    </div>
+  );
+}
+
+function inputClass() {
+  return "h-12 w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 export default function Login() {
@@ -46,8 +147,8 @@ export default function Login() {
 
   const trimmedEmail = useMemo(() => normalizeEmail(email), [email]);
 
-  async function submit(e) {
-    e.preventDefault();
+  async function submit(event) {
+    event.preventDefault();
 
     if (!trimmedEmail) {
       toast.error("Enter your email");
@@ -62,88 +163,137 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await apiClient.post("/auth/login", {
+      const response = await apiClient.post("/auth/login", {
         email: trimmedEmail,
         password,
       });
 
-      const token = res?.data?.token;
-      if (!token) throw new Error("Missing token");
-
-      persistAuthSession(token);
+      persistAuthSession(response?.data || {});
       clearOnboardingState();
 
       toast.success("Welcome back");
-      nav("/app", { replace: true });
-    } catch (err) {
-      toast.error(err?.response?.data?.message || err?.message || "Login failed");
+      nav("/dashboard", { replace: true });
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error?.message || "Login failed");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <AuthShell
-      eyebrow="Store access"
-      title="Log in to your store"
-      subtitle="Use your owner or staff credentials to continue into the workspace."
-      sideTitle="Fast, calm, trustworthy access"
-      sideBody="The login step should feel clean and predictable. No noise, no friction, just confident entry into the system."
-      sideItems={[
-        {
-          title: "Owner access",
-          body: "Open billing, reports, settings, users, and full operational control.",
-        },
-        {
-          title: "Staff access",
-          body: "Cashiers, managers, sellers, storekeepers, and technicians only see what their role allows.",
-        },
-        {
-          title: "After login",
-          body: "Your session is stored and you are routed directly into the app workspace.",
-        },
-      ]}
-      footer={
-        <div className="text-sm text-[var(--color-text-muted)]">
-          New store?{" "}
-          <Link
-            to="/signup"
-            className="font-medium text-[var(--color-text)] underline-offset-4 hover:underline"
-          >
-            Create account
-          </Link>
-        </div>
-      }
-    >
-      <form onSubmit={submit} className="space-y-4">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-            Email
-          </label>
-          <input
-            type="email"
-            className="app-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            placeholder="you@store.com"
-            required
-          />
-        </div>
+    <PublicLayout>
+      <section className="relative overflow-hidden px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="pointer-events-none absolute left-[-12rem] top-[-10rem] h-[28rem] w-[28rem] rounded-full bg-[rgba(74,163,255,0.16)] blur-3xl" />
+        <div className="pointer-events-none absolute bottom-[-14rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[rgba(16,185,129,0.12)] blur-3xl" />
 
-        <PasswordField
-          id="login-password"
-          label="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          placeholder="Enter your password"
-        />
+        <div className="relative mx-auto max-w-5xl space-y-6">
+          <section className={cx(surfaceCard(), "p-5 sm:p-6 lg:p-7")}>
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-3xl">
+                <div className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+                  Store access
+                </div>
 
-        <AsyncButton type="submit" loading={loading} loadingText="Logging in..." className="w-full">
-          Log in
-        </AsyncButton>
-      </form>
-    </AuthShell>
+                <h1 className="mt-5 text-3xl font-black tracking-[-0.05em] text-[var(--color-text)] sm:text-4xl lg:text-5xl">
+                  Log in to your store.
+                </h1>
+
+                <p className="mt-4 max-w-2xl text-base font-medium leading-8 text-[var(--color-text-muted)]">
+                  Use your owner or staff account to continue into the workspace. After login,
+                  Storvex opens the correct store and active branch.
+                </p>
+              </div>
+
+              <div className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-[22px] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-black text-[var(--color-text)]">
+                Secure workspace access
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <DetailTile label="Owner access" value="Full control" />
+              <DetailTile label="Staff access" value="Role-based work" />
+              <DetailTile label="After login" value="Open workspace" />
+            </div>
+          </section>
+
+          <section className={cx(surfaceCard(), "p-5 sm:p-6 lg:p-7")}>
+            <div className="mx-auto max-w-xl">
+              <div className="mb-6 border-b border-[var(--color-border)] pb-6 text-center">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+                  Login
+                </p>
+
+                <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-[var(--color-text)] sm:text-3xl">
+                  Enter your account details
+                </h2>
+
+                <p className="mt-2 text-sm font-semibold leading-6 text-[var(--color-text-muted)]">
+                  Continue into the store workspace with your saved access.
+                </p>
+              </div>
+
+              <form onSubmit={submit} className="space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-black text-[var(--color-text)]">
+                    Email
+                  </label>
+
+                  <input
+                    type="email"
+                    className={inputClass()}
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    autoComplete="email"
+                    placeholder="you@store.com"
+                    required
+                  />
+                </div>
+
+                <PasswordField
+                  id="login-password"
+                  label="Password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  placeholder="Enter your password"
+                />
+
+                <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-black text-[var(--color-text)]">
+                        Next: open your workspace
+                      </p>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-[var(--color-text-muted)]">
+                        Storvex will load your store, role, and active branch.
+                      </p>
+                    </div>
+
+                    <AsyncButton
+                      type="submit"
+                      loading={loading}
+                      loadingText="Logging in..."
+                      className="w-full sm:w-auto"
+                    >
+                      Log in
+                    </AsyncButton>
+                  </div>
+                </div>
+              </form>
+
+              <p className="mt-6 text-center text-sm font-semibold text-[var(--color-text-muted)]">
+                New store?{" "}
+                <Link
+                  to="/signup"
+                  className="font-black text-[var(--color-text)] underline-offset-4 hover:underline"
+                >
+                  Create account
+                </Link>
+              </p>
+            </div>
+          </section>
+        </div>
+      </section>
+    </PublicLayout>
   );
 }

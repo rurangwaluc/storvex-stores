@@ -1,8 +1,5 @@
-// src/services/customersApi.js
+import { apiFetch } from "./apiClient";
 
-import { apiFetch } from "./apiClient"; // adjust relative path if needed
-
-// Create customer
 export function createCustomer(data) {
   return apiFetch("/customers", {
     method: "POST",
@@ -10,17 +7,20 @@ export function createCustomer(data) {
   });
 }
 
-// List customers
-export function listCustomers() {
-  return apiFetch("/customers");
+export function listCustomers(params = {}) {
+  const search = new URLSearchParams();
+
+  if (params.q) search.set("q", params.q);
+  if (params.includeInactive) search.set("includeInactive", "true");
+
+  const qs = search.toString();
+  return apiFetch(qs ? `/customers?${qs}` : "/customers");
 }
 
-// Get customer by ID
 export function getCustomer(id) {
   return apiFetch(`/customers/${id}`);
 }
 
-// Update customer
 export function updateCustomer(id, data) {
   return apiFetch(`/customers/${id}`, {
     method: "PUT",
@@ -28,22 +28,22 @@ export function updateCustomer(id, data) {
   });
 }
 
-// Reactivate customer (undo soft delete)
 export function reactivateCustomer(id) {
   return apiFetch(`/customers/${id}/reactivate`, {
     method: "PUT",
   });
 }
 
-
-// Deactivate customer (soft delete)
 export function deactivateCustomer(id) {
   return apiFetch(`/customers/${id}`, {
     method: "DELETE",
   });
 }
 
-// Get customer ledger
 export function getCustomerLedger(customerId) {
   return apiFetch(`/customers/${customerId}/ledger`);
+}
+
+export function getCustomerCreditSummary() {
+  return apiFetch("/customers/ledger/summary/outstanding");
 }

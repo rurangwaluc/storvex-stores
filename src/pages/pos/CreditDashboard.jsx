@@ -1,555 +1,951 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import AsyncButton from "../../components/ui/AsyncButton";
-import { listOutstandingCredit, listOverdueCredit } from "../../services/posApi";
+import {
+  addSalePayment,
+  getOutstandingCredit,
+  getOverdueCredit,
+  PAYMENT_METHOD_OPTIONS,
+} from "../../services/posApi";
 import { handleSubscriptionBlockedError } from "../../utils/subscriptionError";
 
 const PAGE_SIZE = 10;
-const formatMoney = (n) => `Rwf ${Number(n || 0).toLocaleString("en-US")}`;
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
-function strongText() {
-  return "text-[var(--color-text)]";
+function cleanString(value) {
+  const s = String(value || "").trim();
+  return s || "";
 }
 
-function mutedText() {
-  return "text-[var(--color-text-muted)]";
+function formatMoney(value) {
+  const n = Number(value || 0);
+  const safe = Number.isFinite(n) ? n : 0;
+
+  return `Rwf ${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+  }).format(safe)}`;
 }
 
-function softText() {
-  return "text-[var(--color-text-muted)]";
+function formatNumber(value) {
+  const n = Number(value || 0);
+
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(n) ? n : 0);
+}
+
+function formatDate(value) {
+  if (!value) return "No date";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "No date";
+
+  return d.toLocaleDateString("en-RW", {
+    dateStyle: "medium",
+  });
+}
+
+function daysUntil(value) {
+  if (!value) return null;
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const due = new Date(d);
+  due.setHours(0, 0, 0, 0);
+
+  return Math.round((due.getTime() - today.getTime()) / 86400000);
+}
+
+function dueText(value) {
+  const days = daysUntil(value);
+
+  if (days === null) return "No pay-by date";
+  if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} late`;
+  if (days === 0) return "Due today";
+  if (days === 1) return "Due tomorrow";
+
+  return `Due in ${days} days`;
+}
+
+function activeBranchNameFromStorage() {
+  const name = cleanString(localStorage.getItem("activeBranchName"));
+  const code = cleanString(localStorage.getItem("activeBranchCode"));
+
+  if (code && name) return `${code} • ${name}`;
+  if (name) return name;
+  if (code) return code;
+
+  return "this branch";
 }
 
 function pageCard() {
-  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+  return "rounded-[30px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
 function softPanel() {
-  return "rounded-[22px] bg-[var(--color-surface-2)]";
+  return "rounded-[24px] bg-[var(--color-surface-2)]";
+}
+
+function inputClass() {
+  return "h-12 w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function textareaClass() {
+  return "min-h-[110px] w-full rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function buttonBase() {
+  return "inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function primaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
-}
-
-function secondaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
-}
-
-function SectionHeading({ eyebrow, title, subtitle }) {
-  return (
-    <div>
-      {eyebrow ? (
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
-          {eyebrow}
-        </div>
-      ) : null}
-      <h1 className={cx("mt-3 text-[1.7rem] font-black tracking-tight sm:text-[2rem]", strongText())}>
-        {title}
-      </h1>
-      {subtitle ? <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p> : null}
-    </div>
+  return cx(
+    buttonBase(),
+    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
   );
 }
 
-function StatusBadge({ kind = "neutral", children }) {
+function secondaryBtn() {
+  return cx(
+    buttonBase(),
+    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
+}
+
+function successBtn() {
+  return cx(
+    buttonBase(),
+    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
+}
+
+function warningBtn() {
+  return cx(
+    buttonBase(),
+    "bg-amber-500 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
+}
+
+function saleBalance(sale) {
+  return Number(sale?.balanceDue ?? sale?.balance ?? 0);
+}
+
+function saleTotal(sale) {
+  return Number(sale?.total ?? sale?.amount ?? 0);
+}
+
+function salePaid(sale) {
+  return Number(sale?.amountPaid ?? sale?.paid ?? 0);
+}
+
+function customerName(sale) {
+  return (
+    cleanString(sale?.customer?.name) ||
+    cleanString(sale?.customerName) ||
+    "Customer"
+  );
+}
+
+function customerPhone(sale) {
+  return (
+    cleanString(sale?.customer?.phone) ||
+    cleanString(sale?.customerPhone) ||
+    "No phone saved"
+  );
+}
+
+function receiptCode(sale) {
+  return (
+    cleanString(sale?.receiptNumber) ||
+    cleanString(sale?.invoiceNumber) ||
+    cleanString(sale?.number) ||
+    cleanString(sale?.id).slice(-8).toUpperCase() ||
+    "Receipt"
+  );
+}
+
+function branchLabel(sale) {
+  const code = cleanString(sale?.branch?.code);
+  const name = cleanString(sale?.branch?.name);
+
+  if (code && name) return `${code} • ${name}`;
+  if (name) return name;
+  if (code) return code;
+
+  return activeBranchNameFromStorage();
+}
+
+function statusForSale(sale) {
+  const balance = saleBalance(sale);
+  const days = daysUntil(sale?.dueDate);
+  const status = String(sale?.status || "").toUpperCase();
+
+  if (status === "OVERDUE" || (days !== null && days < 0 && balance > 0)) {
+    return {
+      label: "Late",
+      tone: "danger",
+      text: dueText(sale?.dueDate),
+    };
+  }
+
+  if (days === 0 && balance > 0) {
+    return {
+      label: "Due today",
+      tone: "warning",
+      text: "Customer should pay today.",
+    };
+  }
+
+  return {
+    label: "Open",
+    tone: "warning",
+    text: dueText(sale?.dueDate),
+  };
+}
+
+function StatusBadge({ tone = "neutral", children }) {
   const cls =
-    kind === "danger"
-      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
-      : kind === "warning"
-      ? "bg-[#fff1c9] text-[#b88900]"
-      : kind === "success"
-      ? "bg-[#dcfce7] text-[#15803d]"
-      : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
+    tone === "danger"
+      ? "bg-red-500/10 text-red-600"
+      : tone === "warning"
+        ? "bg-amber-500/10 text-amber-600"
+        : tone === "success"
+          ? "bg-emerald-500/10 text-emerald-600"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
 
   return (
-    <span className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", cls)}>
+    <span
+      className={cx(
+        "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]",
+        cls,
+      )}
+    >
       {children}
     </span>
   );
 }
 
-function MetricCard({ label, value, note, tone = "neutral" }) {
-  const iconTone =
-    tone === "danger"
-      ? "bg-[rgba(219,80,74,0.12)] text-[var(--color-danger)]"
-      : tone === "warning"
-      ? "bg-[#fff1c9] text-[#b88900]"
-      : tone === "success"
-      ? "bg-[#dcfce7] text-[#15803d]"
-      : "bg-[#dff1ff] text-[#4aa8ff]";
-
-  return (
-    <article className={cx(pageCard(), "p-5 sm:p-6")}>
-      <div className="flex items-start gap-4 sm:gap-5">
-        <div className={cx("flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] shadow-[var(--shadow-soft)]", iconTone)}>
-          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.9">
-            <path d="M4 7h16M7 12h10M9 17h6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className={cx("text-sm font-semibold", strongText())}>{label}</div>
-          <div className={cx("mt-2 text-[1.7rem] font-black leading-tight tracking-[-0.02em]", strongText())}>
-            {value}
-          </div>
-          {note ? <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div> : null}
-        </div>
-      </div>
-    </article>
-  );
-}
-
 function SkeletonBlock({ className = "" }) {
-  return <div className={cx("animate-pulse rounded-[20px] bg-[var(--color-surface-2)]", className)} />;
+  return (
+    <div className={cx("animate-pulse rounded-[22px] bg-[var(--color-surface-2)]", className)} />
+  );
 }
 
-function CreditListSkeleton() {
+function CreditDashboardSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className={cx(pageCard(), "p-4 sm:p-5")}>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0 flex-1 space-y-3">
-              <SkeletonBlock className="h-6 w-40" />
-              <SkeletonBlock className="h-4 w-52" />
-            </div>
+    <div className="space-y-5">
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <SkeletonBlock className="h-4 w-28" />
+        <SkeletonBlock className="mt-4 h-10 w-72 max-w-full rounded-[18px]" />
+        <SkeletonBlock className="mt-3 h-4 w-full max-w-xl" />
+      </section>
 
-            <div className="flex gap-2">
-              <SkeletonBlock className="h-8 w-24 rounded-full" />
-              <SkeletonBlock className="h-8 w-24 rounded-full" />
-            </div>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[1, 2, 3, 4].map((item) => (
+          <div key={item} className={cx(pageCard(), "p-5")}>
+            <SkeletonBlock className="h-3.5 w-24" />
+            <SkeletonBlock className="mt-4 h-8 w-28" />
+            <SkeletonBlock className="mt-2 h-4 w-36" />
           </div>
+        ))}
+      </section>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <SkeletonBlock className="h-20 w-full" />
-            <SkeletonBlock className="h-20 w-full" />
-            <SkeletonBlock className="h-20 w-full" />
-            <SkeletonBlock className="h-20 w-full" />
-          </div>
-
-          <div className="mt-4 flex justify-end">
-            <SkeletonBlock className="h-11 w-32 rounded-2xl" />
-          </div>
+      <section className={cx(pageCard(), "p-5")}>
+        <SkeletonBlock className="h-12 w-full rounded-[18px]" />
+        <div className="mt-5 grid gap-3">
+          {[1, 2, 3, 4].map((item) => (
+            <SkeletonBlock key={item} className="h-48 w-full rounded-[28px]" />
+          ))}
         </div>
-      ))}
+      </section>
     </div>
   );
 }
 
-function CreditInfoTile({ label, value, tone = "neutral" }) {
-  const toneCls =
+function SummaryCard({ label, value, note, tone = "neutral" }) {
+  const dot =
     tone === "danger"
-      ? "bg-[rgba(219,80,74,0.12)] border-[rgba(219,80,74,0.20)]"
+      ? "bg-red-500"
       : tone === "warning"
-      ? "bg-[#fff1c9] border-[#fde68a]"
-      : tone === "success"
-      ? "bg-[#dcfce7] border-[#bbf7d0]"
-      : "bg-[var(--color-surface-2)] border-[var(--color-border)]";
-
-  const valueCls =
-    tone === "danger"
-      ? "text-[var(--color-danger)]"
-      : tone === "warning"
-      ? "text-[#9a6b00]"
-      : tone === "success"
-      ? "text-[#166534]"
-      : strongText();
+        ? "bg-amber-500"
+        : tone === "success"
+          ? "bg-emerald-500"
+          : "bg-[var(--color-primary)]";
 
   return (
-    <div className={cx("rounded-[22px] border p-4 shadow-[var(--shadow-soft)]", toneCls)}>
-      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>{label}</div>
-      <div className={cx("mt-3 text-sm font-bold leading-6", valueCls)}>{value}</div>
+    <article className={cx(pageCard(), "relative overflow-hidden p-5")}>
+      <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-[rgba(74,163,255,0.08)] blur-2xl" />
+
+      <div className="relative">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
+            {label}
+          </p>
+          <span className={cx("h-2.5 w-2.5 rounded-full", dot)} />
+        </div>
+
+        <p className="mt-3 truncate text-2xl font-black tracking-[-0.03em] text-[var(--color-text)]">
+          {value}
+        </p>
+
+        {note ? (
+          <p className="mt-1 text-xs font-semibold leading-5 text-[var(--color-text-muted)]">
+            {note}
+          </p>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function InfoTile({ label, value, tone = "neutral" }) {
+  const valueClass =
+    tone === "danger"
+      ? "text-red-600"
+      : tone === "warning"
+        ? "text-amber-600"
+        : tone === "success"
+          ? "text-emerald-600"
+          : "text-[var(--color-text)]";
+
+  return (
+    <div className={cx(softPanel(), "p-4 shadow-[var(--shadow-soft)]")}>
+      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+        {label}
+      </p>
+      <p className={cx("mt-2 break-words text-sm font-black leading-6", valueClass)}>
+        {value || "—"}
+      </p>
     </div>
   );
 }
 
-function relativeDaysLabel(dueDate) {
-  if (!dueDate) return "No due date";
-  const due = new Date(dueDate);
-  if (Number.isNaN(due.getTime())) return "No due date";
+function EmptyState({ title, text, action = null }) {
+  return (
+    <div className="flex min-h-[280px] flex-col items-center justify-center rounded-[30px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)] p-8 text-center">
+      <h3 className="text-lg font-black text-[var(--color-text)]">{title}</h3>
 
-  const today = new Date();
-  const dueOnly = new Date(due.getFullYear(), due.getMonth(), due.getDate());
-  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      <p className="mt-2 max-w-md text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+        {text}
+      </p>
 
-  const diffMs = dueOnly.getTime() - todayOnly.getTime();
-  const diffDays = Math.round(diffMs / 86400000);
-
-  if (diffDays < 0) return `${Math.abs(diffDays)} day(s) overdue`;
-  if (diffDays === 0) return "Due today";
-  return `Due in ${diffDays} day(s)`;
+      {action ? <div className="mt-5">{action}</div> : null}
+    </div>
+  );
 }
 
-function CreditCard({ sale, tone = "warning" }) {
-  const isOverdue = tone === "danger";
-  const customerName = sale.customer?.name || "Unknown customer";
-  const customerPhone = sale.customer?.phone || "No phone";
-  const balanceDue = Number(sale.balanceDue || 0);
-  const total = Number(sale.total || 0);
-  const paid = Math.max(0, total - balanceDue);
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PaymentIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 7h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z" />
+      <path d="M2 10h20" />
+    </svg>
+  );
+}
+
+function CustomerBalanceCard({ sale, onPay }) {
+  const status = statusForSale(sale);
+  const balance = saleBalance(sale);
+  const total = saleTotal(sale);
+  const paid = salePaid(sale);
 
   return (
-    <article className={cx(pageCard(), "border border-[var(--color-border)] p-4 sm:p-5")}>
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className={cx("text-lg font-black tracking-tight", strongText())}>
-              {formatMoney(balanceDue)}
+    <article className={cx(pageCard(), "relative overflow-hidden p-4 sm:p-5")}>
+      <div
+        className={cx(
+          "absolute left-0 top-0 h-full w-1.5",
+          status.tone === "danger" ? "bg-red-500" : "bg-amber-500",
+        )}
+      />
+
+      <div className="pl-3">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-xl font-black tracking-[-0.03em] text-[var(--color-text)]">
+                {customerName(sale)}
+              </h3>
+
+              <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
             </div>
-            {isOverdue ? (
-              <StatusBadge kind="danger">Overdue</StatusBadge>
-            ) : (
-              <StatusBadge kind="warning">Outstanding</StatusBadge>
-            )}
-            <StatusBadge kind="neutral">Credit sale</StatusBadge>
+
+            <p className="mt-2 text-sm font-semibold text-[var(--color-text-muted)]">
+              {customerPhone(sale)}
+            </p>
+
+            <p className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">
+              Receipt: {receiptCode(sale)}
+            </p>
           </div>
 
-          <div className={cx("mt-2 text-sm leading-6", mutedText())}>
-            Customer: <span className={cx("font-semibold", strongText())}>{customerName}</span>
-            {" • "}
-            {customerPhone}
+          <div className="flex flex-col gap-2 sm:flex-row xl:justify-end">
+            <Link to={`/app/pos/sales/${sale.id}`} className={secondaryBtn()}>
+              View receipt
+            </Link>
+
+            <button type="button" onClick={() => onPay(sale)} className={successBtn()}>
+              <PaymentIcon />
+              Record payment
+            </button>
           </div>
         </div>
 
-        <Link to={`/app/pos/sales/${sale.id}`} className={primaryBtn()}>
-          View receipt
-        </Link>
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <CreditInfoTile
-          label="Customer"
-          value={
-            <div>
-              <div>{customerName}</div>
-              <div className="mt-1 text-xs font-medium opacity-80">{customerPhone}</div>
-            </div>
-          }
-        />
-
-        <CreditInfoTile
-          label="Sale total"
-          value={formatMoney(total)}
-          tone="neutral"
-        />
-
-        <CreditInfoTile
-          label="Paid so far"
-          value={formatMoney(paid)}
-          tone={paid > 0 ? "success" : "neutral"}
-        />
-
-        <CreditInfoTile
-          label="Due status"
-          value={
-            <div>
-              <div>{sale.dueDate ? new Date(sale.dueDate).toLocaleDateString() : "—"}</div>
-              <div className="mt-1 text-xs font-medium opacity-80">{relativeDaysLabel(sale.dueDate)}</div>
-            </div>
-          }
-          tone={isOverdue ? "danger" : "warning"}
-        />
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[1.2fr_0.8fr]">
-        <div className={cx(softPanel(), "p-4")}>
-          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
-            Cashier
-          </div>
-          <div className={cx("mt-3 text-sm font-bold leading-6", strongText())}>
-            {sale.cashier?.name || "Unknown cashier"}
-          </div>
-          <div className={cx("mt-1 text-sm leading-6", mutedText())}>
-            {sale.createdAt ? new Date(sale.createdAt).toLocaleString() : "—"}
-          </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <InfoTile label="Balance" value={formatMoney(balance)} tone={status.tone} />
+          <InfoTile label="Paid" value={formatMoney(paid)} tone={paid > 0 ? "success" : "neutral"} />
+          <InfoTile label="Sale total" value={formatMoney(total)} />
+          <InfoTile label="Pay-by date" value={`${formatDate(sale?.dueDate)} • ${status.text}`} tone={status.tone} />
         </div>
 
-        <div
-          className={cx(
-            "rounded-[22px] border p-4 shadow-[var(--shadow-soft)]",
-            isOverdue
-              ? "border-[rgba(219,80,74,0.20)] bg-[rgba(219,80,74,0.12)]"
-              : "border-[#fde68a] bg-[#fff1c9]"
-          )}
-        >
-          <div
-            className={cx(
-              "text-[11px] font-semibold uppercase tracking-[0.18em]",
-              isOverdue ? "text-[var(--color-danger)]" : "text-[#b88900]"
-            )}
-          >
-            Collection note
-          </div>
-          <div
-            className={cx(
-              "mt-3 text-sm font-bold leading-6",
-              isOverdue ? "text-[var(--color-danger)]" : "text-[#9a6b00]"
-            )}
-          >
-            {isOverdue ? "Needs immediate follow-up" : "Balance still active"}
-          </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <InfoTile label="Branch" value={branchLabel(sale)} />
+          <InfoTile label="Created" value={formatDate(sale?.createdAt)} />
         </div>
       </div>
     </article>
   );
 }
 
-function CreditSection({
-  title,
-  subtitle,
-  rows,
-  loading,
-  tone = "warning",
-  visibleCount,
-  onLoadMore,
+function PaymentModal({
+  open,
+  sale,
+  amount,
+  setAmount,
+  method,
+  setMethod,
+  note,
+  setNote,
+  saving,
+  onClose,
+  onSubmit,
 }) {
-  const visibleRows = rows.slice(0, visibleCount);
-  const hasMore = visibleCount < rows.length;
+  if (!open || !sale) return null;
+
+  const balance = saleBalance(sale);
+  const cleanedAmount = Number(String(amount || "").replace(/[^\d]/g, "") || 0);
+  const afterPayment = Math.max(0, balance - cleanedAmount);
 
   return (
-    <section className={cx(pageCard(), "overflow-hidden")}>
-      <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-950/55 px-3 pb-3 pt-10 backdrop-blur-sm sm:items-center sm:p-6">
+      <div className="max-h-[94dvh] w-full max-w-3xl overflow-hidden rounded-[34px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[0_30px_100px_rgba(15,23,42,0.25)]">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
           <div>
-            <div className={cx("text-xl font-black tracking-tight", strongText())}>{title}</div>
-            <div className={cx("mt-2 text-sm leading-6", mutedText())}>{subtitle}</div>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+              Customer payment
+            </p>
+
+            <h2 className="mt-1 text-xl font-black tracking-[-0.03em] text-[var(--color-text)]">
+              Record payment
+            </h2>
+
+            <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+              Record money received from {customerName(sale)}.
+            </p>
           </div>
 
-          {!loading ? (
-            tone === "danger" ? (
-              <StatusBadge kind="danger">{rows.length} account(s)</StatusBadge>
-            ) : (
-              <StatusBadge kind="warning">{rows.length} account(s)</StatusBadge>
-            )
-          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-text)] transition hover:-translate-y-0.5 disabled:opacity-60"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="p-5 sm:p-6">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <InfoTile label="Current balance" value={formatMoney(balance)} tone="warning" />
+            <InfoTile label="This payment" value={formatMoney(cleanedAmount)} tone={cleanedAmount > 0 ? "success" : "neutral"} />
+            <InfoTile label="Balance after" value={formatMoney(afterPayment)} tone={afterPayment > 0 ? "warning" : "success"} />
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                Amount received
+              </span>
+              <input
+                inputMode="numeric"
+                className={inputClass()}
+                value={amount}
+                onChange={(event) => setAmount(event.target.value.replace(/[^\d]/g, ""))}
+                placeholder="Amount"
+                disabled={saving}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                Payment method
+              </span>
+              <select
+                className={inputClass()}
+                value={method}
+                onChange={(event) => setMethod(event.target.value)}
+                disabled={saving}
+              >
+                {PAYMENT_METHOD_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block sm:col-span-2">
+              <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                Note
+              </span>
+              <textarea
+                className={textareaClass()}
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Optional note, MoMo code, bank slip, or reminder"
+                disabled={saving}
+              />
+            </label>
+          </div>
+
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={onClose} disabled={saving} className={secondaryBtn()}>
+              Cancel
+            </button>
+
+            <AsyncButton loading={saving} onClick={onSubmit} className={successBtn()}>
+              Save payment
+            </AsyncButton>
+          </div>
         </div>
       </div>
-
-      <div className="p-5 sm:p-6">
-        {loading ? (
-          <CreditListSkeleton />
-        ) : rows.length === 0 ? (
-          <div className={cx("rounded-[22px] border border-dashed border-[var(--color-border)] px-4 py-10 text-center text-sm", mutedText())}>
-            {tone === "danger"
-              ? "No overdue credit accounts right now."
-              : "No outstanding credit accounts right now."}
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 gap-3">
-              {visibleRows.map((sale, idx) => (
-                <div
-                  key={sale.id}
-                  className={cx(
-                    idx % 2 === 0 ? "relative" : "relative"
-                  )}
-                >
-                  <CreditCard sale={sale} tone={tone} />
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 flex flex-col items-center gap-2">
-              {hasMore ? (
-                <button type="button" onClick={onLoadMore} className={primaryBtn()}>
-                  Load 10 more
-                </button>
-              ) : (
-                <div className={cx("text-sm", mutedText())}>All matching accounts loaded</div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-    </section>
+    </div>
   );
 }
 
 export default function CreditDashboard() {
-  const nav = useNavigate();
-
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
   const [outstanding, setOutstanding] = useState([]);
   const [overdue, setOverdue] = useState([]);
 
-  const [outstandingVisible, setOutstandingVisible] = useState(PAGE_SIZE);
-  const [overdueVisible, setOverdueVisible] = useState(PAGE_SIZE);
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [activeBranchLabel, setActiveBranchLabel] = useState(() => activeBranchNameFromStorage());
+
+  const [payOpen, setPayOpen] = useState(false);
+  const [selectedSale, setSelectedSale] = useState(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState("CASH");
+  const [payNote, setPayNote] = useState("");
+  const [paySaving, setPaySaving] = useState(false);
 
   const mountedRef = useRef(true);
 
   useEffect(() => {
     mountedRef.current = true;
+
     return () => {
       mountedRef.current = false;
     };
   }, []);
 
-  async function load() {
-    setLoading(true);
+  async function load({ silent = false } = {}) {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
-      const [o1, o2] = await Promise.all([listOutstandingCredit(), listOverdueCredit()]);
+      const [outstandingData, overdueData] = await Promise.all([
+        getOutstandingCredit(),
+        getOverdueCredit(),
+      ]);
+
       if (!mountedRef.current) return;
 
-      setOutstanding(Array.isArray(o1?.sales) ? o1.sales : []);
-      setOverdue(Array.isArray(o2?.sales) ? o2.sales : []);
-      setOutstandingVisible(PAGE_SIZE);
-      setOverdueVisible(PAGE_SIZE);
-    } catch (e) {
-      console.error(e);
-      if (!handleSubscriptionBlockedError(e, { toastId: "credit-dashboard-blocked" })) {
-        toast.error(e?.message || "Failed to load credit sales");
-      }
+      const outstandingList = Array.isArray(outstandingData)
+        ? outstandingData
+        : Array.isArray(outstandingData?.sales)
+          ? outstandingData.sales
+          : [];
+
+      const overdueList = Array.isArray(overdueData)
+        ? overdueData
+        : Array.isArray(overdueData?.sales)
+          ? overdueData.sales
+          : [];
+
+      setOutstanding(outstandingList);
+      setOverdue(overdueList);
+      setVisibleCount(PAGE_SIZE);
+      setActiveBranchLabel(activeBranchNameFromStorage());
+    } catch (error) {
       if (!mountedRef.current) return;
+
+      console.error(error);
+
+      if (!handleSubscriptionBlockedError(error, { toastId: "pay-later-dashboard-blocked" })) {
+        toast.error(error?.message || "Failed to load customer balances");
+      }
+
       setOutstanding([]);
       setOverdue([]);
-      setOutstandingVisible(PAGE_SIZE);
-      setOverdueVisible(PAGE_SIZE);
     } finally {
       if (!mountedRef.current) return;
+
       setLoading(false);
+      setRefreshing(false);
     }
   }
 
   useEffect(() => {
     void load();
+
+    function onBranchChanged() {
+      setActiveBranchLabel(activeBranchNameFromStorage());
+      void load({ silent: true });
+    }
+
+    window.addEventListener("storvex:branch-changed", onBranchChanged);
+    window.addEventListener("storvex:workspace-refreshed", onBranchChanged);
+
+    return () => {
+      window.removeEventListener("storvex:branch-changed", onBranchChanged);
+      window.removeEventListener("storvex:workspace-refreshed", onBranchChanged);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const outstandingTotal = useMemo(() => {
-    return outstanding.reduce((sum, s) => sum + Number(s.balanceDue || 0), 0);
-  }, [outstanding]);
-
-  const overdueTotal = useMemo(() => {
-    return overdue.reduce((sum, s) => sum + Number(s.balanceDue || 0), 0);
+  const overdueIds = useMemo(() => {
+    return new Set(overdue.map((sale) => sale.id));
   }, [overdue]);
 
-  const totalAccounts = overdue.length + outstanding.length;
+  const allBalances = useMemo(() => {
+    const map = new Map();
+
+    for (const sale of outstanding) {
+      if (sale?.id) map.set(sale.id, sale);
+    }
+
+    for (const sale of overdue) {
+      if (sale?.id) map.set(sale.id, sale);
+    }
+
+    return Array.from(map.values()).sort((a, b) => {
+      const aLate = overdueIds.has(a.id) ? 1 : 0;
+      const bLate = overdueIds.has(b.id) ? 1 : 0;
+
+      if (aLate !== bLate) return bLate - aLate;
+
+      const aDue = a?.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      const bDue = b?.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+
+      return aDue - bDue;
+    });
+  }, [outstanding, overdue, overdueIds]);
+
+  const filtered = useMemo(() => {
+    const search = q.trim().toLowerCase();
+
+    return allBalances.filter((sale) => {
+      const isLate = overdueIds.has(sale.id) || String(sale?.status || "").toUpperCase() === "OVERDUE";
+      const dueToday = daysUntil(sale?.dueDate) === 0;
+
+      if (statusFilter === "LATE" && !isLate) return false;
+      if (statusFilter === "DUE_TODAY" && !dueToday) return false;
+      if (statusFilter === "OPEN" && isLate) return false;
+
+      if (!search) return true;
+
+      const haystack = [
+        sale?.id,
+        sale?.receiptNumber,
+        sale?.invoiceNumber,
+        customerName(sale),
+        customerPhone(sale),
+        sale?.customer?.email,
+        branchLabel(sale),
+      ]
+        .map((item) => String(item || "").toLowerCase())
+        .join(" ");
+
+      return haystack.includes(search);
+    });
+  }, [allBalances, overdueIds, q, statusFilter]);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [q, statusFilter]);
+
+  const visibleRows = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+
+  const summary = useMemo(() => {
+    const totalBalance = allBalances.reduce((sum, sale) => sum + saleBalance(sale), 0);
+    const overdueBalance = allBalances
+      .filter((sale) => overdueIds.has(sale.id) || String(sale?.status || "").toUpperCase() === "OVERDUE")
+      .reduce((sum, sale) => sum + saleBalance(sale), 0);
+
+    const dueTodayBalance = allBalances
+      .filter((sale) => daysUntil(sale?.dueDate) === 0)
+      .reduce((sum, sale) => sum + saleBalance(sale), 0);
+
+    return {
+      count: allBalances.length,
+      totalBalance,
+      overdueCount: overdueIds.size,
+      overdueBalance,
+      dueTodayBalance,
+    };
+  }, [allBalances, overdueIds]);
+
+  function openPayModal(sale) {
+    setSelectedSale(sale);
+    setPayAmount("");
+    setPayMethod("CASH");
+    setPayNote("");
+    setPayOpen(true);
+  }
+
+  function closePayModal() {
+    if (paySaving) return;
+
+    setPayOpen(false);
+    setSelectedSale(null);
+    setPayAmount("");
+    setPayMethod("CASH");
+    setPayNote("");
+  }
+
+  async function submitPayment() {
+    if (!selectedSale) return;
+
+    const amount = Number(String(payAmount || "").replace(/[^\d]/g, "") || 0);
+    const balance = saleBalance(selectedSale);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Enter a valid payment amount");
+      return;
+    }
+
+    if (amount > balance) {
+      toast.error("Payment cannot be more than the remaining balance");
+      return;
+    }
+
+    setPaySaving(true);
+
+    try {
+      await addSalePayment(selectedSale.id, {
+        amount,
+        method: payMethod,
+        note: cleanString(payNote) || null,
+      });
+
+      toast.success("Payment recorded");
+      closePayModal();
+      await load({ silent: true });
+    } catch (error) {
+      if (handleSubscriptionBlockedError(error, { toastId: "pay-later-payment-blocked" })) {
+        return;
+      }
+
+      toast.error(error?.response?.data?.message || error?.message || "Failed to record payment");
+    } finally {
+      setPaySaving(false);
+    }
+  }
+
+  function loadMore() {
+    setVisibleCount((prev) => prev + PAGE_SIZE);
+  }
+
+  if (loading) {
+    return <CreditDashboardSkeleton />;
+  }
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <SectionHeading
-            eyebrow="POS"
-            title="Credit control"
-            subtitle="Track overdue balances, open receivables, and customer exposure from one collection dashboard."
-          />
+    <div className="space-y-5">
+      <PaymentModal
+        open={payOpen}
+        sale={selectedSale}
+        amount={payAmount}
+        setAmount={setPayAmount}
+        method={payMethod}
+        setMethod={setPayMethod}
+        note={payNote}
+        setNote={setPayNote}
+        saving={paySaving}
+        onClose={closePayModal}
+        onSubmit={submitPayment}
+      />
 
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => nav("/app/pos")} className={secondaryBtn()}>
-              Back to POS
-            </button>
+      <section className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
+        <div className="pointer-events-none absolute -right-24 -top-24 h-[260px] w-[260px] rounded-full bg-[rgba(74,163,255,0.10)] blur-3xl" />
 
-            <Link to="/app/pos" className={primaryBtn()}>
-              New sale
+        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+              Pay later
+            </p>
+
+            <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-[var(--color-text)] sm:text-3xl">
+              Customer balances
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+              Follow up money still owed in{" "}
+              <span className="font-black text-[var(--color-text)]">{activeBranchLabel}</span>.
+              The first 10 balances are shown first. Search, filter, or load more to find the rest.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row xl:justify-end">
+            <Link to="/app/pos/sales" className={secondaryBtn()}>
+              Sales list
             </Link>
 
-            <AsyncButton loading={loading} onClick={load} className={secondaryBtn()}>
+            <AsyncButton loading={refreshing} onClick={() => load({ silent: true })} className={secondaryBtn()}>
               Refresh
             </AsyncButton>
+
+            <Link to="/app/pos" className={primaryBtn()}>
+              <PlusIcon />
+              New sale
+            </Link>
           </div>
         </div>
-
-        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            label="Outstanding accounts"
-            value={outstanding.length}
-            note="Open credit records"
-            tone="warning"
-          />
-          <MetricCard
-            label="Outstanding value"
-            value={formatMoney(outstandingTotal)}
-            note="Receivable balance still open"
-            tone="warning"
-          />
-          <MetricCard
-            label="Overdue accounts"
-            value={overdue.length}
-            note="Accounts needing urgent action"
-            tone="danger"
-          />
-          <MetricCard
-            label="Overdue value"
-            value={formatMoney(overdueTotal)}
-            note={`${totalAccounts} total active credit account${totalAccounts === 1 ? "" : "s"}`}
-            tone="danger"
-          />
-        </section>
       </section>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className={cx(pageCard(), "p-5 sm:p-6")}>
-          <div className={cx("text-base font-bold", strongText())}>Collections focus</div>
-          <div className={cx("mt-2 text-sm leading-6", mutedText())}>
-            Use this screen to prioritize who needs follow-up first and where cash is still trapped.
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard
+          label="Open balances"
+          value={formatNumber(summary.count)}
+          note="Customers who still owe money"
+          tone={summary.count > 0 ? "warning" : "success"}
+        />
+
+        <SummaryCard
+          label="Money owed"
+          value={formatMoney(summary.totalBalance)}
+          note="Total remaining balance"
+          tone={summary.totalBalance > 0 ? "warning" : "success"}
+        />
+
+        <SummaryCard
+          label="Late"
+          value={formatNumber(summary.overdueCount)}
+          note={formatMoney(summary.overdueBalance)}
+          tone={summary.overdueCount > 0 ? "danger" : "success"}
+        />
+
+        <SummaryCard
+          label="Due today"
+          value={formatMoney(summary.dueTodayBalance)}
+          note="Needs same-day follow-up"
+          tone={summary.dueTodayBalance > 0 ? "warning" : "neutral"}
+        />
+      </section>
+
+      <section className={cx(pageCard(), "p-4 sm:p-5")}>
+        <div className="grid gap-3 xl:grid-cols-[1fr_190px]">
+          <div className="relative">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+              <SearchIcon />
+            </span>
+
+            <input
+              className={cx(inputClass(), "pl-11")}
+              value={q}
+              onChange={(event) => setQ(event.target.value)}
+              placeholder="Search by customer, phone, receipt, or branch..."
+            />
           </div>
 
-          <div className="mt-5 space-y-3">
-            <div className={cx(softPanel(), "p-4")}>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
-                Immediate risk
-              </div>
-              <div className={cx("mt-3 text-lg font-bold", strongText())}>
-                {overdue.length} overdue account{overdue.length === 1 ? "" : "s"}
-              </div>
-              <div className={cx("mt-2 text-sm leading-6", mutedText())}>
-                Prioritize balances that already crossed their due date.
-              </div>
-            </div>
-
-            <div className={cx(softPanel(), "p-4")}>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
-                Open exposure
-              </div>
-              <div className={cx("mt-3 text-lg font-bold", strongText())}>
-                {formatMoney(outstandingTotal + overdueTotal)}
-              </div>
-              <div className={cx("mt-2 text-sm leading-6", mutedText())}>
-                Total credit still not collected.
-              </div>
-            </div>
-
-            <div className={cx(softPanel(), "p-4")}>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
-                Collection discipline
-              </div>
-              <div className={cx("mt-3 space-y-3 text-sm leading-6", mutedText())}>
-                <div>Start with overdue balances first.</div>
-                <div>Review receipt details before contacting the customer.</div>
-                <div>Push partial payers toward full settlement quickly.</div>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <div className="space-y-6">
-          <CreditSection
-            title="Overdue"
-            subtitle="Balances past their due date and needing urgent follow-up."
-            rows={overdue}
-            loading={loading}
-            tone="danger"
-            visibleCount={overdueVisible}
-            onLoadMore={() => setOverdueVisible((prev) => prev + PAGE_SIZE)}
-          />
-
-          <CreditSection
-            title="Outstanding"
-            subtitle="Open credit balances that are still within active collection."
-            rows={outstanding}
-            loading={loading}
-            tone="warning"
-            visibleCount={outstandingVisible}
-            onLoadMore={() => setOutstandingVisible((prev) => prev + PAGE_SIZE)}
-          />
+          <select
+            className={inputClass()}
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+          >
+            <option value="ALL">All balances</option>
+            <option value="LATE">Late only</option>
+            <option value="DUE_TODAY">Due today</option>
+            <option value="OPEN">Open, not late</option>
+          </select>
         </div>
-      </div>
+
+        <div className="mt-5">
+          {visibleRows.length === 0 ? (
+            <EmptyState
+              title="No customer balances found"
+              text="Pay-later sales with unpaid balances will appear here. Try changing the search or filter."
+              action={
+                <Link to="/app/pos" className={primaryBtn()}>
+                  Start sale
+                </Link>
+              }
+            />
+          ) : (
+            <>
+              <div className="grid gap-3">
+                {visibleRows.map((sale) => (
+                  <CustomerBalanceCard key={sale.id} sale={sale} onPay={openPayModal} />
+                ))}
+              </div>
+
+              <div className="mt-6 flex flex-col items-center justify-between gap-3 rounded-[26px] bg-[var(--color-surface-2)] px-4 py-4 sm:flex-row">
+                <p className="text-center text-sm font-bold text-[var(--color-text-muted)] sm:text-left">
+                  Showing {formatNumber(visibleRows.length)} of {formatNumber(filtered.length)} balance
+                  {filtered.length === 1 ? "" : "s"}.
+                </p>
+
+                {hasMore ? (
+                  <button
+                    type="button"
+                    onClick={loadMore}
+                    className="inline-flex h-11 w-full items-center justify-center rounded-2xl bg-[var(--color-card)] px-5 text-sm font-black text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 sm:w-auto"
+                  >
+                    Load 10 more
+                  </button>
+                ) : (
+                  <span className="rounded-full bg-[var(--color-card)] px-3 py-2 text-xs font-black text-[var(--color-text-muted)] shadow-[var(--shadow-soft)]">
+                    End of list
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

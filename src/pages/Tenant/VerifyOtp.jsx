@@ -1,9 +1,45 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import apiClient from "../../services/apiClient";
-import AuthShell from "../../components/auth/AuthShell";
+
+import PublicLayout from "../../components/layout/PublicLayout";
 import AsyncButton from "../../components/ui/AsyncButton";
+import apiClient from "../../services/apiClient";
+
+const RESEND_SECONDS = 45;
+
+function cx(...items) {
+  return items.filter(Boolean).join(" ");
+}
+
+function cleanString(value) {
+  return String(value || "").trim();
+}
+
+function maskEmail(email) {
+  const value = cleanString(email);
+  if (!value.includes("@")) return value || "—";
+
+  const [name, domain] = value.split("@");
+  const start = name.slice(0, 2);
+  const end = name.length > 4 ? name.slice(-1) : "";
+
+  return `${start}${"•".repeat(Math.max(3, name.length - 3))}${end}@${domain}`;
+}
+
+function maskPhone(phone) {
+  const digits = String(phone || "").replace(/[^\d]/g, "");
+
+  if (digits.startsWith("2507") && digits.length === 12) {
+    return `+250 ${digits.slice(3, 6)} ••• •${digits.slice(-3)}`;
+  }
+
+  if (digits.length >= 7) {
+    return `${digits.slice(0, 4)} ••• •${digits.slice(-3)}`;
+  }
+
+  return phone || "—";
+}
 
 function readOnboardingState() {
   try {
@@ -22,20 +58,184 @@ function saveOnboardingState(next) {
   localStorage.setItem("storvex_ownerEmail", next.email || "");
   localStorage.setItem("storvex_storeName", next.storeName || "");
   localStorage.setItem("storvex_ownerName", next.ownerName || "");
-  localStorage.setItem("storvex_emailVerified", String(!!next.emailVerified));
-  localStorage.setItem("storvex_phoneVerified", String(!!next.phoneVerified));
+  localStorage.setItem("storvex_shopType", next.shopType || "");
+  localStorage.setItem("storvex_district", next.district || "");
+  localStorage.setItem("storvex_sector", next.sector || "");
+  localStorage.setItem("storvex_address", next.address || "");
+  localStorage.setItem("storvex_deviceId", next.deviceId || "");
+
+  localStorage.setItem("storvex_emailVerified", String(Boolean(next.emailVerified)));
+  localStorage.setItem("storvex_phoneVerified", String(Boolean(next.phoneVerified)));
 }
 
-function StatusPill({ ok, label }) {
-  return <span className={ok ? "badge-success" : "badge-neutral"}>{ok ? "Verified" : label}</span>;
+function inputClass() {
+  return "h-14 w-full rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-center text-lg font-black tracking-[0.35em] text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function StepHint({ title, body }) {
+function buttonBase() {
+  return "inline-flex h-12 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function secondaryButton() {
+  return cx(
+    buttonBase(),
+    "border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+  );
+}
+
+function surfaceCard() {
+  return "rounded-[34px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function DetailTile({ label, value }) {
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
-      <div className="text-sm font-medium text-[var(--color-text)]">{title}</div>
-      <div className="mt-1 text-sm text-[var(--color-text-muted)]">{body}</div>
+    <div className="rounded-[24px] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
+        {label}
+      </p>
+      <p className="mt-2 break-words text-sm font-black text-[var(--color-text)]">
+        {value || "—"}
+      </p>
     </div>
+  );
+}
+
+function StatusPill({ verified }) {
+  return (
+    <span
+      className={cx(
+        "inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.13em]",
+        verified
+          ? "bg-emerald-500/10 text-emerald-600"
+          : "bg-amber-500/10 text-amber-600",
+      )}
+    >
+      {verified ? "Verified" : "Pending"}
+    </span>
+  );
+}
+
+function ProgressStep({ number, label, active = false, done = false }) {
+  return (
+    <div
+      className={cx(
+        "flex items-center gap-3 rounded-2xl border px-4 py-3",
+        active || done
+          ? "border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-soft)]"
+          : "border-[var(--color-border)] bg-[var(--color-surface-2)]",
+      )}
+    >
+      <div
+        className={cx(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black",
+          done
+            ? "bg-emerald-600 text-white"
+            : active
+              ? "bg-[var(--color-primary)] text-white"
+              : "bg-[var(--color-card)] text-[var(--color-text-muted)]",
+        )}
+      >
+        {done ? "✓" : number}
+      </div>
+
+      <div className="text-sm font-black text-[var(--color-text)]">{label}</div>
+    </div>
+  );
+}
+
+function VerificationCard({
+  title,
+  description,
+  destination,
+  maskedDestination,
+  verified,
+  code,
+  setCode,
+  devOtp,
+  sending,
+  verifying,
+  cooldown,
+  onSend,
+  onVerify,
+}) {
+  const disabled = verified || sending || verifying;
+
+  return (
+    <section
+      className={cx(
+        "rounded-[30px] border p-5 shadow-[var(--shadow-soft)] sm:p-6",
+        verified
+          ? "border-emerald-500/20 bg-emerald-500/[0.04]"
+          : "border-[var(--color-border)] bg-[var(--color-card)]",
+      )}
+    >
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-black tracking-[-0.03em] text-[var(--color-text)]">
+              {title}
+            </h2>
+            <StatusPill verified={verified} />
+          </div>
+
+          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[var(--color-text-muted)]">
+            {description}
+          </p>
+
+          <div className="mt-4 inline-flex max-w-full rounded-2xl bg-[var(--color-surface-2)] px-4 py-3 text-sm font-black text-[var(--color-text)]">
+            <span className="truncate">{maskedDestination}</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onSend}
+          disabled={verified || sending || verifying || cooldown > 0}
+          className={cx(secondaryButton(), "min-w-[128px] shrink-0 whitespace-nowrap")}
+        >
+          {verified
+            ? "Verified"
+            : cooldown > 0
+              ? `Resend in ${cooldown}s`
+              : sending
+                ? "Sending..."
+                : "Send code"}
+        </button>
+      </div>
+
+      {devOtp && !verified ? (
+        <div className="mt-4 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-semibold text-[var(--color-text-muted)]">
+          DEV OTP:{" "}
+          <span className="font-mono font-black text-[var(--color-text)]">{devOtp}</span>
+        </div>
+      ) : null}
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <input
+          className={inputClass()}
+          value={code}
+          onChange={(event) =>
+            setCode(event.target.value.replace(/[^\d]/g, "").slice(0, 8))
+          }
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          placeholder="••••••"
+          disabled={disabled}
+          aria-label={`${title} code for ${destination}`}
+        />
+
+        <AsyncButton
+          type="button"
+          loading={verifying}
+          loadingText="Checking..."
+          disabled={verified || sending || !cleanString(code)}
+          onClick={onVerify}
+          className="h-14 min-w-[112px] whitespace-nowrap rounded-[20px] px-6"
+        >
+          {verified ? "Done" : "Verify"}
+        </AsyncButton>
+      </div>
+    </section>
   );
 }
 
@@ -43,8 +243,10 @@ export default function VerifyOtp() {
   const nav = useNavigate();
 
   const onboarding = useMemo(() => readOnboardingState(), []);
+
   const intentId = onboarding?.intentId || localStorage.getItem("storvex_intentId") || "";
   const storeName = onboarding?.storeName || localStorage.getItem("storvex_storeName") || "";
+  const ownerName = onboarding?.ownerName || localStorage.getItem("storvex_ownerName") || "";
   const ownerEmail = onboarding?.email || localStorage.getItem("storvex_ownerEmail") || "";
   const ownerPhone = onboarding?.phone || localStorage.getItem("storvex_ownerPhone") || "";
 
@@ -56,14 +258,20 @@ export default function VerifyOtp() {
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [verifyingPhone, setVerifyingPhone] = useState(false);
 
+  const [emailCooldown, setEmailCooldown] = useState(0);
+  const [phoneCooldown, setPhoneCooldown] = useState(0);
+
   const [emailVerified, setEmailVerified] = useState(
-    onboarding?.emailVerified ?? localStorage.getItem("storvex_emailVerified") === "true"
+    onboarding?.emailVerified ?? localStorage.getItem("storvex_emailVerified") === "true",
   );
+
   const [phoneVerified, setPhoneVerified] = useState(
-    onboarding?.phoneVerified ?? localStorage.getItem("storvex_phoneVerified") === "true"
+    onboarding?.phoneVerified ?? localStorage.getItem("storvex_phoneVerified") === "true",
   );
 
   const [devHint, setDevHint] = useState({ email: null, phone: null });
+
+  const canContinue = Boolean(emailVerified && phoneVerified);
 
   useEffect(() => {
     if (!intentId || !storeName || !ownerEmail || !ownerPhone) {
@@ -72,51 +280,98 @@ export default function VerifyOtp() {
     }
   }, [intentId, storeName, ownerEmail, ownerPhone, nav]);
 
+  useEffect(() => {
+    if (emailCooldown <= 0) return undefined;
+
+    const timer = window.setInterval(() => {
+      setEmailCooldown((value) => Math.max(0, value - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [emailCooldown]);
+
+  useEffect(() => {
+    if (phoneCooldown <= 0) return undefined;
+
+    const timer = window.setInterval(() => {
+      setPhoneCooldown((value) => Math.max(0, value - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [phoneCooldown]);
+
   function persistVerifiedFlags(nextEmailVerified, nextPhoneVerified) {
+    const current = readOnboardingState() || {};
+
     const nextState = {
-      ...(readOnboardingState() || {}),
+      ...current,
       intentId,
       storeName,
+      ownerName: current.ownerName || ownerName,
       email: ownerEmail,
       phone: ownerPhone,
-      emailVerified: !!nextEmailVerified,
-      phoneVerified: !!nextPhoneVerified,
+      shopType: current.shopType || localStorage.getItem("storvex_shopType") || "",
+      district: current.district || localStorage.getItem("storvex_district") || "",
+      sector: current.sector || localStorage.getItem("storvex_sector") || "",
+      address: current.address || localStorage.getItem("storvex_address") || "",
+      deviceId: current.deviceId || localStorage.getItem("storvex_deviceId") || "",
+      emailVerified: Boolean(nextEmailVerified),
+      phoneVerified: Boolean(nextPhoneVerified),
     };
 
-    setEmailVerified(!!nextEmailVerified);
-    setPhoneVerified(!!nextPhoneVerified);
+    setEmailVerified(Boolean(nextEmailVerified));
+    setPhoneVerified(Boolean(nextPhoneVerified));
     saveOnboardingState(nextState);
   }
 
   async function send(channel) {
+    const isEmail = channel === "EMAIL";
+
     try {
-      if (channel === "EMAIL") setSendingEmail(true);
+      if (isEmail) setSendingEmail(true);
       else setSendingPhone(true);
 
-      const { data } = await apiClient.post("/auth/otp/send", { intentId, channel });
+      const { data } = await apiClient.post("/auth/otp/send", {
+        intentId,
+        channel,
+      });
 
-      if (typeof data?.emailVerified === "boolean" || typeof data?.phoneVerified === "boolean") {
-        persistVerifiedFlags(data?.emailVerified, data?.phoneVerified);
+      if (
+        typeof data?.emailVerified === "boolean" ||
+        typeof data?.phoneVerified === "boolean"
+      ) {
+        persistVerifiedFlags(
+          data?.emailVerified ?? emailVerified,
+          data?.phoneVerified ?? phoneVerified,
+        );
       }
 
       if (data?.devOtp) {
-        setDevHint((curr) => ({
-          ...curr,
-          [channel === "EMAIL" ? "email" : "phone"]: data.devOtp,
+        setDevHint((current) => ({
+          ...current,
+          [isEmail ? "email" : "phone"]: data.devOtp,
         }));
       }
 
-      toast.success(channel === "EMAIL" ? "Email code sent" : "Phone code sent");
-    } catch (err) {
-      toast.error(err?.response?.data?.message || err?.message || "Failed to send code");
+      if (isEmail) setEmailCooldown(RESEND_SECONDS);
+      else setPhoneCooldown(RESEND_SECONDS);
+
+      toast.success(isEmail ? "Email code sent" : "Phone code sent");
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to send verification code",
+      );
     } finally {
-      if (channel === "EMAIL") setSendingEmail(false);
+      if (isEmail) setSendingEmail(false);
       else setSendingPhone(false);
     }
   }
 
   async function verify(channel) {
-    const code = channel === "EMAIL" ? emailCode.trim() : phoneCode.trim();
+    const isEmail = channel === "EMAIL";
+    const code = cleanString(isEmail ? emailCode : phoneCode);
 
     if (!code) {
       toast.error("Enter the verification code first");
@@ -124,211 +379,190 @@ export default function VerifyOtp() {
     }
 
     try {
-      if (channel === "EMAIL") setVerifyingEmail(true);
+      if (isEmail) setVerifyingEmail(true);
       else setVerifyingPhone(true);
 
-      const { data } = await apiClient.post("/auth/otp/verify", { intentId, channel, code });
+      const { data } = await apiClient.post("/auth/otp/verify", {
+        intentId,
+        channel,
+        code,
+      });
 
-      persistVerifiedFlags(data?.emailVerified, data?.phoneVerified);
+      const nextEmailVerified = data?.emailVerified ?? (isEmail ? true : emailVerified);
+      const nextPhoneVerified = data?.phoneVerified ?? (!isEmail ? true : phoneVerified);
 
-      if (channel === "EMAIL") setEmailCode("");
-      else setPhoneCode("");
+      persistVerifiedFlags(nextEmailVerified, nextPhoneVerified);
 
-      toast.success(channel === "EMAIL" ? "Email verified" : "Phone verified");
-    } catch (err) {
-      toast.error(err?.response?.data?.message || err?.message || "Verification failed");
+      if (isEmail) {
+        setEmailCode("");
+        setEmailCooldown(0);
+      } else {
+        setPhoneCode("");
+        setPhoneCooldown(0);
+      }
+
+      toast.success(isEmail ? "Email verified" : "Phone verified");
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Verification failed",
+      );
     } finally {
-      if (channel === "EMAIL") setVerifyingEmail(false);
+      if (isEmail) setVerifyingEmail(false);
       else setVerifyingPhone(false);
     }
   }
 
-  function startTrial() {
-    if (!emailVerified || !phoneVerified) {
+  function continueToActivation() {
+    if (!canContinue) {
       toast.error("Verify both email and phone first");
       return;
     }
 
-    localStorage.setItem("storvex_signupMode", "TRIAL");
-    nav("/confirm-signup?mode=TRIAL");
-  }
-
-  function goPaid() {
-    if (!emailVerified || !phoneVerified) {
-      toast.error("Verify both email and phone first");
-      return;
-    }
-
-    localStorage.setItem("storvex_signupMode", "PAID");
     nav("/owner-payment");
   }
 
-  const canContinue = emailVerified && phoneVerified;
-
   return (
-    <AuthShell
-      eyebrow="Verification"
-      title="Verify your email and phone"
-      subtitle={`Complete verification for ${storeName} before activation.`}
-      sideTitle="Verification must feel calm and trustworthy"
-      sideBody="This step proves account ownership, protects trials, and makes the next activation step feel legitimate."
-      sideItems={[
-        {
-          title: "Email verification",
-          body: "Confirms the owner can receive account and recovery messages.",
-        },
-        {
-          title: "Phone verification",
-          body: "Supports trial protection and payment request communication.",
-        },
-        {
-          title: "Next step",
-          body: "After both are verified, continue with either free trial or paid activation.",
-        },
-      ]}
-      footer={
-        <div className="text-sm text-[var(--color-text-muted)]">
-          Need to restart?{" "}
-          <Link
-            to="/signup"
-            className="font-medium text-[var(--color-text)] underline-offset-4 hover:underline"
-          >
-            Back to signup
-          </Link>
-        </div>
-      }
-      compact
-    >
-      <div className="space-y-5">
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
-          <div className="text-sm font-medium text-[var(--color-text)]">Store</div>
-          <div className="mt-1 text-lg font-semibold text-[var(--color-text)]">
-            {storeName || "Your store"}
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <StepHint title="Owner email" body={ownerEmail || "—"} />
-            <StepHint title="Owner phone" body={ownerPhone || "—"} />
-          </div>
-        </div>
+    <PublicLayout>
+      <section className="relative overflow-hidden px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="pointer-events-none absolute left-[-12rem] top-[-10rem] h-[28rem] w-[28rem] rounded-full bg-[rgba(74,163,255,0.16)] blur-3xl" />
+        <div className="pointer-events-none absolute bottom-[-14rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[rgba(16,185,129,0.12)] blur-3xl" />
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-soft)]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-[var(--color-text)]">Email verification</div>
-              <div className="mt-1 break-all text-sm text-[var(--color-text-muted)]">
-                {ownerEmail || "—"}
+        <div className="relative mx-auto max-w-6xl space-y-6">
+          <section className={cx(surfaceCard(), "p-5 sm:p-6 lg:p-7")}>
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-3xl">
+                <div className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+                  Step 2 of 5
+                </div>
+
+                <h1 className="mt-5 text-3xl font-black tracking-[-0.05em] text-[var(--color-text)] sm:text-4xl lg:text-5xl">
+                  Verify owner contact.
+                </h1>
+
+                <p className="mt-4 max-w-2xl text-base font-medium leading-8 text-[var(--color-text-muted)]">
+                  Confirm the email and phone before choosing trial or paid activation.
+                  This protects the owner account and keeps the store setup legitimate.
+                </p>
+              </div>
+
+              <div
+                className={cx(
+                  "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-[22px] px-4 py-3 text-sm font-black",
+                  canContinue
+                    ? "bg-emerald-500/10 text-emerald-600"
+                    : "bg-[var(--color-surface-2)] text-[var(--color-text)]",
+                )}
+              >
+                {canContinue ? "Ready to continue" : "Two checks required"}
               </div>
             </div>
-            <StatusPill ok={emailVerified} label="Pending" />
-          </div>
 
-          {!!devHint.email && !emailVerified ? (
-            <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
-              DEV OTP:{" "}
-              <span className="font-mono text-[var(--color-text)]">{devHint.email}</span>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <DetailTile label="Store" value={storeName || "Your store"} />
+              <DetailTile label="Owner" value={ownerName || "Owner"} />
+              <DetailTile
+                label="Status"
+                value={canContinue ? "Email and phone verified" : "Verification needed"}
+              />
             </div>
-          ) : null}
+          </section>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-            <input
-              className="app-input"
-              placeholder="Enter email code"
-              value={emailCode}
-              onChange={(e) => setEmailCode(e.target.value)}
-              disabled={emailVerified}
-            />
-            <AsyncButton
-              type="button"
-              variant="secondary"
-              loading={sendingEmail}
-              loadingText="Sending..."
-              disabled={emailVerified || verifyingEmail}
-              onClick={() => send("EMAIL")}
-            >
-              {emailVerified ? "Verified" : "Send code"}
-            </AsyncButton>
-            <AsyncButton
-              type="button"
-              loading={verifyingEmail}
-              loadingText="Verifying..."
-              disabled={emailVerified || sendingEmail}
-              onClick={() => verify("EMAIL")}
-            >
-              {emailVerified ? "Done" : "Verify"}
-            </AsyncButton>
-          </div>
-        </div>
+          <section className={cx(surfaceCard(), "p-5")}>
+            <div className="grid gap-3 md:grid-cols-5">
+              <ProgressStep number="1" label="Create store account" done />
+              <ProgressStep number="2" label="Verify email and phone" active />
+              <ProgressStep number="3" label="Choose activation" />
+              <ProgressStep number="4" label="Create password" />
+              <ProgressStep number="5" label="Open workspace" />
+            </div>
+          </section>
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-soft)]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-[var(--color-text)]">Phone verification</div>
-              <div className="mt-1 break-all text-sm text-[var(--color-text-muted)]">
-                {ownerPhone || "—"}
+          <section className={cx(surfaceCard(), "p-5 sm:p-6 lg:p-7")}>
+            <div className="mb-6 border-b border-[var(--color-border)] pb-6">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+                Verification
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-[var(--color-text)] sm:text-3xl">
+                Confirm email and phone
+              </h2>
+
+              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[var(--color-text-muted)]">
+                Send a code to each contact method, enter the code, and continue after both
+                checks are verified.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <VerificationCard
+                title="Email verification"
+                description="Use this email for login support, account recovery, and important store notices."
+                destination={ownerEmail}
+                maskedDestination={maskEmail(ownerEmail)}
+                verified={emailVerified}
+                code={emailCode}
+                setCode={setEmailCode}
+                devOtp={devHint.email}
+                sending={sendingEmail}
+                verifying={verifyingEmail}
+                cooldown={emailCooldown}
+                onSend={() => send("EMAIL")}
+                onVerify={() => verify("EMAIL")}
+              />
+
+              <VerificationCard
+                title="Phone verification"
+                description="Use this phone for owner confirmation, trial protection, and payment communication."
+                destination={ownerPhone}
+                maskedDestination={maskPhone(ownerPhone)}
+                verified={phoneVerified}
+                code={phoneCode}
+                setCode={setPhoneCode}
+                devOtp={devHint.phone}
+                sending={sendingPhone}
+                verifying={verifyingPhone}
+                cooldown={phoneCooldown}
+                onSend={() => send("PHONE")}
+                onVerify={() => verify("PHONE")}
+              />
+
+              <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-[var(--color-text)]">
+                      Next: choose trial or paid activation
+                    </p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-[var(--color-text-muted)]">
+                      You can continue only after both email and phone are verified.
+                    </p>
+                  </div>
+
+                  <AsyncButton
+                    type="button"
+                    disabled={!canContinue}
+                    onClick={continueToActivation}
+                    className="w-full sm:w-auto"
+                  >
+                    Continue to activation
+                  </AsyncButton>
+                </div>
               </div>
+
+              <p className="text-center text-sm font-semibold text-[var(--color-text-muted)]">
+                Need to change details?{" "}
+                <Link
+                  to="/signup"
+                  className="font-black text-[var(--color-text)] underline-offset-4 hover:underline"
+                >
+                  Back to owner setup
+                </Link>
+              </p>
             </div>
-            <StatusPill ok={phoneVerified} label="Pending" />
-          </div>
-
-          {!!devHint.phone && !phoneVerified ? (
-            <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
-              DEV OTP:{" "}
-              <span className="font-mono text-[var(--color-text)]">{devHint.phone}</span>
-            </div>
-          ) : null}
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-            <input
-              className="app-input"
-              placeholder="Enter phone code"
-              value={phoneCode}
-              onChange={(e) => setPhoneCode(e.target.value)}
-              disabled={phoneVerified}
-            />
-            <AsyncButton
-              type="button"
-              variant="secondary"
-              loading={sendingPhone}
-              loadingText="Sending..."
-              disabled={phoneVerified || verifyingPhone}
-              onClick={() => send("PHONE")}
-            >
-              {phoneVerified ? "Verified" : "Send code"}
-            </AsyncButton>
-            <AsyncButton
-              type="button"
-              loading={verifyingPhone}
-              loadingText="Verifying..."
-              disabled={phoneVerified || sendingPhone}
-              onClick={() => verify("PHONE")}
-            >
-              {phoneVerified ? "Done" : "Verify"}
-            </AsyncButton>
-          </div>
+          </section>
         </div>
-
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
-          <div className="text-sm font-medium text-[var(--color-text)]">Activation options</div>
-          <div className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Both email and phone must be verified before continuing.
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <AsyncButton type="button" disabled={!canContinue} onClick={startTrial} className="w-full">
-              Start free trial
-            </AsyncButton>
-            <AsyncButton
-              type="button"
-              variant="secondary"
-              disabled={!canContinue}
-              onClick={goPaid}
-              className="w-full"
-            >
-              Choose paid plan
-            </AsyncButton>
-          </div>
-        </div>
-      </div>
-    </AuthShell>
+      </section>
+    </PublicLayout>
   );
 }

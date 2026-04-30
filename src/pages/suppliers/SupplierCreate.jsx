@@ -88,9 +88,7 @@ export default function SupplierCreate() {
       nav("/app/suppliers");
     } catch (e2) {
       console.error(e2);
-      toast.error(
-        e2?.message || e2?.response?.data?.message || "Failed to create supplier"
-      );
+      toast.error(e2?.message || e2?.response?.data?.message || "Failed to create supplier");
     } finally {
       setSaving(false);
     }
@@ -141,9 +139,7 @@ export default function SupplierCreate() {
                 </div>
 
                 <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
-                    ID type
-                  </label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>ID type</label>
                   <select
                     className="app-input"
                     value={form.idType}
@@ -171,9 +167,7 @@ export default function SupplierCreate() {
                 </div>
 
                 <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
-                    Phone
-                  </label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Phone</label>
                   <input
                     className="app-input"
                     value={form.phone}
@@ -183,9 +177,7 @@ export default function SupplierCreate() {
                 </div>
 
                 <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
-                    Email
-                  </label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Email</label>
                   <input
                     className="app-input"
                     value={form.email}
@@ -195,9 +187,7 @@ export default function SupplierCreate() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
-                    Address
-                  </label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Address</label>
                   <input
                     className="app-input"
                     value={form.address}
@@ -207,9 +197,7 @@ export default function SupplierCreate() {
                 </div>
 
                 <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
-                    Company name
-                  </label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Company name</label>
                   <input
                     className="app-input"
                     value={form.companyName}
@@ -219,9 +207,7 @@ export default function SupplierCreate() {
                 </div>
 
                 <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
-                    Tax ID
-                  </label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Tax ID</label>
                   <input
                     className="app-input"
                     value={form.taxId}
@@ -248,9 +234,7 @@ export default function SupplierCreate() {
                 </div>
 
                 <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
-                    More details
-                  </label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>More details</label>
                   <input
                     className="app-input"
                     value={form.sourceDetails}
@@ -260,12 +244,10 @@ export default function SupplierCreate() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>
-                    Notes
-                  </label>
+                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Notes</label>
                   <textarea
-                    className="app-textarea w-full"
-                    rows={4}
+                    className="app-textarea w-full min-h-[128px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]"
+                    rows={5}
                     value={form.notes}
                     onChange={(e) => setField("notes", e.target.value)}
                     placeholder="Any warning, trust level, or internal note..."
@@ -284,12 +266,7 @@ export default function SupplierCreate() {
                 Cancel
               </button>
 
-              <AsyncButton
-                type="submit"
-                loading={saving}
-                loadingText="Saving..."
-                variant="primary"
-              >
+              <AsyncButton type="submit" loading={saving} loadingText="Saving..." variant="primary">
                 Save Supplier
               </AsyncButton>
             </div>
