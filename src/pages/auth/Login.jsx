@@ -172,7 +172,7 @@ export default function Login() {
       clearOnboardingState();
 
       toast.success("Welcome back");
-      nav("/dashboard", { replace: true });
+      nav("/app", { replace: true });
     } catch (error) {
       toast.error(error?.response?.data?.message || error?.message || "Login failed");
     } finally {

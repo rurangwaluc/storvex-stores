@@ -23,7 +23,7 @@ const REPORT_LINKS = [
   {
     title: "Cash flow",
     text: "Money in, money out, net cash flow, drawer control, payment method split.",
-    to: "/dashboard/reports/cash-flow",
+    to: "/app/reports/cash-flow",
     badge: "Money control",
     emoji: "💵",
     primary: true,
@@ -31,21 +31,21 @@ const REPORT_LINKS = [
   {
     title: "Income statement",
     text: "Sales, expenses, estimated profit, margin, and business result.",
-    to: "/dashboard/reports/income-statement",
+    to: "/app/reports/income-statement",
     badge: "Profit & loss",
     emoji: "📈",
   },
   {
     title: "Trial balance",
     text: "Owner control balance for sales, expenses, profit estimate, and checks.",
-    to: "/dashboard/reports/trial-balance",
+    to: "/app/reports/trial-balance",
     badge: "Accounting view",
     emoji: "⚖️",
   },
   {
     title: "Profit table",
     text: "Plain owner view of sales, expenses, profit margin, and top products.",
-    to: "/dashboard/reports/profit-table",
+    to: "/app/reports/profit-table",
     badge: "Owner profit",
     emoji: "🏆",
   },

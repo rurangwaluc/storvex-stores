@@ -432,7 +432,7 @@ export default function ProfitTable() {
 
           <div className="flex flex-col gap-3 sm:flex-row xl:shrink-0">
              <Link
-                to="/dashboard/reports"
+                to="/app/reports"
                 className="inline-flex h-11 w-full items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 text-sm font-black text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 sm:w-auto"
             >
                 Back to reports

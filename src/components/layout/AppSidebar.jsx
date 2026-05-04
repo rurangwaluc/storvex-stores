@@ -204,25 +204,27 @@ function Icon({ type }) {
   }
 }
 
+const WHATSAPP_ROLES = ["OWNER", "MANAGER", "CASHIER", "SELLER", "STOREKEEPER", "TECHNICIAN"];
+
 const NAV_ITEMS = [
   {
     section: "Core",
     items: [
       {
-        to: "/dashboard",
+        to: "/app",
         label: "Dashboard",
         icon: "dashboard",
         roles: ["OWNER", "MANAGER", "CASHIER", "SELLER", "STOREKEEPER", "TECHNICIAN"],
         end: true,
       },
       {
-        to: "/dashboard/pos",
+        to: "/app/pos",
         label: "POS",
         icon: "pos",
         roles: ["OWNER", "MANAGER", "CASHIER", "SELLER"],
       },
       {
-        to: "/dashboard/interstore",
+        to: "/app/interstore",
         label: "Inter-Store",
         icon: "transfer",
         roles: ["OWNER", "MANAGER", "CASHIER"],
@@ -233,25 +235,25 @@ const NAV_ITEMS = [
     section: "Stock",
     items: [
       {
-        to: "/dashboard/inventory",
+        to: "/app/inventory",
         label: "Inventory",
         icon: "inventory",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
       },
       {
-        to: "/dashboard/inventory/reorder",
+        to: "/app/inventory/reorder",
         label: "Reorder list",
         icon: "inventory",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
       },
       {
-        to: "/dashboard/inventory/stock-history",
+        to: "/app/inventory/stock-history",
         label: "Stock history",
         icon: "inventory",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
       },
       {
-        to: "/dashboard/suppliers",
+        to: "/app/suppliers",
         label: "Suppliers",
         icon: "suppliers",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
@@ -262,16 +264,16 @@ const NAV_ITEMS = [
     section: "Customers",
     items: [
       {
-        to: "/dashboard/customers",
+        to: "/app/customers",
         label: "Customers",
         icon: "customers",
         roles: ["OWNER", "MANAGER", "CASHIER", "SELLER", "TECHNICIAN"],
       },
       {
-        to: "/dashboard/whatsapp/inbox",
+        to: "/app/whatsapp",
         label: "WhatsApp",
         icon: "whatsapp",
-        roles: ["OWNER", "MANAGER", "CASHIER"],
+        roles: WHATSAPP_ROLES,
       },
     ],
   },
@@ -279,25 +281,25 @@ const NAV_ITEMS = [
     section: "Operations",
     items: [
       {
-        to: "/dashboard/documents",
+        to: "/app/documents",
         label: "Documents",
         icon: "documents",
         roles: ["OWNER", "MANAGER", "STOREKEEPER", "SELLER", "CASHIER", "TECHNICIAN"],
       },
       {
-        to: "/dashboard/repairs",
+        to: "/app/repairs",
         label: "Repairs",
         icon: "repairs",
         roles: ["OWNER", "CASHIER", "TECHNICIAN"],
       },
       {
-        to: "/dashboard/reports",
+        to: "/app/reports",
         label: "Reports",
         icon: "reports",
         roles: ["OWNER", "MANAGER"],
       },
       {
-        to: "/dashboard/expenses",
+        to: "/app/expenses",
         label: "Expenses",
         icon: "expenses",
         roles: ["OWNER"],
@@ -308,25 +310,25 @@ const NAV_ITEMS = [
     section: "Control",
     items: [
       {
-        to: "/dashboard/employees",
+        to: "/app/employees",
         label: "Employees",
         icon: "employees",
         roles: ["OWNER", "MANAGER"],
       },
       {
-        to: "/dashboard/billing",
+        to: "/app/billing",
         label: "Billing",
         icon: "billing",
         roles: ["OWNER"],
       },
       {
-        to: "/dashboard/audit",
+        to: "/app/audit",
         label: "Audit logs",
         icon: "audit",
         roles: ["OWNER", "MANAGER"],
       },
       {
-        to: "/dashboard/settings",
+        to: "/app/settings",
         label: "Settings",
         icon: "settings",
         roles: ["OWNER", "MANAGER"],
@@ -338,11 +340,11 @@ const NAV_ITEMS = [
 function isItemActive(pathname, to, end) {
   if (end) return pathname === to;
 
-  if (to === "/dashboard/whatsapp/inbox") {
-    return pathname === to || pathname.startsWith("/dashboard/whatsapp");
+  if (to === "/app/whatsapp") {
+    return pathname === to || pathname.startsWith("/app/whatsapp/");
   }
 
-  if (to === "/dashboard/inventory") {
+  if (to === "/app/inventory") {
     return pathname === to;
   }
 
@@ -386,6 +388,7 @@ function getWorkspaceName() {
 
 function getActiveBranchLabel() {
   const workspace = readWorkspaceCache();
+
   const activeBranch =
     workspace?.activeBranch ||
     workspace?.defaultBranch ||
@@ -430,7 +433,7 @@ function LogoBlock({ collapsed, onClose }) {
   if (collapsed) {
     return (
       <Link
-        to="/dashboard"
+        to="/app"
         onClick={onClose}
         className="group mx-auto flex h-12 w-12 items-center justify-center overflow-hidden rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_44px_rgba(15,23,42,0.16)]"
         aria-label="Go to dashboard"
@@ -447,7 +450,7 @@ function LogoBlock({ collapsed, onClose }) {
 
   return (
     <Link
-      to="/dashboard"
+      to="/app"
       onClick={onClose}
       className="group flex min-w-0 items-center rounded-[26px] border border-transparent p-1.5 transition hover:border-[var(--color-border)] hover:bg-[var(--color-card)]"
       aria-label="Go to dashboard"
@@ -526,7 +529,7 @@ function NavItemButton({ item, active, collapsed, onClick }) {
         collapsed ? "justify-center px-0 py-3" : "px-3.5 py-3",
         active
           ? "bg-[rgba(74,163,255,0.12)] text-[var(--color-primary)] shadow-[inset_0_0_0_1px_rgba(74,163,255,0.16)]"
-          : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]",
+          : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
       )}
       title={collapsed ? item.label : undefined}
     >
@@ -539,7 +542,7 @@ function NavItemButton({ item, active, collapsed, onClick }) {
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl transition",
           active
             ? "bg-[var(--color-primary)] text-white shadow-sm"
-            : "bg-transparent text-current group-hover:bg-[var(--color-card)]",
+            : "bg-transparent text-current group-hover:bg-[var(--color-card)]"
         )}
       >
         <Icon type={item.icon} />
@@ -593,7 +596,7 @@ export default function AppSidebar({
       <div
         className={cn(
           "fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm transition md:hidden",
-          mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+          mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         )}
         onClick={onClose}
       />
@@ -603,7 +606,7 @@ export default function AppSidebar({
           "fixed left-0 top-0 z-50 flex h-[100dvh] flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_24px_80px_rgba(15,23,42,0.18)] transition-all duration-300",
           effectiveCollapsed ? "w-[92px]" : "w-[292px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
-          "md:translate-x-0",
+          "md:translate-x-0"
         )}
         onMouseEnter={() => {
           if (collapsed) setHoverOpen(true);
@@ -662,7 +665,7 @@ export default function AppSidebar({
               <div
                 className={cn(
                   "px-3 pb-2 text-[10px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]",
-                  effectiveCollapsed && "text-center",
+                  effectiveCollapsed && "text-center"
                 )}
               >
                 {effectiveCollapsed ? "•" : group.section}
@@ -694,7 +697,7 @@ export default function AppSidebar({
             onClick={handleLogout}
             className={cn(
               "group flex w-full items-center gap-3 rounded-[24px] border border-transparent bg-[var(--color-surface-2)] text-[var(--color-danger)] transition hover:-translate-y-0.5 hover:border-red-500/20 hover:bg-red-500/10",
-              effectiveCollapsed ? "justify-center px-0 py-3.5" : "px-4 py-3.5",
+              effectiveCollapsed ? "justify-center px-0 py-3.5" : "px-4 py-3.5"
             )}
             title={effectiveCollapsed ? "Sign out" : undefined}
           >
