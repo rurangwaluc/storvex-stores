@@ -166,19 +166,28 @@ function KpiCard({ label, value, note, tone = "info" }) {
     info: "bg-[var(--color-primary)]",
     warning: "bg-amber-500",
     danger: "bg-red-500",
-    purple: "bg-purple-500",
+    neutral: "bg-[var(--color-text-muted)]",
   };
 
   return (
-    <article className={cn(CARD(), "relative overflow-hidden p-5 sm:p-6")}>
-      <div className={cn("absolute inset-x-0 top-0 h-1.5", dotStyles[tone] || dotStyles.info)} />
+    <article className={cn(CARD(), "overflow-hidden p-5 sm:p-6")}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+            {label}
+          </p>
 
-      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-        {label}
-      </p>
+          <div className="mt-4 text-3xl font-black tracking-[-0.055em] text-[var(--color-text)] sm:text-4xl">
+            {value}
+          </div>
+        </div>
 
-      <div className="mt-4 text-3xl font-black tracking-[-0.055em] text-[var(--color-text)] sm:text-4xl">
-        {value}
+        <span
+          className={cn(
+            "mt-1 h-3 w-3 shrink-0 rounded-full shadow-[0_0_0_6px_var(--color-primary-soft)]",
+            dotStyles[tone] || dotStyles.info,
+          )}
+        />
       </div>
 
       <p className="mt-2 text-sm font-semibold leading-6 text-[var(--color-text-muted)]">
@@ -210,7 +219,7 @@ function MiniBarChart({ monthlyRevenue = 0 }) {
                   "w-full rounded-t-2xl transition-all",
                   index === todayIndex
                     ? "bg-[var(--color-primary)]"
-                    : "bg-[var(--color-surface-2)]",
+                    : "bg-[var(--color-card)]",
                 )}
                 style={{ height: `${value}%` }}
               />
@@ -330,7 +339,7 @@ function QuickAction({ label, to, emoji, primary = false }) {
       className={cn(
         "flex min-h-[92px] flex-col justify-between rounded-[26px] border p-4 transition hover:-translate-y-0.5",
         primary
-          ? "border-transparent bg-[var(--color-primary)] text-white shadow-[var(--shadow-card)]"
+          ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-card)]"
           : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:border-[var(--color-primary)]",
       )}
     >
@@ -500,7 +509,7 @@ export default function Dashboard() {
         label: "Active repairs",
         value: String(dashboard?.activeRepairs ?? 0),
         note: "Items currently in service.",
-        tone: "purple",
+        tone: "neutral",
       },
     ],
     [dashboard],
@@ -512,10 +521,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <section className={cn(CARD(), "relative overflow-hidden p-5 sm:p-6 lg:p-7")}>
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[rgba(74,163,255,0.14)] blur-3xl" />
-
-        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+      <section className={cn(CARD(), "p-5 sm:p-6 lg:p-7")}>
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
             <div className="inline-flex max-w-full items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
               <span className="truncate">
@@ -527,7 +534,7 @@ export default function Dashboard() {
               {greeting()}, {firstName}.
             </h1>
 
-            <p className="mt-3 max-w-3xl text-base font-medium leading-8 text-[var(--color-text-muted)]">
+            <p className="mt-3 max-w-3xl text-base font-semibold leading-8 text-[var(--color-text-muted)]">
               Here is today’s business picture: sales, money, stock alerts, customer follow-up,
               subscription, and recent activity.
             </p>
@@ -550,7 +557,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="relative mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <DetailTile label="Store" value={tenantName} strong />
           <DetailTile label="Type" value={categoryLabel(tenant?.shopType)} />
           <DetailTile label="Logo" value={tenant?.logoUrl ? "Configured" : "Missing"} />
@@ -589,7 +596,7 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] text-2xl">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] text-2xl shadow-[var(--shadow-soft)]">
                 📈
               </div>
             </div>

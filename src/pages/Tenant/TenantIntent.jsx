@@ -95,7 +95,7 @@ function saveOnboardingState(next) {
 }
 
 function inputClass() {
-  return "h-12 w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
+  return "h-12 w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)] disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function surfaceCard() {
@@ -106,7 +106,7 @@ function FieldLabel({ children, required = false }) {
   return (
     <label className="mb-1.5 block text-sm font-black text-[var(--color-text)]">
       {children}
-      {required ? <span className="text-red-500"> *</span> : null}
+      {required ? <span className="text-[var(--color-danger)]"> *</span> : null}
     </label>
   );
 }
@@ -176,11 +176,9 @@ function ProgressStep({ number, label, active = false, done = false }) {
       <div
         className={cx(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black",
-          done
-            ? "bg-emerald-600 text-white"
-            : active
-              ? "bg-[var(--color-primary)] text-white"
-              : "bg-[var(--color-card)] text-[var(--color-text-muted)]",
+          done || active
+            ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+            : "bg-[var(--color-card)] text-[var(--color-text-muted)]",
         )}
       >
         {done ? "✓" : number}
@@ -216,7 +214,7 @@ function StoreCategorySelect({ value, onChange }) {
           "border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3",
           "text-left shadow-[var(--shadow-soft)] outline-none transition",
           "hover:border-[var(--color-primary)] focus:border-[var(--color-primary)]",
-          "focus:ring-4 focus:ring-[rgba(74,163,255,0.12)]",
+          "focus:ring-4 focus:ring-[var(--color-primary-ring)]",
         )}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -248,7 +246,7 @@ function StoreCategorySelect({ value, onChange }) {
           className={cx(
             "absolute left-0 right-0 top-[calc(100%+10px)] z-30 overflow-hidden rounded-[24px]",
             "border border-[var(--color-border)] bg-[var(--color-card)] p-2",
-            "shadow-[0_24px_80px_rgba(15,23,42,0.18)]",
+            "shadow-[var(--shadow-card)]",
           )}
         >
           {SHOP_TYPE_OPTIONS.map((option) => {
@@ -265,14 +263,14 @@ function StoreCategorySelect({ value, onChange }) {
                 className={cx(
                   "flex w-full items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left transition",
                   active
-                    ? "bg-[var(--color-primary)] text-white"
+                    ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
                     : "text-[var(--color-text)] hover:bg-[var(--color-surface-2)]",
                 )}
               >
                 <span className="text-sm font-black">{option.label}</span>
 
                 {active ? (
-                  <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white">
+                  <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--color-primary-contrast)]">
                     Selected
                   </span>
                 ) : null}
@@ -421,11 +419,8 @@ export default function TenantIntent() {
 
   return (
     <PublicLayout>
-      <section className="relative overflow-hidden px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        <div className="pointer-events-none absolute left-[-12rem] top-[-10rem] h-[28rem] w-[28rem] rounded-full bg-[rgba(74,163,255,0.16)] blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-14rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[rgba(16,185,129,0.12)] blur-3xl" />
-
-        <div className="relative mx-auto max-w-6xl space-y-6">
+      <section className="px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="mx-auto max-w-6xl space-y-6">
           <section className={cx(surfaceCard(), "p-5 sm:p-6 lg:p-7")}>
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
@@ -437,13 +432,13 @@ export default function TenantIntent() {
                   Create the owner account.
                 </h1>
 
-                <p className="mt-4 max-w-2xl text-base font-medium leading-8 text-[var(--color-text-muted)]">
+                <p className="mt-4 max-w-2xl text-base font-semibold leading-8 text-[var(--color-text-muted)]">
                   Start with the real store identity and owner contact. This becomes the foundation
                   for verification, activation, password creation, and the first branch.
                 </p>
               </div>
 
-              <div className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-[22px] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-black text-[var(--color-text)]">
+              <div className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-black text-[var(--color-text)]">
                 No payment on this step
               </div>
             </div>
@@ -503,7 +498,7 @@ export default function TenantIntent() {
                       />
                     </div>
 
-                   <div>
+                    <div>
                       <FieldLabel required>Store category</FieldLabel>
 
                       <StoreCategorySelect

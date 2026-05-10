@@ -69,7 +69,7 @@ function saveOnboardingState(next) {
 }
 
 function inputClass() {
-  return "h-14 w-full rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-center text-lg font-black tracking-[0.35em] text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
+  return "h-14 w-full rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-center text-lg font-black tracking-[0.35em] text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)] disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function buttonBase() {
@@ -89,8 +89,8 @@ function StatusPill({ verified }) {
       className={cx(
         "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.13em]",
         verified
-          ? "bg-emerald-500/10 text-emerald-600"
-          : "bg-amber-500/10 text-amber-600",
+          ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]",
       )}
     >
       {verified ? "Verified" : "Pending"}
@@ -111,11 +111,9 @@ function ProgressStep({ number, label, active = false, done = false }) {
       <div
         className={cx(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black",
-          done
-            ? "bg-emerald-600 text-white"
-            : active
-              ? "bg-[var(--color-primary)] text-white"
-              : "bg-[var(--color-card)] text-[var(--color-text-muted)]",
+          done || active
+            ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+            : "bg-[var(--color-card)] text-[var(--color-text-muted)]",
         )}
       >
         {done ? "✓" : number}
@@ -414,11 +412,8 @@ export default function VerifyOtp() {
 
   return (
     <PublicLayout>
-      <section className="relative overflow-hidden px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        <div className="pointer-events-none absolute left-[-12rem] top-[-10rem] h-[28rem] w-[28rem] rounded-full bg-[rgba(74,163,255,0.16)] blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-14rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[rgba(16,185,129,0.12)] blur-3xl" />
-
-        <div className="relative mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(620px,1.1fr)] xl:gap-8">
+      <section className="px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(620px,1.1fr)] xl:gap-8">
           <aside className="space-y-5 lg:sticky lg:top-28 lg:self-start">
             <div className="rounded-[36px] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-[var(--shadow-card)] sm:p-8">
               <div className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
@@ -429,7 +424,7 @@ export default function VerifyOtp() {
                 Verify owner contact.
               </h1>
 
-              <p className="mt-5 text-base font-medium leading-8 text-[var(--color-text-muted)]">
+              <p className="mt-5 text-base font-semibold leading-8 text-[var(--color-text-muted)]">
                 Confirm the email and phone before choosing trial or paid activation.
                 This protects the owner account and keeps the store setup legitimate.
               </p>
@@ -486,9 +481,9 @@ export default function VerifyOtp() {
 
                 <div
                   className={cx(
-                    "rounded-[22px] px-4 py-3 text-sm font-black",
+                    "rounded-[22px] border border-[var(--color-border)] px-4 py-3 text-sm font-black",
                     canContinue
-                      ? "bg-emerald-500/10 text-emerald-600"
+                      ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                       : "bg-[var(--color-surface-2)] text-[var(--color-text)]",
                   )}
                 >

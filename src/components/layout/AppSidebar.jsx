@@ -1,9 +1,11 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { clearActiveBranchId } from "../../services/apiClient";
 
-const LOGO_SRC = "/logo.webp";
+const LOGO_LIGHT_MODE_SRC = "/storvex_white.webp";
+const LOGO_DARK_MODE_SRC = "/storvex_dark.webp";
+const LOGO_ICON_SRC = "/storvex_icon.webp";
 
 function cn(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -11,6 +13,43 @@ function cn(...xs) {
 
 function normalizeRole(role) {
   return String(role || "").trim().toUpperCase();
+}
+
+function getThemeLogoSrc() {
+  if (typeof document === "undefined") return LOGO_LIGHT_MODE_SRC;
+
+  const theme = document.documentElement.getAttribute("data-theme");
+  return theme === "dark" ? LOGO_DARK_MODE_SRC : LOGO_LIGHT_MODE_SRC;
+}
+
+function useThemeLogoSrc() {
+  const [logoSrc, setLogoSrc] = useState(() => getThemeLogoSrc());
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    function syncLogo() {
+      setLogoSrc(getThemeLogoSrc());
+    }
+
+    syncLogo();
+
+    const observer = new MutationObserver(syncLogo);
+
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    window.addEventListener("storage", syncLogo);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("storage", syncLogo);
+    };
+  }, []);
+
+  return logoSrc;
 }
 
 function getDecodedRoles(token) {
@@ -66,7 +105,27 @@ function Icon({ type }) {
     case "inventory":
       return (
         <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
-          <path d="M21 8l-9-5-9 5 9 5 9-5zm-18 3v8l9 5 9-5v-8" />
+          <path d="M21 8.5 12 3 3 8.5l9 5.5 9-5.5Z" strokeLinejoin="round" />
+          <path d="M3 8.5v7L12 21l9-5.5v-7" strokeLinejoin="round" />
+          <path d="M12 14v7" />
+        </svg>
+      );
+
+    case "reorder":
+      return (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
+          <path d="M7 7h11l-3-3" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M17 17H6l3 3" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M8 11h8M8 14h5" strokeLinecap="round" />
+        </svg>
+      );
+
+    case "stock-history":
+      return (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
+          <path d="M4 12a8 8 0 1 0 2.35-5.65L4 8.7" strokeLinecap="round" />
+          <path d="M4 4v4.7h4.7" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M12 8v4l3 2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
 
@@ -243,13 +302,13 @@ const NAV_ITEMS = [
       {
         to: "/app/inventory/reorder",
         label: "Reorder list",
-        icon: "inventory",
+        icon: "reorder",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
       },
       {
         to: "/app/inventory/stock-history",
         label: "Stock history",
-        icon: "inventory",
+        icon: "stock-history",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
       },
       {
@@ -429,19 +488,19 @@ function clearAuthStorage() {
   } catch {}
 }
 
-function LogoBlock({ collapsed, onClose }) {
+function LogoBlock({ collapsed, onClose, logoSrc }) {
   if (collapsed) {
     return (
       <Link
         to="/app"
         onClick={onClose}
-        className="group mx-auto flex h-12 w-12 items-center justify-center overflow-hidden rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_44px_rgba(15,23,42,0.16)]"
+        className="group mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-[26px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:border-[var(--color-primary)]"
         aria-label="Go to dashboard"
       >
         <img
-          src={LOGO_SRC}
+          src={LOGO_ICON_SRC}
           alt="Storvex"
-          className="h-9 w-9 object-contain transition duration-300 group-hover:scale-105"
+          className="h-12 w-12 object-contain transition duration-300 group-hover:scale-105"
           draggable="false"
         />
       </Link>
@@ -452,14 +511,14 @@ function LogoBlock({ collapsed, onClose }) {
     <Link
       to="/app"
       onClick={onClose}
-      className="group flex min-w-0 items-center rounded-[26px] border border-transparent p-1.5 transition hover:border-[var(--color-border)] hover:bg-[var(--color-card)]"
+      className="group flex min-w-0 items-center rounded-[30px] border border-transparent p-1.5 transition hover:border-[var(--color-border)] hover:bg-[var(--color-card)]"
       aria-label="Go to dashboard"
     >
-      <span className="flex h-[52px] w-[164px] shrink-0 items-center justify-start overflow-hidden rounded-[22px] px-2">
+      <span className="flex h-[74px] w-[232px] shrink-0 items-center justify-start overflow-hidden rounded-[26px] px-2">
         <img
-          src={LOGO_SRC}
+          src={logoSrc}
           alt="Storvex"
-          className="h-11 max-w-full object-contain transition duration-300 group-hover:scale-[1.02]"
+          className="h-16 max-w-[214px] object-contain transition duration-300 group-hover:scale-[1.02]"
           draggable="false"
         />
       </span>
@@ -474,8 +533,8 @@ function WorkspaceCard({ collapsed, primaryRole }) {
   if (collapsed) {
     return (
       <div className="px-3 pb-3">
-        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-[20px] border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 shadow-[var(--shadow-soft)]">
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,0.12)]" />
+        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-[20px] border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] shadow-[var(--shadow-soft)]">
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-primary)]" />
         </div>
       </div>
     );
@@ -484,9 +543,7 @@ function WorkspaceCard({ collapsed, primaryRole }) {
   return (
     <div className="px-3 pb-4">
       <div className="relative overflow-hidden rounded-[26px] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-soft)]">
-        <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-[rgba(74,163,255,0.12)] blur-2xl" />
-
-        <div className="relative flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
               Workspace
@@ -501,12 +558,12 @@ function WorkspaceCard({ collapsed, primaryRole }) {
             </div>
           </div>
 
-          <div className="shrink-0 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-600">
+          <div className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--color-text)]">
             Active
           </div>
         </div>
 
-        <div className="relative mt-3 flex items-center justify-between gap-3 rounded-[18px] bg-[var(--color-surface-2)] px-3 py-2">
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-[18px] bg-[var(--color-surface-2)] px-3 py-2">
           <span className="text-[11px] font-bold text-[var(--color-text-muted)]">
             Signed in as
           </span>
@@ -515,6 +572,22 @@ function WorkspaceCard({ collapsed, primaryRole }) {
           </span>
         </div>
       </div>
+    </div>
+  );
+}
+
+function GroupLabel({ label, collapsed }) {
+  if (collapsed) {
+    return (
+      <div className="mb-3 px-3" title={label}>
+        <div className="mx-auto h-px w-10 rounded-full bg-[var(--color-border)]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 pb-2 text-[10px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+      {label}
     </div>
   );
 }
@@ -528,8 +601,8 @@ function NavItemButton({ item, active, collapsed, onClick }) {
         "group relative flex w-full items-center gap-3 rounded-[22px] text-left transition duration-200",
         collapsed ? "justify-center px-0 py-3" : "px-3.5 py-3",
         active
-          ? "bg-[rgba(74,163,255,0.12)] text-[var(--color-primary)] shadow-[inset_0_0_0_1px_rgba(74,163,255,0.16)]"
-          : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
+          ? "border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] shadow-[var(--shadow-soft)]"
+          : "border border-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
       )}
       title={collapsed ? item.label : undefined}
     >
@@ -541,7 +614,7 @@ function NavItemButton({ item, active, collapsed, onClick }) {
         className={cn(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl transition",
           active
-            ? "bg-[var(--color-primary)] text-white shadow-sm"
+            ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-sm"
             : "bg-transparent text-current group-hover:bg-[var(--color-card)]"
         )}
       >
@@ -566,6 +639,7 @@ export default function AppSidebar({
 }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const logoSrc = useThemeLogoSrc();
   const [hoverOpen, setHoverOpen] = useState(false);
 
   const token =
@@ -595,7 +669,7 @@ export default function AppSidebar({
     <>
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm transition md:hidden",
+          "fixed inset-0 z-40 bg-black/55 backdrop-blur-sm transition md:hidden",
           mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         )}
         onClick={onClose}
@@ -603,7 +677,7 @@ export default function AppSidebar({
 
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-[100dvh] flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_24px_80px_rgba(15,23,42,0.18)] transition-all duration-300",
+          "fixed left-0 top-0 z-50 flex h-[100dvh] flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] transition-all duration-300",
           effectiveCollapsed ? "w-[92px]" : "w-[292px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
           "md:translate-x-0"
@@ -615,20 +689,15 @@ export default function AppSidebar({
           if (collapsed) setHoverOpen(false);
         }}
       >
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -left-24 top-[-120px] h-[260px] w-[260px] rounded-full bg-[rgba(74,163,255,0.08)] blur-3xl" />
-          <div className="absolute bottom-[-160px] right-[-160px] h-[300px] w-[300px] rounded-full bg-[rgba(34,197,94,0.06)] blur-3xl" />
-        </div>
-
-        <div className="relative flex min-h-[84px] items-center justify-between gap-3 px-4 py-4">
-          <LogoBlock collapsed={effectiveCollapsed} onClose={onClose} />
+        <div className="relative flex min-h-[108px] items-center justify-between gap-3 px-4 py-4">
+          <LogoBlock collapsed={effectiveCollapsed} onClose={onClose} logoSrc={logoSrc} />
 
           {!effectiveCollapsed ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={onToggleCollapse}
-                className="hidden h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:opacity-95 md:inline-flex"
+                className="hidden h-10 w-10 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] md:inline-flex"
                 aria-label="Collapse sidebar"
               >
                 <Icon type="collapse-left" />
@@ -637,7 +706,7 @@ export default function AppSidebar({
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:opacity-95 md:hidden"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] md:hidden"
                 aria-label="Close sidebar"
               >
                 <Icon type="close" />
@@ -647,7 +716,7 @@ export default function AppSidebar({
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="absolute -right-4 top-7 hidden h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:opacity-95 md:inline-flex"
+              className="absolute -right-4 top-10 hidden h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] md:inline-flex"
               aria-label="Expand sidebar"
             >
               <Icon type="collapse-right" />
@@ -662,14 +731,7 @@ export default function AppSidebar({
         <nav className="relative min-h-0 flex-1 overflow-y-auto px-3 pb-3 [scrollbar-width:thin]">
           {filteredNav.map((group) => (
             <div key={group.section} className="mb-4">
-              <div
-                className={cn(
-                  "px-3 pb-2 text-[10px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]",
-                  effectiveCollapsed && "text-center"
-                )}
-              >
-                {effectiveCollapsed ? "•" : group.section}
-              </div>
+              <GroupLabel label={group.section} collapsed={effectiveCollapsed} />
 
               <ul className="space-y-1.5">
                 {group.items.map((item) => {
@@ -696,7 +758,7 @@ export default function AppSidebar({
             type="button"
             onClick={handleLogout}
             className={cn(
-              "group flex w-full items-center gap-3 rounded-[24px] border border-transparent bg-[var(--color-surface-2)] text-[var(--color-danger)] transition hover:-translate-y-0.5 hover:border-red-500/20 hover:bg-red-500/10",
+              "group flex w-full items-center gap-3 rounded-[24px] border border-transparent bg-[var(--color-surface-2)] text-[var(--color-danger)] transition hover:-translate-y-0.5 hover:border-red-500/30 hover:bg-red-500/10",
               effectiveCollapsed ? "justify-center px-0 py-3.5" : "px-4 py-3.5"
             )}
             title={effectiveCollapsed ? "Sign out" : undefined}

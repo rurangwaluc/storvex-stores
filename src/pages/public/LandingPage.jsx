@@ -135,11 +135,11 @@ function ProofCard({ value, title, text }) {
   return (
     <SurfaceCard className="p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4">
-       <div className="flex h-12 items-center justify-center rounded-2xl 
-  bg-[var(--color-primary-soft)] text-sm font-black text-[var(--color-primary)] px-4">
+        <div className="flex h-12 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] px-4 text-sm font-black text-[var(--color-primary)]">
           {value}
         </div>
-        <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+
+        <div className="h-2.5 w-2.5 rounded-full bg-[var(--color-primary)]" />
       </div>
 
       <h3 className="mt-5 text-base font-black tracking-[-0.02em] text-[var(--color-text)]">
@@ -155,11 +155,12 @@ function ProofCard({ value, title, text }) {
 
 function ModuleCard({ title, text, stat }) {
   return (
-    <SurfaceCard className="group overflow-hidden p-5 transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_80px_rgba(15,23,42,0.14)]">
+    <SurfaceCard className="group overflow-hidden p-5 transition duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-card)]">
       <div className="flex items-center justify-between gap-4">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] text-sm font-black text-[var(--color-primary)]">
           {stat}
         </div>
+
         <span className="rounded-full bg-[var(--color-surface-2)] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
           Store control
         </span>
@@ -180,7 +181,7 @@ function JourneyStep({ step, item }) {
   return (
     <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-soft)]">
       <div className="flex gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-xs font-black text-white shadow-[var(--shadow-soft)]">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-xs font-black text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)]">
           {step}
         </div>
 
@@ -199,11 +200,8 @@ function JourneyStep({ step, item }) {
 
 function StoreControlPreview() {
   return (
-    <SurfaceCard className="relative overflow-hidden p-4 sm:p-5 lg:p-6">
-      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[rgba(74,163,255,0.18)] blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-28 -left-24 h-72 w-72 rounded-full bg-[rgba(16,185,129,0.12)] blur-3xl" />
-
-      <div className="relative rounded-[30px] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 sm:p-5">
+    <SurfaceCard className="p-4 sm:p-5 lg:p-6">
+      <div className="rounded-[30px] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 sm:p-5">
         <div className="flex flex-col gap-4 border-b border-[var(--color-border)] pb-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
@@ -217,8 +215,8 @@ function StoreControlPreview() {
             </div>
           </div>
 
-          <div className="flex w-fit items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-emerald-600">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          <div className="flex w-fit items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[var(--color-text)]">
+            <span className="h-2 w-2 rounded-full bg-[var(--color-primary)]" />
             Active branch
           </div>
         </div>
@@ -258,7 +256,7 @@ function StoreControlPreview() {
                 </div>
               </div>
 
-              <span className="rounded-full bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-600">
+              <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--color-text)]">
                 Open
               </span>
             </div>
@@ -322,16 +320,16 @@ function StoreControlPreview() {
           </div>
         </div>
 
-        <div className="mt-5 rounded-[26px] bg-[var(--color-primary)] p-4 text-white shadow-[var(--shadow-soft)]">
+        <div className="mt-5 rounded-[26px] bg-[var(--color-primary)] p-4 text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-sm font-black">Owner decision point</div>
-              <div className="mt-1 text-xs font-semibold leading-5 text-white/75">
+              <div className="mt-1 text-xs font-semibold leading-5 opacity-75">
                 Can the owner trust today’s sales, cash, and stock movement?
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white/15 px-4 py-2 text-sm font-black">
+            <div className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-black">
               Yes — every action has evidence
             </div>
           </div>
@@ -344,11 +342,8 @@ function StoreControlPreview() {
 export default function LandingPage() {
   return (
     <PublicLayout>
-      <section className="relative overflow-hidden px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
-        <div className="pointer-events-none absolute left-[-12rem] top-[-12rem] h-[34rem] w-[34rem] rounded-full bg-[rgba(74,163,255,0.16)] blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-16rem] right-[-12rem] h-[36rem] w-[36rem] rounded-full bg-[rgba(16,185,129,0.12)] blur-3xl" />
-
-        <div className="relative mx-auto max-w-7xl">
+      <section className="px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+        <div className="mx-auto max-w-7xl">
           <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
             <div className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-[var(--color-text-muted)] shadow-[var(--shadow-soft)]">
               Store control system for modern retail
@@ -358,7 +353,7 @@ export default function LandingPage() {
               Stop guessing what happened in your store.
             </h1>
 
-            <p className="mt-6 max-w-3xl text-base font-medium leading-8 text-[var(--color-text-muted)] sm:text-lg">
+            <p className="mt-6 max-w-3xl text-base font-semibold leading-8 text-[var(--color-text-muted)] sm:text-lg">
               Storvex gives store owners one serious workspace for sales, inventory,
               cash drawer control, customer balances, receipts, warranties, staff access,
               and branch accountability.
@@ -407,7 +402,7 @@ export default function LandingPage() {
             <h2 className="mt-3 text-3xl font-black tracking-[-0.055em] text-[var(--color-text)] sm:text-4xl lg:text-5xl">
               Built for the moments where stores lose money.
             </h2>
-            <p className="mt-4 text-base font-medium leading-8 text-[var(--color-text-muted)]">
+            <p className="mt-4 text-base font-semibold leading-8 text-[var(--color-text-muted)]">
               Storvex is not a decorative dashboard. It is built around the places
               where real stores leak money: unclear stock, weak cash control,
               unpaid customer balances, and staff actions without evidence.
@@ -429,7 +424,7 @@ export default function LandingPage() {
             <h2 className="mt-3 text-3xl font-black tracking-[-0.055em] text-[var(--color-text)] sm:text-4xl lg:text-5xl">
               The first owner experience must feel controlled.
             </h2>
-            <p className="mt-4 text-base font-medium leading-8 text-[var(--color-text-muted)]">
+            <p className="mt-4 text-base font-semibold leading-8 text-[var(--color-text-muted)]">
               Before the dashboard, the owner must understand the path: create the store,
               verify ownership, choose access, create a password, and enter a workspace
               where the first branch already exists.
@@ -456,22 +451,20 @@ export default function LandingPage() {
 
       <section id="trust" className="px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
         <div className="mx-auto max-w-7xl">
-          <SurfaceCard className="relative overflow-hidden p-6 sm:p-8 lg:p-10">
-            <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[rgba(74,163,255,0.14)] blur-3xl" />
-
-            <div className="relative mx-auto max-w-3xl text-center">
+          <SurfaceCard className="p-6 sm:p-8 lg:p-10">
+            <div className="mx-auto max-w-3xl text-center">
               <SectionEyebrow>Owner trust</SectionEyebrow>
               <h2 className="mt-3 text-3xl font-black tracking-[-0.055em] text-[var(--color-text)] sm:text-4xl lg:text-5xl">
                 Clear for owners. Strict for staff. Useful every day.
               </h2>
-              <p className="mt-4 text-base font-medium leading-8 text-[var(--color-text-muted)]">
+              <p className="mt-4 text-base font-semibold leading-8 text-[var(--color-text-muted)]">
                 The owner should not need technical words to understand the business.
                 Storvex uses plain language around sales, stock, money, customers,
                 branches, and staff access.
               </p>
             </div>
 
-            <div className="relative mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {trustPoints.map((item) => (
                 <div
                   key={item}
@@ -487,17 +480,15 @@ export default function LandingPage() {
 
       <section className="px-4 pb-14 pt-8 sm:px-6 lg:px-8 lg:pb-20">
         <div className="mx-auto max-w-7xl">
-          <div className="relative overflow-hidden rounded-[40px] bg-[var(--color-primary)] p-6 text-white shadow-[var(--shadow-card)] sm:p-8 lg:p-10">
-            <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/20 blur-3xl" />
-
-            <div className="relative flex flex-col items-center text-center">
-              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white/70">
+          <div className="overflow-hidden rounded-[40px] border border-[var(--color-border)] bg-[var(--color-primary)] p-6 text-[var(--color-primary-contrast)] shadow-[var(--shadow-card)] sm:p-8 lg:p-10">
+            <div className="flex flex-col items-center text-center">
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] opacity-70">
                 Ready to begin
               </p>
               <h2 className="mt-3 max-w-4xl text-3xl font-black tracking-[-0.055em] sm:text-4xl lg:text-5xl">
                 Create the owner account and open a branch-ready workspace.
               </h2>
-              <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 text-white/75 sm:text-base">
+              <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 opacity-75 sm:text-base">
                 Start with store identity, verify the owner, activate access,
                 and continue into a workspace built for real store control.
               </p>
@@ -505,14 +496,14 @@ export default function LandingPage() {
               <div className="mt-7 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
                 <Link
                   to="/signup"
-                  className="inline-flex h-12 items-center justify-center rounded-2xl bg-white px-6 text-sm font-black text-[var(--color-primary)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5"
+                  className="inline-flex h-12 items-center justify-center rounded-2xl bg-[var(--color-primary-contrast)] px-6 text-sm font-black text-[var(--color-primary)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5"
                 >
                   Get started
                 </Link>
 
                 <Link
                   to="/login"
-                  className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/25 bg-white/10 px-6 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
+                  className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/25 bg-white/10 px-6 text-sm font-black text-[var(--color-primary-contrast)] transition hover:-translate-y-0.5 hover:bg-white/15"
                 >
                   Sign in
                 </Link>

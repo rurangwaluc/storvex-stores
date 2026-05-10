@@ -192,9 +192,9 @@ function ProgressStep({ number, label, active = false, done = false }) {
         className={cx(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black",
           done
-            ? "bg-emerald-600 text-white"
+            ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
             : active
-              ? "bg-[var(--color-primary)] text-white"
+              ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
               : "bg-[var(--color-card)] text-[var(--color-text-muted)]",
         )}
       >
@@ -212,14 +212,16 @@ function PasswordRule({ ok, children }) {
       className={cx(
         "flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black",
         ok
-          ? "bg-emerald-500/10 text-emerald-600"
+          ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
           : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]",
       )}
     >
       <span
         className={cx(
           "flex h-5 w-5 items-center justify-center rounded-full text-[10px]",
-          ok ? "bg-emerald-600 text-white" : "bg-[var(--color-card)]",
+          ok
+            ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+            : "bg-[var(--color-card)]",
         )}
       >
         {ok ? "✓" : "•"}
@@ -414,11 +416,8 @@ export default function ConfirmSignup() {
 
   return (
     <PublicLayout>
-      <section className="relative overflow-hidden px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        <div className="pointer-events-none absolute left-[-12rem] top-[-10rem] h-[28rem] w-[28rem] rounded-full bg-[rgba(74,163,255,0.16)] blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-14rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[rgba(16,185,129,0.12)] blur-3xl" />
-
-        <div className="relative mx-auto max-w-6xl space-y-6">
+      <section className="px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="mx-auto max-w-6xl space-y-6">
           <section className={cx(surfaceCard(), "p-5 sm:p-6 lg:p-7")}>
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
@@ -430,13 +429,13 @@ export default function ConfirmSignup() {
                   Create your owner password.
                 </h1>
 
-                <p className="mt-4 max-w-2xl text-base font-medium leading-8 text-[var(--color-text-muted)]">
+                <p className="mt-4 max-w-2xl text-base font-semibold leading-8 text-[var(--color-text-muted)]">
                   This is the final security step before Storvex creates the store,
                   owner account, subscription, and first branch.
                 </p>
               </div>
 
-              <div className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-[22px] bg-emerald-500/10 px-4 py-3 text-sm font-black text-emerald-600">
+              <div className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-black text-[var(--color-text)]">
                 Ready to open workspace
               </div>
             </div>

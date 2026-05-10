@@ -15,10 +15,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         toastOptions={{
           duration: 3500,
           style: {
-            borderRadius: "14px",
-            border: "1px solid rgba(148,163,184,0.18)",
-            background: "rgb(24,27,31)",
-            color: "#fff",
+            borderRadius: "16px",
+            border: "1px solid var(--color-border)",
+            background: "var(--color-card)",
+            color: "var(--color-text)",
+            boxShadow: "var(--shadow-card)",
+            fontFamily:
+              "Quicksand, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            fontWeight: 700,
           },
         }}
       />

@@ -1,3 +1,4 @@
+// frontend-stores/src/App.jsx
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import AuditLogs from "./pages/audit/AuditLogs";
@@ -59,6 +60,7 @@ import DeliveryNoteEdit from "./pages/deliveryNotes/DeliveryNoteEdit";
 
 import SettingsLayout from "./pages/settings/SettingsLayout";
 import SettingsGeneral from "./pages/settings/SettingsGeneral";
+import SettingsBranches from "./pages/settings/SettingsBranches";
 import SettingsRoles from "./pages/settings/SettingsRoles";
 import SettingsMembers from "./pages/settings/SettingsMembers";
 import SettingsSecurity from "./pages/settings/SettingsSecurity";
@@ -128,6 +130,7 @@ export default function App() {
 
               <Route path="settings" element={<SettingsLayout />}>
                 <Route index element={<SettingsGeneral />} />
+                <Route path="branches" element={<SettingsBranches />} />
                 <Route path="members" element={<SettingsMembers />} />
                 <Route path="roles" element={<SettingsRoles />} />
                 <Route path="security" element={<SettingsSecurity />} />

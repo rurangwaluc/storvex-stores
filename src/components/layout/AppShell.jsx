@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+
 import { useTheme } from "../../hooks/useTheme";
 import AppHeader from "./AppHeader";
 import AppSidebar from "./AppSidebar";
@@ -92,13 +93,13 @@ function pickWorkspaceLocation(workspace) {
   const branchLocation = uniqueLocationParts(
     activeBranch?.sector,
     activeBranch?.district,
-    activeBranch?.address,
+    activeBranch?.address
   ).join(" • ");
 
   const tenantLocation = uniqueLocationParts(
     tenant?.sector,
     tenant?.district,
-    tenant?.address,
+    tenant?.address
   ).join(" • ");
 
   return (
@@ -177,49 +178,46 @@ function clearWorkspaceStorage() {
   clearActiveBranchId();
 }
 
-function ShellFallbackGlow() {
-  return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute -right-24 top-[-120px] h-[280px] w-[280px] rounded-full bg-[rgba(74,163,255,0.08)] blur-3xl" />
-      <div className="absolute bottom-[-160px] left-[18%] h-[320px] w-[320px] rounded-full bg-[rgba(34,197,94,0.06)] blur-3xl" />
-    </div>
-  );
-}
-
 function pickPageTitle(pathname) {
   const path = String(pathname || "");
 
-  if (path === "/dashboard") return "Dashboard";
+  if (path === "/app") return "Dashboard";
 
-  if (path === "/dashboard/reports") return "Reports";
-  if (path === "/dashboard/reports/cash-flow") return "Cash flow report";
-  if (path === "/dashboard/reports/income-statement") return "Income statement";
-  if (path === "/dashboard/reports/trial-balance") return "Trial balance";
-  if (path === "/dashboard/reports/profit-table") return "Profit table";
+  if (path === "/app/reports") return "Reports";
+  if (path.startsWith("/app/reports/cash-flow")) return "Cash flow report";
+  if (path.startsWith("/app/reports/income-statement")) return "Income statement";
+  if (path.startsWith("/app/reports/trial-balance")) return "Trial balance";
+  if (path.startsWith("/app/reports/profit-table")) return "Profit table";
 
-  if (path.startsWith("/dashboard/inventory")) return "Inventory";
-  if (path.startsWith("/dashboard/pos/sales")) return "Sales";
-  if (path.startsWith("/dashboard/pos/credit")) return "Customer credit";
-  if (path.startsWith("/dashboard/pos/drawer")) return "Cash drawer";
-  if (path.startsWith("/dashboard/pos")) return "Point of sale";
+  if (path.startsWith("/app/whatsapp")) return "WhatsApp";
 
-  if (path.startsWith("/dashboard/documents/warranties")) return "Warranties";
-  if (path.startsWith("/dashboard/documents/receipts")) return "Receipts";
-  if (path.startsWith("/dashboard/documents/invoices")) return "Invoices";
-  if (path.startsWith("/dashboard/documents/proformas")) return "Proformas";
-  if (path.startsWith("/dashboard/documents/delivery-notes")) return "Delivery notes";
-  if (path.startsWith("/dashboard/documents")) return "Documents";
+  if (path.startsWith("/app/pos/drawer")) return "Cash drawer";
+  if (path.startsWith("/app/pos/credit")) return "Customer credit";
+  if (path.startsWith("/app/pos/sales")) return "Sales";
+  if (path.startsWith("/app/pos")) return "Point of sale";
 
-  if (path.startsWith("/dashboard/customers")) return "Customers";
-  if (path.startsWith("/dashboard/expenses")) return "Expenses";
-  if (path.startsWith("/dashboard/suppliers")) return "Suppliers";
-  if (path.startsWith("/dashboard/employees")) return "Employees";
-  if (path.startsWith("/dashboard/settings")) return "Settings";
-  if (path.startsWith("/dashboard/billing")) return "Billing";
-  if (path.startsWith("/dashboard/audit")) return "Audit logs";
-  if (path.startsWith("/dashboard/repairs")) return "Repairs";
-  if (path.startsWith("/dashboard/whatsapp")) return "WhatsApp";
-  if (path.startsWith("/dashboard/interstore")) return "Inter-store deals";
+  if (path.startsWith("/app/interstore")) return "Inter-store deals";
+
+  if (path.startsWith("/app/inventory/reorder")) return "Reorder list";
+  if (path.startsWith("/app/inventory/stock-history")) return "Stock history";
+  if (path.startsWith("/app/inventory")) return "Inventory";
+
+  if (path.startsWith("/app/suppliers")) return "Suppliers";
+  if (path.startsWith("/app/customers")) return "Customers";
+
+  if (path.startsWith("/app/documents/warranties")) return "Warranties";
+  if (path.startsWith("/app/documents/receipts")) return "Receipts";
+  if (path.startsWith("/app/documents/invoices")) return "Invoices";
+  if (path.startsWith("/app/documents/proformas")) return "Proformas";
+  if (path.startsWith("/app/documents/delivery-notes")) return "Delivery notes";
+  if (path.startsWith("/app/documents")) return "Document center";
+
+  if (path.startsWith("/app/repairs")) return "Repairs";
+  if (path.startsWith("/app/settings")) return "Settings";
+  if (path.startsWith("/app/billing")) return "Billing";
+  if (path.startsWith("/app/audit")) return "Audit logs";
+  if (path.startsWith("/app/employees")) return "Employees";
+  if (path.startsWith("/app/expenses")) return "Expenses";
 
   return "";
 }
@@ -236,7 +234,11 @@ export default function AppShell({ children }) {
   const [workspace, setWorkspace] = useState(cachedWorkspace);
 
   const workspaceName = useMemo(() => pickWorkspaceName(workspace), [workspace]);
-  const pageTitle = useMemo(() => pickPageTitle(location.pathname), [location.pathname]);
+
+  const pageTitle = useMemo(
+    () => pickPageTitle(location.pathname),
+    [location.pathname]
+  );
 
   const headerTitle = pageTitle || workspaceName || "Workspace";
 
@@ -256,7 +258,7 @@ export default function AppShell({ children }) {
             workspace: payload,
             branchId: pickBranchIdFromWorkspace(payload),
           },
-        }),
+        })
       );
 
       return payload;
@@ -347,8 +349,6 @@ export default function AppShell({ children }) {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
-      <ShellFallbackGlow />
-
       <AppSidebar
         collapsed={collapsed}
         mobileOpen={mobileOpen}
@@ -368,7 +368,7 @@ export default function AppShell({ children }) {
         />
 
         <main
-          className="px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5"
+          className="min-h-[calc(100vh-78px)] bg-[var(--color-bg)] px-4 pb-6 pt-4 text-[var(--color-text)] sm:px-6 sm:pb-8 sm:pt-5"
           style={{
             paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))",
           }}

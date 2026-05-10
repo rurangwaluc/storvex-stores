@@ -76,11 +76,11 @@ function softPanel() {
 }
 
 function inputClass() {
-  return "h-12 w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
+  return "h-12 w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)] disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function textareaClass() {
-  return "min-h-[110px] w-full rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
+  return "min-h-[110px] w-full rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)] disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function buttonBase() {
@@ -90,35 +90,35 @@ function buttonBase() {
 function secondaryButton() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-3)]"
   );
 }
 
 function primaryButton() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "border border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5 hover:opacity-95"
   );
 }
 
 function successButton() {
   return cx(
     buttonBase(),
-    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
 function warningButton() {
   return cx(
     buttonBase(),
-    "bg-amber-500 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-amber-500 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
 function dangerButton() {
   return cx(
     buttonBase(),
-    "bg-red-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-red-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
@@ -136,7 +136,7 @@ function StatusBadge({ tone = "neutral", children }) {
     <span
       className={cx(
         "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]",
-        classes,
+        classes
       )}
     >
       {children}
@@ -202,7 +202,7 @@ function SummaryCard({ label, value, note, tone = "neutral", loading = false }) 
 
   return (
     <article className={cx(pageCard(), "relative overflow-hidden p-5")}>
-      <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-[rgba(74,163,255,0.08)] blur-2xl" />
+      <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-[var(--color-surface-3)] opacity-45 blur-2xl" />
 
       <div className="relative">
         <div className="flex items-center justify-between gap-3">
@@ -252,14 +252,16 @@ function MiniStep({ number, title, active }) {
       className={cx(
         "flex items-center gap-2 rounded-full px-3 py-2 text-xs font-black transition",
         active
-          ? "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
-          : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]",
+          ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]"
       )}
     >
       <span
         className={cx(
           "flex h-5 w-5 items-center justify-center rounded-full text-[10px]",
-          active ? "bg-white/20 text-white" : "bg-[var(--color-card)] text-[var(--color-text)]",
+          active
+            ? "bg-[var(--color-primary-contrast)]/15 text-[var(--color-primary-contrast)]"
+            : "bg-[var(--color-card)] text-[var(--color-text)]"
         )}
       >
         {number}
@@ -283,14 +285,14 @@ function SaleModeButton({ active, tone, title, text, onClick }) {
         "rounded-[24px] p-4 text-left transition hover:-translate-y-0.5",
         active
           ? cx(activeClass, "shadow-[var(--shadow-soft)]")
-          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:shadow-[var(--shadow-soft)]",
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:shadow-[var(--shadow-soft)]"
       )}
     >
       <span className="block text-sm font-black">{title}</span>
       <span
         className={cx(
           "mt-2 block text-xs font-semibold leading-5",
-          active ? "text-white/85" : "text-[var(--color-text-muted)]",
+          active ? "text-white/85" : "text-[var(--color-text-muted)]"
         )}
       >
         {text}
@@ -318,8 +320,8 @@ function PaymentMethodCard({ option, active, onClick }) {
       className={cx(
         "rounded-[22px] p-4 text-left transition hover:-translate-y-0.5",
         active
-          ? "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
-          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:shadow-[var(--shadow-soft)]",
+          ? "border border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:shadow-[var(--shadow-soft)]"
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -328,7 +330,9 @@ function PaymentMethodCard({ option, active, onClick }) {
           <div
             className={cx(
               "mt-2 text-xs font-semibold leading-5",
-              active ? "text-white/80" : "text-[var(--color-text-muted)]",
+              active
+                ? "text-[var(--color-primary-contrast)] opacity-80"
+                : "text-[var(--color-text-muted)]"
             )}
           >
             {simpleDescription}
@@ -336,7 +340,7 @@ function PaymentMethodCard({ option, active, onClick }) {
         </div>
 
         {active ? (
-          <span className="rounded-full bg-white/15 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em]">
+          <span className="rounded-full border border-[var(--color-primary-contrast)]/20 bg-[var(--color-primary-contrast)]/10 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--color-primary-contrast)]">
             Chosen
           </span>
         ) : null}
@@ -353,7 +357,7 @@ function ProductRow({ product, onAdd }) {
     <article
       className={cx(
         "rounded-[24px] bg-[var(--color-surface-2)] p-4 transition",
-        disabled ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]",
+        disabled ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]"
       )}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -363,7 +367,8 @@ function ProductRow({ product, onAdd }) {
           </div>
 
           <div className="mt-1 truncate text-sm font-semibold text-[var(--color-text-muted)]">
-            {[product.brand, product.category, product.sku].filter(Boolean).join(" • ") || "No category"}
+            {[product.brand, product.category, product.sku].filter(Boolean).join(" • ") ||
+              "No category"}
           </div>
 
           <div className="mt-2 flex flex-wrap gap-2">
@@ -388,7 +393,7 @@ function ProductRow({ product, onAdd }) {
               "inline-flex h-10 items-center justify-center rounded-full px-4 text-xs font-black transition disabled:cursor-not-allowed",
               disabled
                 ? "bg-[var(--color-card)] text-[var(--color-text-muted)]"
-                : "bg-emerald-500/10 text-emerald-600 hover:-translate-y-0.5",
+                : "bg-emerald-500/10 text-emerald-600 hover:-translate-y-0.5"
             )}
           >
             {disabled ? "Unavailable" : "Add"}
@@ -407,8 +412,8 @@ function CustomerCard({ customer, active, onClick }) {
       className={cx(
         "rounded-[24px] p-4 text-left transition",
         active
-          ? "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)]"
-          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]",
+          ? "border border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]"
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -417,7 +422,9 @@ function CustomerCard({ customer, active, onClick }) {
           <div
             className={cx(
               "mt-1 text-xs font-semibold",
-              active ? "text-white/80" : "text-[var(--color-text-muted)]",
+              active
+                ? "text-[var(--color-primary-contrast)] opacity-80"
+                : "text-[var(--color-text-muted)]"
             )}
           >
             {customer.phone || "No phone saved"}
@@ -427,7 +434,9 @@ function CustomerCard({ customer, active, onClick }) {
             <div
               className={cx(
                 "mt-1 truncate text-xs font-semibold",
-                active ? "text-white/80" : "text-[var(--color-text-muted)]",
+                active
+                  ? "text-[var(--color-primary-contrast)] opacity-80"
+                  : "text-[var(--color-text-muted)]"
               )}
             >
               {customer.email}
@@ -436,7 +445,7 @@ function CustomerCard({ customer, active, onClick }) {
         </div>
 
         {active ? (
-          <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]">
+          <span className="rounded-full border border-[var(--color-primary-contrast)]/20 bg-[var(--color-primary-contrast)]/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--color-primary-contrast)]">
             Selected
           </span>
         ) : null}
@@ -455,7 +464,8 @@ function CartItemCard({ item, onDec, onInc, onRemove }) {
             Price: <span className="text-[var(--color-text)]">{formatMoney(item.price)}</span>
           </div>
           <div className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
-            Available: <span className="text-[var(--color-text)]">{formatNumber(item.stockQty)}</span>
+            Available:{" "}
+            <span className="text-[var(--color-text)]">{formatNumber(item.stockQty)}</span>
           </div>
         </div>
 
@@ -858,7 +868,7 @@ export default function PosSale() {
         return prev.map((item) =>
           item.productId === product.id
             ? { ...item, quantity: item.quantity + 1 }
-            : item,
+            : item
         );
       }
 
@@ -886,7 +896,7 @@ export default function PosSale() {
         }
 
         return { ...item, quantity: item.quantity + 1 };
-      }),
+      })
     );
   }
 
@@ -895,8 +905,8 @@ export default function PosSale() {
       prev.map((item) =>
         item.productId === productId
           ? { ...item, quantity: Math.max(1, item.quantity - 1) }
-          : item,
-      ),
+          : item
+      )
     );
   }
 
@@ -1064,7 +1074,7 @@ export default function PosSale() {
   return (
     <div className="space-y-5">
       <section className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
-        <div className="pointer-events-none absolute -right-24 -top-24 h-[260px] w-[260px] rounded-full bg-[rgba(74,163,255,0.10)] blur-3xl" />
+        <div className="pointer-events-none absolute -right-24 -top-24 h-[260px] w-[260px] rounded-full bg-[var(--color-surface-3)] opacity-40 blur-3xl" />
 
         <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
@@ -1269,7 +1279,7 @@ export default function PosSale() {
                 <AsyncButton
                   loading={drawerRefreshBusy}
                   onClick={() => loadDrawerStatus({ silent: false })}
-                  className={secondaryButton()}
+                  variant="secondary"
                 >
                   Check drawer
                 </AsyncButton>
@@ -1628,7 +1638,7 @@ export default function PosSale() {
                 disabled={!cart.length || hasCashDrawerRisk}
                 className={cx(
                   "mt-5 w-full",
-                  saleType === "CREDIT" ? warningButton() : primaryButton(),
+                  saleType === "CREDIT" ? warningButton() : primaryButton()
                 )}
               >
                 {saleType === "CREDIT" ? "Finish pay-later sale" : "Finish sale"}

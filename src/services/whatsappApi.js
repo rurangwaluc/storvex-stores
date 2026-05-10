@@ -17,6 +17,7 @@ import { apiFetch } from "./apiClient";
  * - GET    /whatsapp/inbox/conversations
  * - GET    /whatsapp/inbox/assignable-staff
  * - GET    /whatsapp/inbox/conversations/:id/messages
+ * - PATCH  /whatsapp/inbox/conversations/:id/read
  * - POST   /whatsapp/inbox/conversations/:id/reply
  * - PATCH  /whatsapp/inbox/conversations/:id/status
  * - PATCH  /whatsapp/inbox/conversations/:id/assign
@@ -207,6 +208,7 @@ function sanitizeConversation(value) {
     updatedAt: item.updatedAt || null,
     createdAt: item.createdAt || null,
     messageCount: toNumber(item.messageCount, 0),
+    unreadCount: toNumber(item.unreadCount, 0),
 
     customer: sanitizeCustomer(item.customer, item.phone),
     assignedTo: sanitizeAssignedUser(item.assignedTo),
@@ -479,6 +481,20 @@ function sanitizeBroadcastSummary(value) {
   };
 }
 
+function sanitizeReadState(value, conversationId = "") {
+  const item = ensureObject(value);
+
+  return {
+    id: trimString(item.id),
+    tenantId: trimString(item.tenantId),
+    conversationId: trimString(item.conversationId || conversationId),
+    userId: trimString(item.userId),
+    lastReadAt: item.lastReadAt || null,
+    lastReadMessageId: trimString(item.lastReadMessageId),
+    updatedAt: item.updatedAt || null,
+  };
+}
+
 function normalizeTargeting(payload = {}) {
   const source = ensureObject(payload);
 
@@ -593,6 +609,30 @@ export async function listWhatsAppConversationMessages(conversationId) {
     conversationId: trimString(data?.conversationId || id),
     conversation: data?.conversation ? sanitizeConversation(data.conversation) : null,
     messages: ensureArray(data?.messages).map(sanitizeMessage),
+  };
+}
+
+export async function markWhatsAppConversationRead(conversationId) {
+  const id = trimString(conversationId);
+
+  if (!id) {
+    return {
+      ok: false,
+      conversationId: "",
+      unreadCount: 0,
+      readState: null,
+    };
+  }
+
+  const data = await apiFetch(`/whatsapp/inbox/conversations/${id}/read`, {
+    method: "PATCH",
+  });
+
+  return {
+    ok: toBoolean(data?.ok),
+    conversationId: trimString(data?.conversationId || id),
+    unreadCount: toNumber(data?.unreadCount, 0),
+    readState: data?.readState ? sanitizeReadState(data.readState, id) : null,
   };
 }
 
@@ -973,6 +1013,7 @@ export const listAssignableStaff = listAssignableWhatsAppStaff;
 export const listWhatsAppInboxConversations = listWhatsAppConversations;
 export const getWhatsAppInboxMessages = listWhatsAppConversationMessages;
 export const replyToConversation = replyToWhatsAppConversation;
+export const markConversationRead = markWhatsAppConversationRead;
 
 export {
   sanitizeAccount,

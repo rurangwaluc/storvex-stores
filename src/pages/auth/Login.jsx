@@ -135,7 +135,7 @@ function DetailTile({ label, value }) {
 }
 
 function inputClass() {
-  return "h-12 w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(74,163,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60";
+  return "h-12 w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-bold text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)] disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 export default function Login() {
@@ -182,11 +182,8 @@ export default function Login() {
 
   return (
     <PublicLayout>
-      <section className="relative overflow-hidden px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        <div className="pointer-events-none absolute left-[-12rem] top-[-10rem] h-[28rem] w-[28rem] rounded-full bg-[rgba(74,163,255,0.16)] blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-14rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[rgba(16,185,129,0.12)] blur-3xl" />
-
-        <div className="relative mx-auto max-w-5xl space-y-6">
+      <section className="px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="mx-auto max-w-5xl space-y-6">
           <section className={cx(surfaceCard(), "p-5 sm:p-6 lg:p-7")}>
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
@@ -198,13 +195,13 @@ export default function Login() {
                   Log in to your store.
                 </h1>
 
-                <p className="mt-4 max-w-2xl text-base font-medium leading-8 text-[var(--color-text-muted)]">
+                <p className="mt-4 max-w-2xl text-base font-semibold leading-8 text-[var(--color-text-muted)]">
                   Use your owner or staff account to continue into the workspace. After login,
                   Storvex opens the correct store and active branch.
                 </p>
               </div>
 
-              <div className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-[22px] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-black text-[var(--color-text)]">
+              <div className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-black text-[var(--color-text)]">
                 Secure workspace access
               </div>
             </div>
