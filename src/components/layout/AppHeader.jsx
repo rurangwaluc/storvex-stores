@@ -1,3 +1,4 @@
+// frontend-stores/src/components/layout/AppHeader.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
@@ -203,11 +204,19 @@ function safeReadJson(key) {
 
 function pickFirstNonEmpty(...values) {
   for (const value of values) {
-    const v = String(value || "").trim();
-    if (v) return v;
+    const clean = String(value || "").trim();
+    if (clean) return clean;
   }
 
   return "";
+}
+
+function normalizeCompare(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[#•|,]/g, " ")
+    .replace(/\s+/g, " ");
 }
 
 function cleanLocationPart(value) {
@@ -222,7 +231,7 @@ function uniqueLocationParts(...values) {
     const clean = cleanLocationPart(value);
     if (!clean) continue;
 
-    const key = clean.toLowerCase();
+    const key = normalizeCompare(clean);
     if (seen.has(key)) continue;
 
     seen.add(key);
@@ -242,16 +251,39 @@ function formatBranchLocation(branch, fallbackLocation = "") {
   return cleanLocationPart(fallbackLocation);
 }
 
+function isRepeatedBranchText(value, branch) {
+  const text = normalizeCompare(value);
+  const branchName = normalizeCompare(branch?.name);
+  const branchCode = normalizeCompare(branch?.code);
+
+  if (!text) return true;
+  if (branchName && text === branchName) return true;
+  if (branchCode && text === branchCode) return true;
+  if (branchName && text.includes(branchName)) return true;
+
+  return false;
+}
+
 function formatBranchDisplay(branch, fallbackLocation = "") {
   const branchName = cleanLocationPart(branch?.name) || "Active branch";
   const branchCode = cleanLocationPart(branch?.code);
   const branchLocation = formatBranchLocation(branch, fallbackLocation);
 
-  const metaLine = [branchCode, branchLocation].filter(Boolean).join(" • ");
+  const metaParts = [];
+
+  if (branchCode && !isRepeatedBranchText(branchCode, { name: branchName })) {
+    metaParts.push(branchCode);
+  } else if (branchCode && normalizeCompare(branchCode) !== normalizeCompare(branchName)) {
+    metaParts.push(branchCode);
+  }
+
+  if (branchLocation && !isRepeatedBranchText(branchLocation, branch)) {
+    metaParts.push(branchLocation);
+  }
 
   return {
     nameLine: branchName,
-    metaLine,
+    metaLine: uniqueLocationParts(...metaParts).join(" • "),
   };
 }
 
@@ -277,9 +309,8 @@ function decodeTokenUser(token) {
         decoded?.shopName
       ),
       workspaceLocation: pickFirstNonEmpty(
-        decoded?.locationName,
-        decoded?.branchName,
-        decoded?.workspaceLocation
+        decoded?.workspaceLocation,
+        decoded?.locationName
       ),
     };
   } catch {
@@ -302,6 +333,43 @@ function normalizeBranch(branch) {
     canOperate: branch.canOperate !== false,
     canViewReports: branch.canViewReports !== false,
   };
+}
+
+function getWorkspaceBranches(workspace) {
+  const candidates = [
+    workspace?.branches,
+    workspace?.allowedBranches,
+    workspace?.branchAccess?.branches,
+    workspace?.user?.branches,
+    workspace?.user?.allowedBranches,
+  ];
+
+  const merged = [];
+
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) continue;
+
+    for (const rawBranch of candidate) {
+      const branch = normalizeBranch(rawBranch);
+      if (!branch?.id) continue;
+
+      if (!merged.some((item) => item.id === branch.id)) {
+        merged.push(branch);
+      }
+    }
+  }
+
+  const activeBranch = normalizeBranch(workspace?.activeBranch);
+  const defaultBranch = normalizeBranch(workspace?.defaultBranch);
+  const mainBranch = normalizeBranch(workspace?.mainBranch);
+
+  for (const branch of [activeBranch, defaultBranch, mainBranch]) {
+    if (branch?.id && !merged.some((item) => item.id === branch.id)) {
+      merged.push(branch);
+    }
+  }
+
+  return merged;
 }
 
 function resolveActiveBranch(workspace, branches) {
@@ -346,7 +414,7 @@ function getSessionSnapshot() {
 
   const token = localStorage.getItem("tenantToken") || localStorage.getItem("token") || "";
   const decoded = decodeTokenUser(token);
-  const workspace = safeReadJsonFromStorage(WORKSPACE_CACHE_KEY);
+  const workspace = safeReadJsonFromStorage(WORKSPACE_CACHE_KEY) || {};
 
   const userObj =
     workspace?.user ||
@@ -354,12 +422,12 @@ function getSessionSnapshot() {
     safeReadJson("tenantUser") ||
     safeReadJson("authUser") ||
     safeReadJson("me") ||
-    safeReadJson("profile");
+    safeReadJson("profile") ||
+    {};
 
   const tenant = workspace?.tenant || userObj?.tenant || null;
 
-  const rawBranches = Array.isArray(workspace?.branches) ? workspace.branches : [];
-  const branches = rawBranches.map(normalizeBranch).filter(Boolean);
+  const branches = getWorkspaceBranches(workspace);
   const activeBranch = resolveActiveBranch(workspace, branches);
 
   const userName = pickFirstNonEmpty(
@@ -403,15 +471,15 @@ function getSessionSnapshot() {
     tenant?.address
   ).join(" • ");
 
+  const storedWorkspaceLocation = localStorage.getItem("workspaceLocation");
+
   const workspaceLocation = pickFirstNonEmpty(
     branchLocation,
     tenantLocation,
-    localStorage.getItem("workspaceLocation"),
+    storedWorkspaceLocation,
     localStorage.getItem("locationName"),
-    localStorage.getItem("branchName"),
     userObj?.workspaceLocation,
     userObj?.locationName,
-    userObj?.branchName,
     decoded.workspaceLocation
   );
 
@@ -448,7 +516,15 @@ function initials(text) {
 
 function branchLabel(branch) {
   if (!branch) return "No branch";
-  return [branch.name, branch.code ? `#${branch.code}` : ""].filter(Boolean).join(" ");
+
+  const name = cleanLocationPart(branch.name) || "Active branch";
+  const code = cleanLocationPart(branch.code);
+
+  if (!code || normalizeCompare(name).includes(normalizeCompare(code))) {
+    return name;
+  }
+
+  return `${name} #${code}`;
 }
 
 function persistSelectedBranch(branch) {
@@ -556,8 +632,14 @@ export default function AppHeader({
   }, [session.userName, session.userEmail]);
 
   const finalWorkspaceName = useMemo(() => {
-    return pickFirstNonEmpty(session.workspaceName, workspaceName, "Storvex workspace");
-  }, [session.workspaceName, workspaceName]);
+    const candidate = pickFirstNonEmpty(session.workspaceName, workspaceName, "Storvex workspace");
+
+    if (isRepeatedBranchText(candidate, session.activeBranch)) {
+      return "Storvex workspace";
+    }
+
+    return candidate;
+  }, [session.workspaceName, workspaceName, session.activeBranch]);
 
   const activeBranch = session.activeBranch;
   const branches = Array.isArray(session.branches) ? session.branches : [];

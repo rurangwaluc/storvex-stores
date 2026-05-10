@@ -1,4 +1,7 @@
+// frontend-stores/src/pages/settings/SettingsLayout.jsx
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+
+import { getUserRole } from "../../utils/role";
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -46,42 +49,49 @@ const NAV_ITEMS = [
     label: "General",
     subtitle: "Store profile and document defaults",
     to: "/app/settings",
+    roles: ["OWNER", "MANAGER"],
   },
   {
     key: "branches",
     label: "Branches",
     subtitle: "Branch locations, limits, and main branch truth",
     to: "/app/settings/branches",
+    roles: ["OWNER", "MANAGER"],
   },
   {
     key: "members",
     label: "Members",
     subtitle: "Staff accounts and access control",
     to: "/app/settings/members",
+    roles: ["OWNER", "MANAGER"],
   },
   {
     key: "roles",
     label: "User roles",
     subtitle: "Policy matrix and permissions",
     to: "/app/settings/roles",
+    roles: ["OWNER", "MANAGER"],
   },
   {
     key: "billing",
     label: "Billing",
     subtitle: "Plan, renewals, and invoices",
-    to: "/app/billing",
+    to: "/app/settings/billing",
+    roles: ["OWNER"],
   },
   {
     key: "security",
     label: "Security",
     subtitle: "Authentication and session rules",
     to: "/app/settings/security",
+    roles: ["OWNER", "MANAGER"],
   },
   {
     key: "audit",
     label: "Audit logs",
     subtitle: "Operational history and review",
     to: "/app/settings/audit",
+    roles: ["OWNER", "MANAGER"],
   },
 ];
 
@@ -210,6 +220,7 @@ function currentKeyFromPath(pathname) {
   if (pathname.includes("/app/settings/branches")) return "branches";
   if (pathname.includes("/app/settings/members")) return "members";
   if (pathname.includes("/app/settings/roles")) return "roles";
+  if (pathname.includes("/app/settings/billing")) return "billing";
   if (pathname.includes("/app/billing")) return "billing";
   if (pathname.includes("/app/settings/security")) return "security";
   if (pathname.includes("/app/settings/audit")) return "audit";
@@ -219,7 +230,7 @@ function currentKeyFromPath(pathname) {
 
 function SectionHeading({ eyebrow, title, subtitle }) {
   return (
-    <div>
+    <div className="min-w-0">
       {eyebrow ? (
         <p className={cx("text-[11px] font-black uppercase tracking-[0.18em]", softText())}>
           {eyebrow}
@@ -228,7 +239,7 @@ function SectionHeading({ eyebrow, title, subtitle }) {
 
       <h1
         className={cx(
-          "mt-3 text-[1.6rem] font-black tracking-[-0.04em] sm:text-[1.95rem]",
+          "mt-2 text-[1.35rem] font-black tracking-[-0.04em] sm:mt-3 sm:text-[1.95rem]",
           strongText(),
         )}
       >
@@ -236,7 +247,12 @@ function SectionHeading({ eyebrow, title, subtitle }) {
       </h1>
 
       {subtitle ? (
-        <p className={cx("mt-3 max-w-3xl text-sm font-semibold leading-6", mutedText())}>
+        <p
+          className={cx(
+            "mt-2 max-w-3xl text-sm font-semibold leading-6 sm:mt-3",
+            mutedText(),
+          )}
+        >
           {subtitle}
         </p>
       ) : null}
@@ -288,27 +304,72 @@ function NavCard({ item, end = false }) {
   );
 }
 
+function MobileSectionSwitcher({ activeItem, visibleNavItems, onChange }) {
+  return (
+    <div className="sticky top-[78px] z-20 -mx-4 border-y border-[var(--color-border)] bg-[var(--color-bg)]/95 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:hidden">
+      <div className={cx(pageCard(), "overflow-hidden p-3 shadow-[var(--shadow-soft)]")}>
+        <label
+          className={cx(
+            "mb-2 block text-[10px] font-black uppercase tracking-[0.18em]",
+            softText(),
+          )}
+        >
+          Settings section
+        </label>
+
+        <div className="grid grid-cols-[42px_minmax(0,1fr)] gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]">
+            <Icon name={activeItem.key} />
+          </div>
+
+          <select
+            className="app-input h-11 min-w-0"
+            value={activeItem.to}
+            onChange={(event) => onChange(event.target.value)}
+          >
+            {visibleNavItems.map((item) => (
+              <option key={item.key} value={item.to}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <p className={cx("mt-2 line-clamp-2 text-xs font-semibold leading-5", mutedText())}>
+          {activeItem.subtitle}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const role = getUserRole();
+
+  const visibleNavItems = NAV_ITEMS.filter((item) => item.roles.includes(role));
 
   const activeKey = currentKeyFromPath(location.pathname);
-  const activeItem = NAV_ITEMS.find((item) => item.key === activeKey) || NAV_ITEMS[0];
+  const activeItem =
+    visibleNavItems.find((item) => item.key === activeKey) ||
+    visibleNavItems[0] ||
+    NAV_ITEMS[0];
 
   return (
-    <div className="space-y-6">
-      <section className={cx(pageCard(), "overflow-hidden")}>
-        <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+    <div className="min-w-0 space-y-5 overflow-x-hidden sm:space-y-6">
+      <section className={cx(pageCard(), "min-w-0 overflow-hidden")}>
+        <div className="border-b border-[var(--color-border)] px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl">
               <SectionHeading
                 eyebrow="Control center"
                 title="Settings"
-                subtitle="Manage store identity, branches, staff access, document branding, billing, security, and operational controls from one locked workspace."
+                subtitle="Manage store identity, branches, staff access, document branding, security, and operational controls from one locked workspace."
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="hidden flex-wrap items-center gap-2 sm:flex">
               <span className={sectionBadge("primary")}>Store configuration</span>
               <span className={sectionBadge()}>Branch truth</span>
               <span className={sectionBadge()}>Access control</span>
@@ -316,48 +377,29 @@ export default function SettingsLayout() {
           </div>
         </div>
 
-        <div className="px-5 py-5 sm:px-6">
-          <div className="hidden lg:block">
-            <div className={cx(softPanel(), "p-3")}>
-              <div className="grid grid-cols-1 gap-3 xl:grid-cols-3 2xl:grid-cols-7">
-                {NAV_ITEMS.map((item) => (
-                  <NavCard key={item.key} item={item} end={item.key === "general"} />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:hidden">
-            <label
-              className={cx(
-                "mb-2 block text-xs font-black uppercase tracking-[0.18em]",
-                softText(),
-              )}
-            >
-              Section
-            </label>
-
-            <select
-              className="app-input"
-              value={activeItem.to}
-              onChange={(event) => navigate(event.target.value)}
-            >
-              {NAV_ITEMS.map((item) => (
-                <option key={item.key} value={item.to}>
-                  {item.label}
-                </option>
+        <div className="hidden px-5 py-5 sm:px-6 lg:block">
+          <div className={cx(softPanel(), "p-3")}>
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-3 2xl:grid-cols-6">
+              {visibleNavItems.map((item) => (
+                <NavCard key={item.key} item={item} end={item.key === "general"} />
               ))}
-            </select>
+            </div>
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <span className={sectionBadge("primary")}>Current: {activeItem.label}</span>
-            <span className={sectionBadge()}>{NAV_ITEMS.length} sections</span>
+            <span className={sectionBadge()}>{visibleNavItems.length} sections</span>
           </div>
         </div>
       </section>
 
-      <section className="min-w-0">
+      <MobileSectionSwitcher
+        activeItem={activeItem}
+        visibleNavItems={visibleNavItems}
+        onChange={(to) => navigate(to)}
+      />
+
+      <section className="min-w-0 overflow-x-hidden">
         <Outlet />
       </section>
     </div>

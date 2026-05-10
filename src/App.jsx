@@ -47,7 +47,6 @@ import VerifyOtp from "./pages/Tenant/VerifyOtp";
 
 import SubscriptionGate from "./components/SubscriptionGate";
 import Renew from "./pages/Billing/Renew";
-import Billing from "./pages/Billing/Billing";
 
 import SuppliersList from "./pages/suppliers/SuppliersList";
 import SupplierCreate from "./pages/suppliers/SupplierCreate";
@@ -61,6 +60,7 @@ import DeliveryNoteEdit from "./pages/deliveryNotes/DeliveryNoteEdit";
 import SettingsLayout from "./pages/settings/SettingsLayout";
 import SettingsGeneral from "./pages/settings/SettingsGeneral";
 import SettingsBranches from "./pages/settings/SettingsBranches";
+import SettingsBilling from "./pages/settings/SettingsBilling";
 import SettingsRoles from "./pages/settings/SettingsRoles";
 import SettingsMembers from "./pages/settings/SettingsMembers";
 import SettingsSecurity from "./pages/settings/SettingsSecurity";
@@ -93,6 +93,14 @@ function GuardedStoreLayout() {
   );
 }
 
+function GuardedRenewPage() {
+  return (
+    <SubscriptionGate>
+      <Renew />
+    </SubscriptionGate>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -103,7 +111,10 @@ export default function App() {
         <Route path="/owner-payment" element={<OwnerPayment />} />
         <Route path="/confirm-signup" element={<ConfirmSignup />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/renew" element={<Renew />} />
+
+        <Route path="/renew" element={<RequireTenantAuth />}>
+          <Route index element={<GuardedRenewPage />} />
+        </Route>
 
         <Route path="/app" element={<RequireTenantAuth />}>
           <Route element={<GuardedStoreLayout />}>
@@ -133,6 +144,16 @@ export default function App() {
                 <Route path="branches" element={<SettingsBranches />} />
                 <Route path="members" element={<SettingsMembers />} />
                 <Route path="roles" element={<SettingsRoles />} />
+
+                <Route
+                  path="billing"
+                  element={
+                    <RequireRole roles={["OWNER"]}>
+                      <SettingsBilling />
+                    </RequireRole>
+                  }
+                />
+
                 <Route path="security" element={<SettingsSecurity />} />
                 <Route path="audit" element={<SettingsAudit />} />
               </Route>
@@ -140,7 +161,7 @@ export default function App() {
 
             <Route element={<RequireRole roles={["OWNER"]} />}>
               <Route path="audit" element={<AuditLogs />} />
-              <Route path="billing" element={<Billing />} />
+              <Route path="billing" element={<Navigate to="/app/settings/billing" replace />} />
             </Route>
 
             <Route element={<RequireRole roles={["OWNER", "MANAGER", "STOREKEEPER"]} />}>

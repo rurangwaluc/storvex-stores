@@ -1,3 +1,4 @@
+// frontend-stores/src/components/SubscriptionGate.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -29,8 +30,32 @@ function cleanString(value) {
   return s || "";
 }
 
+function normalizeRole(value) {
+  return cleanString(value).toUpperCase();
+}
+
 function getToken() {
   return localStorage.getItem("tenantToken") || localStorage.getItem("token") || "";
+}
+
+function isRenewPath(pathname) {
+  return String(pathname || "") === "/renew";
+}
+
+function isBillingPath(pathname) {
+  return String(pathname || "") === "/app/billing";
+}
+
+function pickUserRole(data) {
+  return normalizeRole(
+    data?.user?.role ||
+      data?.role ||
+      localStorage.getItem("userRole")
+  );
+}
+
+function canAccessRenewPage(data) {
+  return pickUserRole(data) === "OWNER";
 }
 
 function pickBranchIdFromWorkspace(data) {
@@ -156,7 +181,7 @@ function SkeletonBlock({ className = "" }) {
     <div
       className={cx(
         "animate-pulse rounded-[18px] bg-[var(--color-surface-2)]",
-        className,
+        className
       )}
     />
   );
@@ -164,7 +189,7 @@ function SkeletonBlock({ className = "" }) {
 
 function WorkspaceGateSkeleton() {
   return (
-    <div className="min-h-screen app-shell flex items-center justify-center px-4">
+    <div className="app-shell flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-xl rounded-[32px] bg-[var(--color-card)] p-6 shadow-[var(--shadow-card)] sm:p-7">
         <div className="flex items-start gap-4 sm:gap-5">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] bg-[rgba(74,163,255,0.12)] shadow-[var(--shadow-soft)]">
@@ -247,33 +272,78 @@ export default function SubscriptionGate({ children }) {
         setMe(data);
         persistWorkspace(data);
 
-        const sub = data?.subscription;
+        const sub = data?.subscription || null;
+        const pathname = loc.pathname;
+        const onRenew = isRenewPath(pathname);
+        const onBilling = isBillingPath(pathname);
+        const ownerCanRenew = canAccessRenewPage(data);
 
-        if (!sub) {
-          nav("/renew", { replace: true });
+        if (onRenew && !ownerCanRenew) {
+          toast.error("Only the store owner can renew the subscription.");
+          nav("/app", { replace: true });
           return;
         }
 
-        const accessMode = String(sub?.accessMode || "").toUpperCase();
-        const status = String(sub?.status || "").toUpperCase();
+        if (!sub) {
+          if (ownerCanRenew) {
+            nav("/renew", { replace: true });
+          } else {
+            toast.error("Subscription is missing. Ask the store owner to renew access.");
+            nav("/app", { replace: true });
+          }
+          return;
+        }
 
-        if (accessMode === "SUSPENDED") {
+        const accessMode = cleanString(sub?.accessMode).toUpperCase();
+        const status = cleanString(sub?.status).toUpperCase();
+
+        if (accessMode === "SUSPENDED" || status === "SUSPENDED") {
           toast.error("Account suspended. Contact support.");
-          nav("/renew", { replace: true });
+
+          if (ownerCanRenew) {
+            nav("/renew", { replace: true });
+          } else {
+            nav("/app", { replace: true });
+          }
+
           return;
         }
 
         if (status === "EXPIRED") {
-          if (loc.pathname !== "/renew" && loc.pathname !== "/app/billing") {
-            toast("Subscription expired. You are in read-only mode. Renew to continue operations.");
+          if (!onRenew && !onBilling) {
+            toast(
+              ownerCanRenew
+                ? "Subscription expired. Renew to continue operations."
+                : "Subscription expired. Ask the store owner to renew access."
+            );
           }
+
+          if (ownerCanRenew && !onRenew && !onBilling) {
+            nav("/renew", { replace: true });
+          }
+
           return;
         }
 
         if (accessMode === "READ_ONLY") {
-          if (loc.pathname !== "/renew" && loc.pathname !== "/app/billing") {
-            toast("Subscription is in read-only mode. Renew to restore full access.");
+          if (!onRenew && !onBilling) {
+            toast(
+              ownerCanRenew
+                ? "Subscription is in read-only mode. Renew to restore full access."
+                : "Subscription is in read-only mode. Ask the store owner to renew access."
+            );
           }
+
+          if (ownerCanRenew && !onRenew && !onBilling) {
+            nav("/renew", { replace: true });
+          }
+
+          return;
+        }
+
+        if (onRenew && status !== "EXPIRED" && accessMode !== "READ_ONLY") {
+          toast.success("Subscription is active.");
+          nav("/app/billing", { replace: true });
         }
       } catch (err) {
         const msg =

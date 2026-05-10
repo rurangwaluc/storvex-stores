@@ -1,10 +1,11 @@
+// frontend-stores/src/components/layout/AppSidebar.jsx
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { useEffect, useMemo, useState } from "react";
 import { clearActiveBranchId } from "../../services/apiClient";
 
-const LOGO_LIGHT_MODE_SRC = "/storvex_white.webp";
-const LOGO_DARK_MODE_SRC = "/storvex_dark.webp";
+const LOGO_FOR_LIGHT_THEME_SRC = "/storvex_dark.webp";
+const LOGO_FOR_DARK_THEME_SRC = "/storvex_white.webp";
 const LOGO_ICON_SRC = "/storvex_icon.webp";
 
 function cn(...xs) {
@@ -15,11 +16,18 @@ function normalizeRole(role) {
   return String(role || "").trim().toUpperCase();
 }
 
+function normalizeCompare(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
 function getThemeLogoSrc() {
-  if (typeof document === "undefined") return LOGO_LIGHT_MODE_SRC;
+  if (typeof document === "undefined") return LOGO_FOR_LIGHT_THEME_SRC;
 
   const theme = document.documentElement.getAttribute("data-theme");
-  return theme === "dark" ? LOGO_DARK_MODE_SRC : LOGO_LIGHT_MODE_SRC;
+  return theme === "dark" ? LOGO_FOR_DARK_THEME_SRC : LOGO_FOR_LIGHT_THEME_SRC;
 }
 
 function useThemeLogoSrc() {
@@ -445,25 +453,53 @@ function getWorkspaceName() {
   );
 }
 
-function getActiveBranchLabel() {
+function getActiveBranch() {
   const workspace = readWorkspaceCache();
 
-  const activeBranch =
+  return (
     workspace?.activeBranch ||
     workspace?.defaultBranch ||
     workspace?.mainBranch ||
-    null;
+    null
+  );
+}
 
-  const name =
+function getActiveBranchLabel(workspaceName) {
+  const activeBranch = getActiveBranch();
+
+  const branchName =
     cleanString(activeBranch?.name) ||
     cleanString(localStorage.getItem("activeBranchName")) ||
-    "Active branch";
+    "";
 
-  const code =
+  const branchCode =
     cleanString(activeBranch?.code) ||
-    cleanString(localStorage.getItem("activeBranchCode"));
+    cleanString(localStorage.getItem("activeBranchCode")) ||
+    "";
 
-  return code ? `${code} • ${name}` : name;
+  const normalizedWorkspaceName = normalizeCompare(workspaceName);
+  const normalizedBranchName = normalizeCompare(branchName);
+
+  if (!branchName && !branchCode) return "Active branch";
+
+  const branchAlreadyRepeatsStore =
+    normalizedWorkspaceName &&
+    normalizedBranchName &&
+    (normalizedBranchName === normalizedWorkspaceName ||
+      normalizedBranchName.includes(normalizedWorkspaceName));
+
+  if (branchAlreadyRepeatsStore) {
+    if (branchCode) return branchCode;
+    return activeBranch?.isMain ? "Main branch" : "Active branch";
+  }
+
+  if (branchCode && normalizedBranchName.includes(normalizeCompare(branchCode))) {
+    return branchName;
+  }
+
+  if (branchCode && branchName) return `${branchCode} • ${branchName}`;
+  if (branchName) return branchName;
+  return branchCode;
 }
 
 function clearAuthStorage() {
@@ -528,7 +564,7 @@ function LogoBlock({ collapsed, onClose, logoSrc }) {
 
 function WorkspaceCard({ collapsed, primaryRole }) {
   const workspaceName = getWorkspaceName();
-  const branchLabel = getActiveBranchLabel();
+  const branchLabel = getActiveBranchLabel(workspaceName);
 
   if (collapsed) {
     return (

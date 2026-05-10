@@ -1,3 +1,4 @@
+// frontend-stores/src/pages/settings/SettingsSecurity.jsx
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -12,6 +13,10 @@ import {
   revokeSecuritySession,
   revokeOtherSecuritySessions,
 } from "../../services/securityApi";
+
+const INITIAL_SESSIONS_VISIBLE = 3;
+const INITIAL_LOGIN_EVENTS_VISIBLE = 5;
+const LOAD_MORE_STEP = 5;
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -30,39 +35,43 @@ function softText() {
 }
 
 function pageCard() {
-  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+  return "rounded-[28px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 }
 
 function softPanel() {
-  return "rounded-[22px] bg-[var(--color-surface-2)]";
+  return "rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)]";
 }
 
 function primaryBtn() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-black text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-5 text-sm font-black text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 function successBadge() {
-  return "bg-[#7cfcc6] text-[#0b3b2e]";
+  return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300";
 }
 
 function infoBadge() {
-  return "bg-[#57b5ff] text-[#06263d]";
+  return "bg-sky-500/10 text-sky-600 dark:text-sky-300";
 }
 
 function warningBadge() {
-  return "bg-[#ff9f43] text-[#402100]";
+  return "bg-amber-500/10 text-amber-600 dark:text-amber-300";
 }
 
 function processBadge() {
-  return "bg-[#ffe45e] text-[#4a4300]";
+  return "bg-violet-500/10 text-violet-600 dark:text-violet-300";
 }
 
 function neutralBadge() {
-  return "bg-[var(--color-surface)] text-[var(--color-text-muted)]";
+  return "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
 }
 
 function fieldLabel() {
-  return "mb-1.5 block text-sm font-medium text-[var(--color-text)]";
+  return "mb-1.5 block text-sm font-black text-[var(--color-text)]";
 }
 
 function inputClass() {
@@ -71,13 +80,22 @@ function inputClass() {
 
 function formatDateTime(value) {
   if (!value) return "—";
+
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString();
+
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function formatTimeAgo(value) {
   if (!value) return "—";
+
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
 
@@ -99,22 +117,24 @@ function SectionHeading({ eyebrow, title, subtitle }) {
   return (
     <div>
       {eyebrow ? (
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+        <div className={cx("text-[11px] font-black uppercase tracking-[0.18em]", softText())}>
           {eyebrow}
         </div>
       ) : null}
 
       <h2
         className={cx(
-          "mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]",
-          strongText()
+          "mt-3 text-[1.55rem] font-black tracking-[-0.04em] sm:text-[1.9rem]",
+          strongText(),
         )}
       >
         {title}
       </h2>
 
       {subtitle ? (
-        <p className={cx("mt-3 text-sm leading-6", mutedText())}>{subtitle}</p>
+        <p className={cx("mt-3 max-w-3xl text-sm font-semibold leading-6", mutedText())}>
+          {subtitle}
+        </p>
       ) : null}
     </div>
   );
@@ -125,31 +145,36 @@ function SummaryCard({ label, value, note, tone = "neutral" }) {
     tone === "success"
       ? "text-emerald-600 dark:text-emerald-300"
       : tone === "warning"
-      ? "text-amber-600 dark:text-amber-300"
-      : tone === "danger"
-      ? "text-[var(--color-danger)]"
-      : strongText();
+        ? "text-amber-600 dark:text-amber-300"
+        : tone === "danger"
+          ? "text-[var(--color-danger)]"
+          : strongText();
 
   const accentClass =
     tone === "success"
       ? "bg-emerald-500"
       : tone === "warning"
-      ? "bg-amber-500"
-      : tone === "danger"
-      ? "bg-[var(--color-danger)]"
-      : "bg-[var(--color-primary)]";
+        ? "bg-amber-500"
+        : tone === "danger"
+          ? "bg-[var(--color-danger)]"
+          : "bg-[var(--color-primary)]";
 
   return (
-    <article className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
+    <article className={cx(pageCard(), "relative min-h-[132px] overflow-hidden p-5 sm:p-6")}>
       <div className={cx("absolute left-0 top-0 h-full w-1.5", accentClass)} />
+
       <div className="pl-2">
-        <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+        <div className={cx("text-[11px] font-black uppercase tracking-[0.18em]", softText())}>
           {label}
         </div>
-        <div className={cx("mt-2 text-[1.7rem] font-black tracking-tight", toneClass)}>
+
+        <div className={cx("mt-2 text-[1.65rem] font-black tracking-[-0.04em]", toneClass)}>
           {value}
         </div>
-        {note ? <div className={cx("mt-2 text-sm leading-6", mutedText())}>{note}</div> : null}
+
+        {note ? (
+          <div className={cx("mt-2 text-sm font-semibold leading-6", mutedText())}>{note}</div>
+        ) : null}
       </div>
     </article>
   );
@@ -158,11 +183,13 @@ function SummaryCard({ label, value, note, tone = "neutral" }) {
 function InfoStat({ label, value, sub }) {
   return (
     <div className={cx(softPanel(), "p-4")}>
-      <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", softText())}>
+      <div className={cx("text-[11px] font-black uppercase tracking-[0.18em]", softText())}>
         {label}
       </div>
-      <div className={cx("mt-2 text-sm font-bold leading-6", strongText())}>{value || "—"}</div>
-      {sub ? <div className={cx("mt-1 text-xs leading-5", mutedText())}>{sub}</div> : null}
+
+      <div className={cx("mt-2 text-sm font-black leading-6", strongText())}>{value || "—"}</div>
+
+      {sub ? <div className={cx("mt-1 text-xs font-semibold leading-5", mutedText())}>{sub}</div> : null}
     </div>
   );
 }
@@ -171,10 +198,10 @@ function StepCard({ number, title, text, active = false }) {
   return (
     <div
       className={cx(
-        "rounded-[22px] p-4 transition",
+        "rounded-[22px] border p-4 transition",
         active
-          ? "bg-[var(--color-primary-soft)] ring-1 ring-[var(--color-primary-ring)]"
-          : "bg-[var(--color-surface-2)]"
+          ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]"
+          : "border-[var(--color-border)] bg-[var(--color-surface-2)]",
       )}
     >
       <div className="flex items-start gap-3">
@@ -182,16 +209,16 @@ function StepCard({ number, title, text, active = false }) {
           className={cx(
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black",
             active
-              ? "bg-[var(--color-primary)] text-white"
-              : "bg-[var(--color-surface)] text-[var(--color-text)]"
+              ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+              : "bg-[var(--color-card)] text-[var(--color-text)]",
           )}
         >
           {number}
         </div>
 
         <div className="min-w-0">
-          <div className={cx("text-sm font-bold", strongText())}>{title}</div>
-          <div className={cx("mt-1 text-xs leading-5", mutedText())}>{text}</div>
+          <div className={cx("text-sm font-black", strongText())}>{title}</div>
+          <div className={cx("mt-1 text-xs font-semibold leading-5", mutedText())}>{text}</div>
         </div>
       </div>
     </div>
@@ -203,16 +230,16 @@ function ProtectionPill({ tone = "neutral", children }) {
     tone === "success"
       ? successBadge()
       : tone === "info"
-      ? infoBadge()
-      : tone === "warning"
-      ? warningBadge()
-      : tone === "process"
-      ? processBadge()
-      : neutralBadge();
+        ? infoBadge()
+        : tone === "warning"
+          ? warningBadge()
+          : tone === "process"
+            ? processBadge()
+            : neutralBadge();
 
   return (
     <span
-      className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold", cls)}
+      className={cx("inline-flex items-center rounded-full px-3 py-1.5 text-xs font-black", cls)}
     >
       {children}
     </span>
@@ -227,17 +254,45 @@ function sessionTone(session, currentSessionId) {
 
 function loginEventTone(event) {
   const status = String(event?.status || "").toUpperCase();
+
   if (status === "SUCCESS") return "success";
   if (status === "FAILED") return "warning";
   if (status === "BLOCKED") return "process";
+
   return "neutral";
 }
 
 function EmptyState({ title, text }) {
   return (
     <div className={cx(softPanel(), "px-5 py-10 text-center")}>
-      <div className={cx("text-base font-semibold", strongText())}>{title}</div>
-      <div className={cx("mt-2 text-sm leading-6", mutedText())}>{text}</div>
+      <div className={cx("text-base font-black", strongText())}>{title}</div>
+      <div className={cx("mx-auto mt-2 max-w-md text-sm font-semibold leading-6", mutedText())}>
+        {text}
+      </div>
+    </div>
+  );
+}
+
+function LoadMorePanel({ visible, total, onLoadMore, label }) {
+  if (total <= visible) return null;
+
+  const remaining = total - visible;
+  const nextCount = Math.min(LOAD_MORE_STEP, remaining);
+
+  return (
+    <div className={cx(softPanel(), "mt-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between")}>
+      <div>
+        <div className={cx("text-sm font-black", strongText())}>
+          Showing {visible} of {total}
+        </div>
+        <div className={cx("mt-1 text-xs font-semibold leading-5", mutedText())}>
+          Load more only when you need deeper review.
+        </div>
+      </div>
+
+      <button type="button" onClick={onLoadMore} className={secondaryBtn()}>
+        Load {nextCount} more {label}
+      </button>
     </div>
   );
 }
@@ -265,11 +320,11 @@ function SessionCard({ session, currentSessionId, busyId, onRevoke }) {
             {session?.deviceLabel || "Unknown device"}
           </div>
 
-          <div className={cx("mt-1 text-sm leading-6", mutedText())}>
+          <div className={cx("mt-1 break-words text-sm font-semibold leading-6", mutedText())}>
             {session?.userAgent || "No device details available"}
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <InfoStat
               label="Last active"
               value={formatTimeAgo(session?.lastSeenAt || session?.createdAt)}
@@ -284,12 +339,11 @@ function SessionCard({ session, currentSessionId, busyId, onRevoke }) {
           {isCurrent ? (
             <div
               className={cx(
-                "rounded-2xl px-4 py-3 text-sm font-medium",
+                "rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-sm font-black",
                 mutedText(),
-                "bg-[var(--color-surface)]"
               )}
             >
-              This is the device you are using now.
+              Current device
             </div>
           ) : (
             <AsyncButton
@@ -297,7 +351,7 @@ function SessionCard({ session, currentSessionId, busyId, onRevoke }) {
               loading={busy}
               loadingText="Signing out..."
               onClick={() => onRevoke(session.id)}
-              className="bg-[#ff6b57] text-white hover:opacity-95"
+              className="bg-[var(--color-danger)] text-white hover:opacity-95"
             >
               Sign out device
             </AsyncButton>
@@ -310,14 +364,16 @@ function SessionCard({ session, currentSessionId, busyId, onRevoke }) {
 
 function LoginEventCard({ event }) {
   const tone = loginEventTone(event);
+  const status = String(event?.status || "").toUpperCase();
+
   const title =
-    String(event?.status || "").toUpperCase() === "SUCCESS"
+    status === "SUCCESS"
       ? "Successful sign-in"
-      : String(event?.status || "").toUpperCase() === "FAILED"
-      ? "Failed sign-in"
-      : String(event?.status || "").toUpperCase() === "BLOCKED"
-      ? "Blocked sign-in"
-      : "Sign-in event";
+      : status === "FAILED"
+        ? "Failed sign-in"
+        : status === "BLOCKED"
+          ? "Blocked sign-in"
+          : "Sign-in event";
 
   return (
     <article className={cx(softPanel(), "p-4")}>
@@ -328,20 +384,22 @@ function LoginEventCard({ event }) {
             {event?.role ? <ProtectionPill tone="info">{event.role}</ProtectionPill> : null}
           </div>
 
-          <div className={cx("mt-3 text-sm font-bold", strongText())}>
+          <div className={cx("mt-3 text-sm font-black", strongText())}>
             {event?.deviceLabel || "Unknown device"}
           </div>
 
-          <div className={cx("mt-1 text-sm leading-6", mutedText())}>
+          <div className={cx("mt-1 break-words text-sm font-semibold leading-6", mutedText())}>
             {event?.email || "No email recorded"}
           </div>
 
           {event?.reason ? (
-            <div className={cx("mt-2 text-xs leading-5", mutedText())}>Note: {event.reason}</div>
+            <div className={cx("mt-2 text-xs font-semibold leading-5", mutedText())}>
+              Note: {event.reason}
+            </div>
           ) : null}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:min-w-[260px]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:min-w-[260px]">
           <InfoStat label="Time" value={formatDateTime(event?.createdAt)} />
           <InfoStat label="Address" value={event?.ipAddress || "—"} />
         </div>
@@ -360,12 +418,18 @@ export default function SettingsSecurity() {
   const [sessions, setSessions] = useState([]);
   const [loginEvents, setLoginEvents] = useState([]);
 
+  const [visibleSessionsCount, setVisibleSessionsCount] = useState(INITIAL_SESSIONS_VISIBLE);
+  const [visibleLoginEventsCount, setVisibleLoginEventsCount] = useState(
+    INITIAL_LOGIN_EVENTS_VISIBLE,
+  );
+
   const [form, setForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
     revokeOtherSessions: true,
   });
+
   const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
@@ -386,9 +450,23 @@ export default function SettingsSecurity() {
         getSecurityLoginEvents(),
       ]);
 
+      const nextSessions = Array.isArray(sessionsData) ? sessionsData : [];
+      const nextEvents = Array.isArray(eventsData) ? eventsData : [];
+
       setOverview(overviewData || null);
-      setSessions(Array.isArray(sessionsData) ? sessionsData : []);
-      setLoginEvents(Array.isArray(eventsData) ? eventsData : []);
+      setSessions(nextSessions);
+      setLoginEvents(nextEvents);
+
+      setVisibleSessionsCount((current) =>
+        Math.min(Math.max(current, INITIAL_SESSIONS_VISIBLE), Math.max(nextSessions.length, INITIAL_SESSIONS_VISIBLE)),
+      );
+
+      setVisibleLoginEventsCount((current) =>
+        Math.min(
+          Math.max(current, INITIAL_LOGIN_EVENTS_VISIBLE),
+          Math.max(nextEvents.length, INITIAL_LOGIN_EVENTS_VISIBLE),
+        ),
+      );
 
       if (showToast) toast.success("Security details refreshed");
     } catch (err) {
@@ -402,6 +480,7 @@ export default function SettingsSecurity() {
 
   useEffect(() => {
     loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const currentSessionId = overview?.currentSessionId || null;
@@ -409,6 +488,16 @@ export default function SettingsSecurity() {
   const recentLoginsCount = Number(overview?.summary?.recentLogins || 0);
   const failedAttemptsCount = Number(overview?.summary?.failedAttempts || 0);
   const lastPasswordChange = overview?.summary?.lastPasswordChangeAt || null;
+
+  const visibleSessions = useMemo(
+    () => sessions.slice(0, visibleSessionsCount),
+    [sessions, visibleSessionsCount],
+  );
+
+  const visibleLoginEvents = useMemo(
+    () => loginEvents.slice(0, visibleLoginEventsCount),
+    [loginEvents, visibleLoginEventsCount],
+  );
 
   const posture = useMemo(() => {
     if (activeSessionsCount <= 0) {
@@ -436,6 +525,16 @@ export default function SettingsSecurity() {
 
   function updateField(key, value) {
     setForm((curr) => ({ ...curr, [key]: value }));
+  }
+
+  function loadMoreSessions() {
+    setVisibleSessionsCount((current) => Math.min(current + LOAD_MORE_STEP, sessions.length));
+  }
+
+  function loadMoreLoginEvents() {
+    setVisibleLoginEventsCount((current) =>
+      Math.min(current + LOAD_MORE_STEP, loginEvents.length),
+    );
   }
 
   async function onRevokeSession(sessionId) {
@@ -522,6 +621,10 @@ export default function SettingsSecurity() {
     return <PageSkeleton titleWidth="w-48" lines={4} variant="default" />;
   }
 
+  const activeOtherSessionsCount = sessions.filter(
+    (session) => session.id !== currentSessionId && !session.isRevoked,
+  ).length;
+
   return (
     <div className="space-y-6">
       <section className={cx(pageCard(), "overflow-hidden")}>
@@ -540,10 +643,10 @@ export default function SettingsSecurity() {
 
               <AsyncButton
                 type="button"
-                variant="secondary"
                 loading={refreshing}
                 loadingText="Refreshing..."
                 onClick={() => loadAll(true)}
+                className={secondaryBtn()}
               >
                 Refresh security
               </AsyncButton>
@@ -558,18 +661,21 @@ export default function SettingsSecurity() {
             note="Devices that still have access to this account"
             tone="success"
           />
+
           <SummaryCard
             label="Recent sign-ins"
             value={String(recentLoginsCount)}
             note="Latest account access records"
             tone="neutral"
           />
+
           <SummaryCard
             label="Blocked or failed attempts"
             value={String(failedAttemptsCount)}
             note="Recent sign-in attempts that did not succeed"
             tone={failedAttemptsCount > 0 ? "warning" : "success"}
           />
+
           <SummaryCard
             label="Last password update"
             value={lastPasswordChange ? formatTimeAgo(lastPasswordChange) : "—"}
@@ -589,18 +695,18 @@ export default function SettingsSecurity() {
             <SectionHeading
               eyebrow="Current session"
               title="Trusted device visibility"
-              subtitle="See the device you are using now and every other device that still has access to this account."
+              subtitle="See your current device first, then load more only when deeper device review is needed."
             />
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
             <AsyncButton
               type="button"
-              variant="secondary"
               loading={revokingOther}
               loadingText="Signing out..."
               onClick={onRevokeOtherSessions}
-              disabled={sessions.filter((x) => x.id !== currentSessionId && !x.isRevoked).length === 0}
+              disabled={activeOtherSessionsCount === 0}
+              className={secondaryBtn()}
             >
               Sign out other devices
             </AsyncButton>
@@ -618,17 +724,26 @@ export default function SettingsSecurity() {
               text="We could not find any saved device sessions for this account."
             />
           ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {sessions.map((session) => (
-                <SessionCard
-                  key={session.id}
-                  session={session}
-                  currentSessionId={currentSessionId}
-                  busyId={revokeBusyId}
-                  onRevoke={onRevokeSession}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 gap-3">
+                {visibleSessions.map((session) => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    currentSessionId={currentSessionId}
+                    busyId={revokeBusyId}
+                    onRevoke={onRevokeSession}
+                  />
+                ))}
+              </div>
+
+              <LoadMorePanel
+                visible={visibleSessions.length}
+                total={sessions.length}
+                label="devices"
+                onLoadMore={loadMoreSessions}
+              />
+            </>
           )}
         </div>
       </section>
@@ -638,7 +753,7 @@ export default function SettingsSecurity() {
           <SectionHeading
             eyebrow="Access activity"
             title="Recent sign-in activity"
-            subtitle="Track successful, failed, and blocked account access in a format that is easy to review."
+            subtitle="A short review feed by default, with load more for deeper investigation."
           />
 
           <div className="mt-6">
@@ -648,11 +763,20 @@ export default function SettingsSecurity() {
                 text="Recent account access records will appear here once they are available."
               />
             ) : (
-              <div className="grid grid-cols-1 gap-3">
-                {loginEvents.map((event) => (
-                  <LoginEventCard key={event.id} event={event} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 gap-3">
+                  {visibleLoginEvents.map((event) => (
+                    <LoginEventCard key={event.id} event={event} />
+                  ))}
+                </div>
+
+                <LoadMorePanel
+                  visible={visibleLoginEvents.length}
+                  total={loginEvents.length}
+                  label="events"
+                  onLoadMore={loadMoreLoginEvents}
+                />
+              </>
             )}
           </div>
         </div>
@@ -662,7 +786,7 @@ export default function SettingsSecurity() {
             <SectionHeading
               eyebrow="Password control"
               title="Change password"
-              subtitle="Update your password and, if needed, remove access from other devices at the same time."
+              subtitle="Update your password and remove access from other devices at the same time."
             />
 
             <form onSubmit={onChangePassword} className="mt-6 space-y-4">
@@ -706,12 +830,13 @@ export default function SettingsSecurity() {
                   onChange={(e) => updateField("revokeOtherSessions", e.target.checked)}
                   className="mt-0.5 h-4 w-4 rounded"
                 />
+
                 <div>
-                  <div className={cx("text-sm font-medium", strongText())}>
+                  <div className={cx("text-sm font-black", strongText())}>
                     Sign out other devices after password change
                   </div>
-                  <div className={cx("mt-1 text-xs leading-5", mutedText())}>
-                    Recommended when you want this new password to apply everywhere immediately.
+                  <div className={cx("mt-1 text-xs font-semibold leading-5", mutedText())}>
+                    Recommended when you want the new password to apply everywhere immediately.
                   </div>
                 </div>
               </label>
@@ -739,26 +864,31 @@ export default function SettingsSecurity() {
                 text="Your account stays active on devices where you have already signed in."
                 active={activeSessionsCount > 0}
               />
+
               <StepCard
                 number="2"
                 title="Access tracking"
                 text="Recent sign-ins and failed attempts are recorded so account activity can be reviewed."
-                active={true}
+                active
               />
+
               <StepCard
                 number="3"
                 title="Password protection"
                 text="Changing your password can also remove access from other devices in one step."
-                active={true}
+                active
               />
             </div>
           </section>
 
           <section className={cx(pageCard(), "p-5 sm:p-6")}>
-            <div className={cx("text-lg font-black tracking-tight", strongText())}>Security note</div>
-            <p className={cx("mt-3 text-sm leading-6", mutedText())}>
-              This page is designed to be clear for day-to-day use. It focuses on what matters most:
-              which devices are signed in, when the account was accessed, and how quickly you can protect it.
+            <div className={cx("text-lg font-black tracking-tight", strongText())}>
+              Security note
+            </div>
+
+            <p className={cx("mt-3 text-sm font-semibold leading-6", mutedText())}>
+              This page focuses on what matters most: which devices are signed in, when the
+              account was accessed, and how quickly you can protect it.
             </p>
           </section>
         </div>

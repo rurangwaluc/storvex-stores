@@ -1,3 +1,4 @@
+// frontend-stores/src/components/layout/AppShell.jsx
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -34,6 +35,73 @@ function readCachedWorkspace() {
   );
 }
 
+function writeCachedWorkspace(workspace) {
+  if (!workspace) return;
+
+  try {
+    sessionStorage.setItem(WORKSPACE_CACHE_KEY, JSON.stringify(workspace));
+  } catch {}
+
+  try {
+    localStorage.setItem(WORKSPACE_CACHE_KEY, JSON.stringify(workspace));
+  } catch {}
+}
+
+function normalizeBranch(branch) {
+  if (!branch?.id) return null;
+
+  return {
+    id: cleanString(branch.id),
+    tenantId: cleanString(branch.tenantId),
+    name: cleanString(branch.name) || "Branch",
+    code: cleanString(branch.code),
+    type: cleanString(branch.type),
+    status: cleanString(branch.status) || "ACTIVE",
+    phone: cleanString(branch.phone),
+    email: cleanString(branch.email),
+    countryCode: cleanString(branch.countryCode) || "RW",
+    district: cleanString(branch.district),
+    sector: cleanString(branch.sector),
+    address: cleanString(branch.address),
+    isMain: Boolean(branch.isMain),
+    isDefault: Boolean(branch.isDefault),
+    canOperate: branch.canOperate !== false,
+    canViewReports: Boolean(branch.canViewReports),
+  };
+}
+
+function uniqueBranches(...groups) {
+  const seen = new Set();
+  const branches = [];
+
+  for (const group of groups) {
+    const list = Array.isArray(group) ? group : [];
+
+    for (const raw of list) {
+      const branch = normalizeBranch(raw);
+      if (!branch?.id || seen.has(branch.id)) continue;
+
+      seen.add(branch.id);
+      branches.push(branch);
+    }
+  }
+
+  return branches;
+}
+
+function pickWorkspaceBranches(workspace) {
+  return uniqueBranches(
+    workspace?.allowedBranches,
+    workspace?.branches,
+    workspace?.branchAccess?.allowedBranches,
+    workspace?.user?.allowedBranches,
+    workspace?.tenant?.branches,
+    workspace?.activeBranch ? [workspace.activeBranch] : [],
+    workspace?.defaultBranch ? [workspace.defaultBranch] : [],
+    workspace?.mainBranch ? [workspace.mainBranch] : [],
+  );
+}
+
 function pickWorkspaceName(workspace) {
   return (
     cleanString(workspace?.tenant?.name) ||
@@ -46,8 +114,14 @@ function pickWorkspaceName(workspace) {
 }
 
 function pickActiveBranch(workspace) {
+  const branches = pickWorkspaceBranches(workspace);
+
   const activeBranchId =
     cleanString(getActiveBranchId()) ||
+    cleanString(localStorage.getItem("storvex_active_branch_id")) ||
+    cleanString(localStorage.getItem("storvex_activeBranchId")) ||
+    cleanString(localStorage.getItem("activeBranchId")) ||
+    cleanString(localStorage.getItem("branchId")) ||
     cleanString(workspace?.user?.activeBranchId) ||
     cleanString(workspace?.user?.branchId) ||
     cleanString(workspace?.branchAccess?.activeBranchId) ||
@@ -55,14 +129,15 @@ function pickActiveBranch(workspace) {
     cleanString(workspace?.defaultBranch?.id) ||
     cleanString(workspace?.mainBranch?.id);
 
-  const branches = Array.isArray(workspace?.branches) ? workspace.branches : [];
-  const matched = branches.find((branch) => branch?.id === activeBranchId);
+  const matched = branches.find((branch) => branch.id === activeBranchId);
 
   return (
     matched ||
-    workspace?.activeBranch ||
-    workspace?.defaultBranch ||
-    workspace?.mainBranch ||
+    branches.find((branch) => branch.isDefault) ||
+    branches.find((branch) => branch.isMain) ||
+    normalizeBranch(workspace?.activeBranch) ||
+    normalizeBranch(workspace?.defaultBranch) ||
+    normalizeBranch(workspace?.mainBranch) ||
     branches[0] ||
     null
   );
@@ -93,13 +168,13 @@ function pickWorkspaceLocation(workspace) {
   const branchLocation = uniqueLocationParts(
     activeBranch?.sector,
     activeBranch?.district,
-    activeBranch?.address
+    activeBranch?.address,
   ).join(" • ");
 
   const tenantLocation = uniqueLocationParts(
     tenant?.sector,
     tenant?.district,
-    tenant?.address
+    tenant?.address,
   ).join(" • ");
 
   return (
@@ -122,28 +197,72 @@ function pickBranchIdFromWorkspace(workspace) {
   );
 }
 
-function persistWorkspace(workspace) {
-  if (!workspace) return;
+function persistActiveBranch(branch) {
+  const activeBranch = normalizeBranch(branch);
 
-  try {
-    sessionStorage.setItem(WORKSPACE_CACHE_KEY, JSON.stringify(workspace));
-  } catch {}
+  if (!activeBranch?.id) return;
 
-  try {
-    localStorage.setItem(WORKSPACE_CACHE_KEY, JSON.stringify(workspace));
-  } catch {}
+  setActiveBranchId(activeBranch.id);
 
-  const tenant = workspace?.tenant || workspace?.user?.tenant || null;
-  const user = workspace?.user || null;
+  localStorage.setItem("branchId", activeBranch.id);
+  localStorage.setItem("activeBranchId", activeBranch.id);
+  localStorage.setItem("storvex_activeBranchId", activeBranch.id);
+  localStorage.setItem("storvex_active_branch_id", activeBranch.id);
+
+  if (activeBranch.name) {
+    localStorage.setItem("activeBranchName", activeBranch.name);
+    localStorage.setItem("storvex_activeBranchName", activeBranch.name);
+  }
+
+  if (activeBranch.code) {
+    localStorage.setItem("activeBranchCode", activeBranch.code);
+    localStorage.setItem("storvex_activeBranchCode", activeBranch.code);
+  }
+
+  localStorage.setItem("activeBranchIsMain", String(Boolean(activeBranch.isMain)));
+
+  const location = uniqueLocationParts(
+    activeBranch.sector,
+    activeBranch.district,
+    activeBranch.address,
+  ).join(" • ");
+
+  if (location) {
+    localStorage.setItem("workspaceLocation", location);
+  }
+}
+
+function normalizeWorkspacePayload(workspace) {
+  if (!workspace) return null;
+
+  const branches = pickWorkspaceBranches(workspace);
   const activeBranch = pickActiveBranch(workspace);
-  const activeBranchId = pickBranchIdFromWorkspace(workspace);
-  const workspaceLocation = pickWorkspaceLocation(workspace);
 
-  if (activeBranchId) {
-    setActiveBranchId(activeBranchId);
-    localStorage.setItem("branchId", activeBranchId);
-    localStorage.setItem("activeBranchId", activeBranchId);
-    localStorage.setItem("storvex_active_branch_id", activeBranchId);
+  return {
+    ...workspace,
+
+    // AppHeader currently reads workspace.branches.
+    // Keep both names so old and new components stay compatible.
+    branches,
+    allowedBranches: branches,
+
+    activeBranch,
+  };
+}
+
+function persistWorkspace(workspace) {
+  const normalizedWorkspace = normalizeWorkspacePayload(workspace);
+  if (!normalizedWorkspace) return null;
+
+  const tenant = normalizedWorkspace?.tenant || normalizedWorkspace?.user?.tenant || null;
+  const user = normalizedWorkspace?.user || null;
+  const activeBranch = normalizedWorkspace.activeBranch;
+  const workspaceLocation = pickWorkspaceLocation(normalizedWorkspace);
+
+  writeCachedWorkspace(normalizedWorkspace);
+
+  if (activeBranch?.id) {
+    persistActiveBranch(activeBranch);
   }
 
   if (tenant?.id) localStorage.setItem("tenantId", tenant.id);
@@ -154,22 +273,34 @@ function persistWorkspace(workspace) {
   if (user?.email) localStorage.setItem("userEmail", user.email);
   if (user?.role) localStorage.setItem("userRole", user.role);
 
-  if (activeBranch?.name) localStorage.setItem("activeBranchName", activeBranch.name);
-  if (activeBranch?.code) localStorage.setItem("activeBranchCode", activeBranch.code);
-  if (workspaceLocation) localStorage.setItem("workspaceLocation", workspaceLocation);
+  if (workspaceLocation) {
+    localStorage.setItem("workspaceLocation", workspaceLocation);
+  }
+
+  return normalizedWorkspace;
 }
 
 function clearWorkspaceStorage() {
   localStorage.removeItem("tenantToken");
   localStorage.removeItem("token");
+
   localStorage.removeItem("userRole");
   localStorage.removeItem("tenantId");
   localStorage.removeItem("userId");
   localStorage.removeItem("tenantName");
   localStorage.removeItem("userName");
   localStorage.removeItem("userEmail");
+
   localStorage.removeItem("activeBranchName");
   localStorage.removeItem("activeBranchCode");
+  localStorage.removeItem("activeBranchIsMain");
+  localStorage.removeItem("branchId");
+  localStorage.removeItem("activeBranchId");
+  localStorage.removeItem("storvex_activeBranchId");
+  localStorage.removeItem("storvex_activeBranchName");
+  localStorage.removeItem("storvex_activeBranchCode");
+  localStorage.removeItem("storvex_active_branch_id");
+
   localStorage.removeItem("workspaceLocation");
   localStorage.removeItem(WORKSPACE_CACHE_KEY);
 
@@ -213,7 +344,14 @@ function pickPageTitle(pathname) {
   if (path.startsWith("/app/documents")) return "Document center";
 
   if (path.startsWith("/app/repairs")) return "Repairs";
+
+  if (path.startsWith("/app/settings/branches")) return "Branches";
+  if (path.startsWith("/app/settings/members")) return "Members";
+  if (path.startsWith("/app/settings/roles")) return "User roles";
+  if (path.startsWith("/app/settings/security")) return "Security";
+  if (path.startsWith("/app/settings/audit")) return "Settings audit";
   if (path.startsWith("/app/settings")) return "Settings";
+
   if (path.startsWith("/app/billing")) return "Billing";
   if (path.startsWith("/app/audit")) return "Audit logs";
   if (path.startsWith("/app/employees")) return "Employees";
@@ -227,7 +365,9 @@ export default function AppShell({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const cachedWorkspace = useMemo(() => readCachedWorkspace(), []);
+  const cachedWorkspace = useMemo(() => {
+    return normalizeWorkspacePayload(readCachedWorkspace());
+  }, []);
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -235,10 +375,7 @@ export default function AppShell({ children }) {
 
   const workspaceName = useMemo(() => pickWorkspaceName(workspace), [workspace]);
 
-  const pageTitle = useMemo(
-    () => pickPageTitle(location.pathname),
-    [location.pathname]
-  );
+  const pageTitle = useMemo(() => pickPageTitle(location.pathname), [location.pathname]);
 
   const headerTitle = pageTitle || workspaceName || "Workspace";
 
@@ -249,19 +386,19 @@ export default function AppShell({ children }) {
 
       if (!payload) return null;
 
-      persistWorkspace(payload);
-      setWorkspace(payload);
+      const nextWorkspace = persistWorkspace(payload);
+      setWorkspace(nextWorkspace);
 
       window.dispatchEvent(
         new CustomEvent("storvex:workspace-refreshed", {
           detail: {
-            workspace: payload,
-            branchId: pickBranchIdFromWorkspace(payload),
+            workspace: nextWorkspace,
+            branchId: pickBranchIdFromWorkspace(nextWorkspace),
           },
-        })
+        }),
       );
 
-      return payload;
+      return nextWorkspace;
     } catch (err) {
       if (err?.response?.status === 401) {
         clearWorkspaceStorage();
@@ -306,11 +443,39 @@ export default function AppShell({ children }) {
   useEffect(() => {
     let timer = null;
 
-    function handleBranchChanged() {
+    function handleBranchChanged(event) {
       window.clearTimeout(timer);
 
       timer = window.setTimeout(() => {
-        refreshWorkspace();
+        const incomingBranch = normalizeBranch(event?.detail?.branch);
+
+        setWorkspace((current) => {
+          const latest = normalizeWorkspacePayload(readCachedWorkspace()) || current || {};
+
+          if (!incomingBranch?.id) {
+            return latest;
+          }
+
+          persistActiveBranch(incomingBranch);
+
+          const branches = pickWorkspaceBranches(latest);
+          const nextBranches = branches.length ? branches : [incomingBranch];
+
+          const nextWorkspace = normalizeWorkspacePayload({
+            ...latest,
+            branches: nextBranches.map((branch) =>
+              branch.id === incomingBranch.id ? { ...branch, ...incomingBranch } : branch,
+            ),
+            allowedBranches: nextBranches.map((branch) =>
+              branch.id === incomingBranch.id ? { ...branch, ...incomingBranch } : branch,
+            ),
+            activeBranch: incomingBranch,
+          });
+
+          writeCachedWorkspace(nextWorkspace);
+
+          return nextWorkspace;
+        });
       }, 120);
     }
 
@@ -320,17 +485,18 @@ export default function AppShell({ children }) {
       window.clearTimeout(timer);
       window.removeEventListener("storvex:branch-changed", handleBranchChanged);
     };
-  }, [refreshWorkspace]);
+  }, []);
 
   useEffect(() => {
     function handleStorage(event) {
       if (
         event.key === "storvex_active_branch_id" ||
+        event.key === "storvex_activeBranchId" ||
         event.key === "activeBranchId" ||
         event.key === "branchId" ||
         event.key === WORKSPACE_CACHE_KEY
       ) {
-        const latest = readCachedWorkspace();
+        const latest = normalizeWorkspacePayload(readCachedWorkspace());
         if (latest) setWorkspace(latest);
       }
     }
