@@ -1,33 +1,39 @@
+// frontend-stores/src/pages/suppliers/SupplierSupplyCreate.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import AsyncButton from "../../components/ui/AsyncButton";
-import { getSupplierById, createSupplierSupply } from "../../services/suppliersApi";
-import { searchProducts } from "../../services/inventoryApi";
+import PageSkeleton from "../../components/ui/PageSkeleton";
+import {
+  createSupplierSupply,
+  getSupplierById,
+} from "../../services/suppliersApi";
 
-const SOURCE_TYPE_OPTIONS = [
-  { value: "BOUGHT", label: "Bought" },
-  { value: "GIFT", label: "Gift" },
+const SOURCE_TYPES = [
+  { value: "BOUGHT", label: "Bought stock" },
+  { value: "GIFT", label: "Gifted stock" },
   { value: "TRADE_IN", label: "Trade-in" },
   { value: "CONSIGNMENT", label: "Consignment" },
-  { value: "OTHER", label: "Other" },
+  { value: "OTHER", label: "Other source" },
 ];
 
-function fmtMoney(n) {
-  return `RWF ${Number(n || 0).toLocaleString()}`;
-}
+const EMPTY_ITEM = {
+  productId: "",
+  productName: "",
+  category: "",
+  subcategory: "",
+  subcategoryOther: "",
+  brand: "",
+  serial: "",
+  quantity: "1",
+  buyPrice: "",
+  sellPrice: "",
+  notes: "",
+};
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
-}
-
-function shell() {
-  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
-}
-
-function panel() {
-  return "rounded-[22px] bg-[var(--color-surface-2)]";
 }
 
 function strongText() {
@@ -38,595 +44,865 @@ function mutedText() {
   return "text-[var(--color-text-muted)]";
 }
 
-function Modal({ open, title, children, onClose }) {
-  if (!open) return null;
+function softText() {
+  return "text-[var(--color-text-muted)]";
+}
 
+function pageCard() {
+  return "rounded-[28px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function softPanel() {
+  return "rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)]";
+}
+
+function primaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-black text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-5 text-sm font-black text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function dangerBtn() {
+  return "inline-flex h-10 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 px-4 text-xs font-black uppercase tracking-[0.12em] text-red-600 transition hover:border-red-500/40 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-300";
+}
+
+function inputClass() {
+  return "app-input";
+}
+
+function textareaClass() {
+  return "w-full min-h-[110px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]";
+}
+
+function badgeClass(tone = "neutral") {
+  if (tone === "primary") {
+    return "bg-[var(--color-primary-soft)] text-[var(--color-primary)]";
+  }
+
+  if (tone === "success") {
+    return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300";
+  }
+
+  if (tone === "warning") {
+    return "bg-amber-500/10 text-amber-600 dark:text-amber-300";
+  }
+
+  if (tone === "danger") {
+    return "bg-red-500/10 text-red-600 dark:text-red-300";
+  }
+
+  if (tone === "info") {
+    return "bg-sky-500/10 text-sky-600 dark:text-sky-300";
+  }
+
+  return "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
+}
+
+function Badge({ children, tone = "neutral", className = "" }) {
   return (
-    <div className="fixed inset-0 z-50 p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className={cx(shell(), "w-full max-w-lg overflow-hidden")}>
-          <div className="flex items-center justify-between border-b border-[var(--color-border)] p-4">
-            <div className={cx("text-base font-black tracking-tight", strongText())}>{title}</div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-surface-2)] text-[var(--color-text)] transition hover:opacity-90"
-              aria-label="Close"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="p-4">{children}</div>
+    <span
+      className={cx(
+        "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-black",
+        badgeClass(tone),
+        className
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function cleanString(value) {
+  return String(value || "").trim();
+}
+
+function toNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function formatMoney(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "RWF 0";
+  return `RWF ${Math.round(n).toLocaleString("en-US")}`;
+}
+
+function sourceLabel(value) {
+  return SOURCE_TYPES.find((item) => item.value === value)?.label || "Other source";
+}
+
+function getCurrentBranchName() {
+  return (
+    cleanString(localStorage.getItem("activeBranchName")) ||
+    cleanString(localStorage.getItem("activeBranchCode")) ||
+    cleanString(localStorage.getItem("tenantName")) ||
+    "Current branch"
+  );
+}
+
+function getCurrentLocationLabel() {
+  return cleanString(localStorage.getItem("workspaceLocation"));
+}
+
+function SectionHeading({ eyebrow, title, subtitle }) {
+  return (
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-black uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
         </div>
-      </div>
+      ) : null}
+
+      <h1
+        className={cx(
+          "mt-3 text-[1.55rem] font-black tracking-[-0.04em] sm:text-[1.95rem]",
+          strongText()
+        )}
+      >
+        {title}
+      </h1>
+
+      {subtitle ? (
+        <p className={cx("mt-3 max-w-3xl text-sm font-semibold leading-6", mutedText())}>
+          {subtitle}
+        </p>
+      ) : null}
     </div>
   );
 }
 
-function SkeletonLine({ className = "" }) {
-  return <div className={cx("animate-pulse rounded-full bg-[var(--color-surface)]", className)} />;
+function Field({ label, required = false, hint, children }) {
+  return (
+    <div className="min-w-0">
+      <label className={cx("mb-1.5 block text-sm font-black", strongText())}>
+        {label}
+        {required ? <span className="text-[var(--color-danger)]"> *</span> : null}
+      </label>
+
+      {children}
+
+      {hint ? (
+        <div className={cx("mt-2 text-xs font-semibold leading-5", mutedText())}>{hint}</div>
+      ) : null}
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, note, tone = "neutral" }) {
+  const accentClass =
+    tone === "success"
+      ? "bg-emerald-500"
+      : tone === "warning"
+        ? "bg-amber-500"
+        : tone === "danger"
+          ? "bg-[var(--color-danger)]"
+          : tone === "info"
+            ? "bg-sky-500"
+            : "bg-[var(--color-primary)]";
+
+  return (
+    <article className={cx(pageCard(), "relative min-h-[124px] overflow-hidden p-5")}>
+      <div className={cx("absolute left-0 top-0 h-full w-1.5", accentClass)} />
+
+      <div className="pl-2">
+        <div className={cx("text-[10px] font-black uppercase tracking-[0.18em]", softText())}>
+          {label}
+        </div>
+
+        <div className={cx("mt-2 break-words text-lg font-black tracking-[-0.03em]", strongText())}>
+          {value || "—"}
+        </div>
+
+        {note ? (
+          <div className={cx("mt-2 text-xs font-semibold leading-5", mutedText())}>{note}</div>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function MiniStat({ label, value, note, tone = "neutral" }) {
+  return (
+    <div className={cx(softPanel(), "p-4")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className={cx("text-[10px] font-black uppercase tracking-[0.18em]", softText())}>
+            {label}
+          </div>
+          <div className={cx("mt-2 break-words text-sm font-black leading-6", strongText())}>
+            {value || "—"}
+          </div>
+        </div>
+
+        {tone !== "neutral" ? (
+          <Badge tone={tone}>{tone === "success" ? "OK" : "Check"}</Badge>
+        ) : null}
+      </div>
+
+      {note ? (
+        <div className={cx("mt-2 text-xs font-semibold leading-5", mutedText())}>{note}</div>
+      ) : null}
+    </div>
+  );
+}
+
+function ItemCard({ item, index, canRemove, onChange, onRemove }) {
+  const quantity = toNumber(item.quantity, 0);
+  const buyPrice = toNumber(item.buyPrice, 0);
+  const sellPrice = toNumber(item.sellPrice, 0);
+  const totalCost = quantity * buyPrice;
+  const expectedSales = quantity * sellPrice;
+
+  function setField(key, value) {
+    onChange(index, { ...item, [key]: value });
+  }
+
+  return (
+    <section className={cx(pageCard(), "overflow-hidden")}>
+      <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone="primary">Item {index + 1}</Badge>
+              {cleanString(item.serial) ? <Badge tone="success">Serial saved</Badge> : null}
+            </div>
+
+            <div className={cx("mt-3 text-lg font-black tracking-[-0.03em]", strongText())}>
+              {cleanString(item.productName) || "New stock item"}
+            </div>
+
+            <div className={cx("mt-1 text-sm font-semibold leading-6", mutedText())}>
+              Record product, quantity, buying cost, selling price, and proof details.
+            </div>
+          </div>
+
+          {canRemove ? (
+            <button type="button" onClick={() => onRemove(index)} className={dangerBtn()}>
+              Remove item
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="space-y-5 p-5 sm:p-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <Field label="Product name" required hint="Use the exact product name staff will recognize.">
+              <input
+                className={inputClass()}
+                value={item.productName}
+                onChange={(event) => setField("productName", event.target.value)}
+                placeholder="Example: Samsung Galaxy A15 128GB"
+                required
+              />
+            </Field>
+          </div>
+
+          <Field label="Category">
+            <input
+              className={inputClass()}
+              value={item.category}
+              onChange={(event) => setField("category", event.target.value)}
+              placeholder="Phone, Laptop, TV..."
+            />
+          </Field>
+
+          <Field label="Brand">
+            <input
+              className={inputClass()}
+              value={item.brand}
+              onChange={(event) => setField("brand", event.target.value)}
+              placeholder="Samsung, HP, Lenovo..."
+            />
+          </Field>
+
+          <Field label="Serial / IMEI" hint="Recommended for phones, laptops, and high-value electronics.">
+            <input
+              className={inputClass()}
+              value={item.serial}
+              onChange={(event) => setField("serial", event.target.value)}
+              placeholder="Optional, but recommended"
+            />
+          </Field>
+
+          <Field label="Quantity" required>
+            <input
+              type="number"
+              min="1"
+              className={inputClass()}
+              value={item.quantity}
+              onChange={(event) => setField("quantity", event.target.value)}
+              required
+            />
+          </Field>
+
+          <Field label="Buying price" required hint="Amount paid per item.">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              className={inputClass()}
+              value={item.buyPrice}
+              onChange={(event) => setField("buyPrice", event.target.value)}
+              placeholder="0"
+              required
+            />
+          </Field>
+
+          <Field label="Selling price" required hint="Expected selling price per item.">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              className={inputClass()}
+              value={item.sellPrice}
+              onChange={(event) => setField("sellPrice", event.target.value)}
+              placeholder="0"
+              required
+            />
+          </Field>
+
+          <div className="md:col-span-2">
+            <Field label="Item notes">
+              <textarea
+                className={textareaClass()}
+                value={item.notes}
+                onChange={(event) => setField("notes", event.target.value)}
+                placeholder="Condition, warranty note, packaging, supplier promise..."
+              />
+            </Field>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <MiniStat
+            label="Quantity"
+            value={quantity || "—"}
+            note="Units being recorded"
+            tone={quantity > 0 ? "success" : "warning"}
+          />
+          <MiniStat
+            label="Total cost"
+            value={formatMoney(totalCost)}
+            note="Quantity × buying price"
+            tone={totalCost > 0 ? "warning" : "neutral"}
+          />
+          <MiniStat
+            label="Expected sales"
+            value={formatMoney(expectedSales)}
+            note="Quantity × selling price"
+            tone={expectedSales > 0 ? "success" : "neutral"}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PreviewPanel({
+  supplier,
+  currentBranchName,
+  currentLocationLabel,
+  sourceType,
+  documentRef,
+  items,
+  alsoUpdateStock,
+}) {
+  const totalItems = items.length;
+  const totalQuantity = items.reduce((sum, item) => sum + Math.max(0, toNumber(item.quantity, 0)), 0);
+  const totalCost = items.reduce((sum, item) => {
+    const qty = Math.max(0, toNumber(item.quantity, 0));
+    const buy = Math.max(0, toNumber(item.buyPrice, 0));
+    return sum + qty * buy;
+  }, 0);
+
+  const expectedSales = items.reduce((sum, item) => {
+    const qty = Math.max(0, toNumber(item.quantity, 0));
+    const sell = Math.max(0, toNumber(item.sellPrice, 0));
+    return sum + qty * sell;
+  }, 0);
+
+  const missingNames = items.filter((item) => !cleanString(item.productName)).length;
+
+  return (
+    <aside className={cx(pageCard(), "h-fit p-5 sm:p-6")}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone={missingNames ? "warning" : "success"}>
+          {missingNames ? "Needs review" : "Ready"}
+        </Badge>
+        <Badge tone="primary">{sourceLabel(sourceType)}</Badge>
+      </div>
+
+      <div className={cx("mt-5 text-lg font-black tracking-[-0.03em]", strongText())}>
+        Supply snapshot
+      </div>
+
+      <p className={cx("mt-2 text-sm font-semibold leading-6", mutedText())}>
+        Review what will be added to the current selling location before saving.
+      </p>
+
+      <div className="mt-5 space-y-3">
+        <MiniStat
+          label="Supplier"
+          value={supplier?.name || "Supplier"}
+          note={supplier?.phone || supplier?.companyName || "Supplier profile"}
+          tone="info"
+        />
+
+        <MiniStat
+          label="Receiving location"
+          value={currentBranchName}
+          note={currentLocationLabel || "Stock will be recorded for the current location"}
+          tone="success"
+        />
+
+        <MiniStat
+          label="Document reference"
+          value={cleanString(documentRef) || "Not added"}
+          note="Invoice, receipt, or purchase note"
+        />
+
+        <MiniStat
+          label="Stock update"
+          value={alsoUpdateStock ? "Add to stock now" : "Record only"}
+          note={
+            alsoUpdateStock
+              ? "Stock quantities will be updated immediately"
+              : "Supply will be saved without changing stock"
+          }
+          tone={alsoUpdateStock ? "success" : "warning"}
+        />
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-3">
+        <SummaryCard label="Lines" value={totalItems} note="Different items in this supply" />
+        <SummaryCard label="Units" value={totalQuantity} note="Total quantity received" tone="info" />
+        <SummaryCard label="Total cost" value={formatMoney(totalCost)} note="Expected purchase cost" tone="warning" />
+        <SummaryCard
+          label="Expected sales"
+          value={formatMoney(expectedSales)}
+          note="Potential selling value"
+          tone="success"
+        />
+      </div>
+    </aside>
+  );
 }
 
 export default function SupplierSupplyCreate() {
   const { id } = useParams();
-  const nav = useNavigate();
+  const navigate = useNavigate();
 
-  const [supplier, setSupplier] = useState(null);
-  const [loadingSupplier, setLoadingSupplier] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [supplier, setSupplier] = useState(null);
 
-  const [sourceType, setSourceType] = useState("BOUGHT");
-  const [sourceDetails, setSourceDetails] = useState("");
-  const [documentRef, setDocumentRef] = useState("");
-  const [notes, setNotes] = useState("");
-  const [alsoUpdateStock, setAlsoUpdateStock] = useState(true);
+  const [form, setForm] = useState({
+    sourceType: "BOUGHT",
+    sourceDetails: "",
+    documentRef: "",
+    notes: "",
+    alsoUpdateStock: true,
+    items: [{ ...EMPTY_ITEM }],
+  });
 
-  const [items, setItems] = useState([
-    {
-      productId: "",
-      productName: "",
-      category: "",
-      subcategory: "",
-      subcategoryOther: "",
-      brand: "",
-      serial: "",
-      quantity: 1,
-      buyPrice: "",
-      sellPrice: "",
-      notes: "",
-    },
-  ]);
-
-  const [searchQ, setSearchQ] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [results, setResults] = useState([]);
-  const [pickRowIndex, setPickRowIndex] = useState(0);
-  const [helpOpen, setHelpOpen] = useState(false);
-
-  useEffect(() => {
-    async function load() {
-      setLoadingSupplier(true);
-      try {
-        const s = await getSupplierById(String(id));
-        setSupplier(s);
-      } catch (err) {
-        console.error(err);
-        toast.error(err?.message || "Failed to load supplier");
-        setSupplier(null);
-      } finally {
-        setLoadingSupplier(false);
-      }
-    }
-
-    load();
-  }, [id]);
-
-  useEffect(() => {
-    const q = searchQ.trim();
-    if (!q) {
-      setResults([]);
-      return;
-    }
-
-    const t = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const data = await searchProducts(q, 20);
-        setResults(Array.isArray(data?.products) ? data.products : []);
-      } catch (err) {
-        console.error(err);
-        setResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 250);
-
-    return () => clearTimeout(t);
-  }, [searchQ]);
+  const currentBranchName = useMemo(() => getCurrentBranchName(), []);
+  const currentLocationLabel = useMemo(() => getCurrentLocationLabel(), []);
 
   const totals = useMemo(() => {
-    const totalBuy = items.reduce(
-      (sum, it) => sum + Number(it.buyPrice || 0) * Number(it.quantity || 0),
+    const items = Array.isArray(form.items) ? form.items : [];
+
+    const totalQuantity = items.reduce(
+      (sum, item) => sum + Math.max(0, toNumber(item.quantity, 0)),
       0
     );
-    const totalSell = items.reduce(
-      (sum, it) => sum + Number(it.sellPrice || 0) * Number(it.quantity || 0),
-      0
-    );
 
-    return { totalBuy, totalSell };
-  }, [items]);
+    const totalCost = items.reduce((sum, item) => {
+      const qty = Math.max(0, toNumber(item.quantity, 0));
+      const buy = Math.max(0, toNumber(item.buyPrice, 0));
+      return sum + qty * buy;
+    }, 0);
 
-  function setItem(i, k, v) {
-    setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, [k]: v } : it)));
-  }
+    const expectedSales = items.reduce((sum, item) => {
+      const qty = Math.max(0, toNumber(item.quantity, 0));
+      const sell = Math.max(0, toNumber(item.sellPrice, 0));
+      return sum + qty * sell;
+    }, 0);
 
-  function addRow() {
-    setItems((prev) => [
-      ...prev,
-      {
-        productId: "",
-        productName: "",
-        category: "",
-        subcategory: "",
-        subcategoryOther: "",
-        brand: "",
-        serial: "",
-        quantity: 1,
-        buyPrice: "",
-        sellPrice: "",
-        notes: "",
-      },
-    ]);
-  }
+    return {
+      itemLines: items.length,
+      totalQuantity,
+      totalCost,
+      expectedSales,
+    };
+  }, [form.items]);
 
-  function removeRow(i) {
-    setItems((prev) => prev.filter((_, idx) => idx !== i));
-    setPickRowIndex((v) => Math.max(0, Math.min(v, items.length - 2)));
-  }
+  useEffect(() => {
+    let alive = true;
 
-  function pickProduct(i, p) {
-    setItems((prev) =>
-      prev.map((it, idx) => {
-        if (idx !== i) return it;
+    async function loadSupplier() {
+      setLoading(true);
 
-        return {
-          ...it,
-          productId: p.id,
-          productName: p.name || "",
-          category: p.category || "",
-          subcategory: p.subcategory || "",
-          subcategoryOther: p.subcategoryOther || "",
-          brand: p.brand || "",
-          buyPrice: p.costPrice ?? it.buyPrice ?? "",
-          sellPrice: p.sellPrice ?? it.sellPrice ?? "",
-        };
-      })
-    );
+      try {
+        const data = await getSupplierById(String(id));
 
-    setSearchQ("");
-    setResults([]);
-  }
+        if (!alive) return;
 
-  async function submit(e) {
-    e.preventDefault();
-    if (saving) return;
+        setSupplier(data || null);
+      } catch (err) {
+        console.error(err);
 
-    const cleanItems = items
-      .map((it) => {
-        const linked = Boolean(it.productId);
+        if (!alive) return;
 
-        return {
-          productId: it.productId || null,
-          productName: String(it.productName || "").trim(),
-          category: linked ? String(it.category || "").trim() || null : null,
-          subcategory: linked ? String(it.subcategory || "").trim() || null : null,
-          subcategoryOther: linked ? String(it.subcategoryOther || "").trim() || null : null,
-          brand: linked ? String(it.brand || "").trim() || null : null,
-          serial: String(it.serial || "").trim() || null,
-          quantity: Number(it.quantity),
-          buyPrice: Number(it.buyPrice),
-          sellPrice: Number(it.sellPrice),
-          notes: String(it.notes || "").trim() || null,
-        };
-      })
-      .filter((it) => it.productName);
-
-    if (cleanItems.length === 0) return toast.error("Add at least 1 item");
-
-    for (const it of cleanItems) {
-      if (!Number.isInteger(it.quantity) || it.quantity <= 0) {
-        return toast.error("Quantity must be more than 0");
-      }
-      if (!Number.isFinite(it.buyPrice) || it.buyPrice < 0) {
-        return toast.error("Buy price must be 0 or more");
-      }
-      if (!Number.isFinite(it.sellPrice) || it.sellPrice < 0) {
-        return toast.error("Sell price must be 0 or more");
-      }
-      if (it.serial && it.quantity !== 1) {
-        return toast.error("If you write a serial number, quantity must be 1");
+        setSupplier(null);
+        toast.error(err?.response?.data?.message || err?.message || "Failed to load supplier");
+      } finally {
+        if (alive) setLoading(false);
       }
     }
+
+    loadSupplier();
+
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  function setField(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function setItem(index, nextItem) {
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item, itemIndex) => (itemIndex === index ? nextItem : item)),
+    }));
+  }
+
+  function addItem() {
+    setForm((prev) => ({
+      ...prev,
+      items: [...prev.items, { ...EMPTY_ITEM }],
+    }));
+  }
+
+  function removeItem(index) {
+    setForm((prev) => {
+      const nextItems = prev.items.filter((_, itemIndex) => itemIndex !== index);
+      return {
+        ...prev,
+        items: nextItems.length ? nextItems : [{ ...EMPTY_ITEM }],
+      };
+    });
+  }
+
+  function validatePayload(payload) {
+    if (!payload.items.length) {
+      toast.error("Add at least one item.");
+      return false;
+    }
+
+    for (let index = 0; index < payload.items.length; index += 1) {
+      const item = payload.items[index];
+      const row = index + 1;
+
+      if (!item.productName) {
+        toast.error(`Item ${row}: product name is required.`);
+        return false;
+      }
+
+      if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+        toast.error(`Item ${row}: quantity must be more than 0.`);
+        return false;
+      }
+
+      if (!Number.isFinite(item.buyPrice) || item.buyPrice < 0) {
+        toast.error(`Item ${row}: buying price must be 0 or more.`);
+        return false;
+      }
+
+      if (!Number.isFinite(item.sellPrice) || item.sellPrice < 0) {
+        toast.error(`Item ${row}: selling price must be 0 or more.`);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+
+    if (saving) return;
+
+    const payload = {
+      sourceType: form.sourceType,
+      sourceDetails: cleanString(form.sourceDetails) || null,
+      documentRef: cleanString(form.documentRef) || null,
+      notes: cleanString(form.notes) || null,
+      alsoUpdateStock: Boolean(form.alsoUpdateStock),
+      items: form.items.map((item) => ({
+        productId: cleanString(item.productId) || null,
+        productName: cleanString(item.productName),
+        category: cleanString(item.category) || null,
+        subcategory: cleanString(item.subcategory) || null,
+        subcategoryOther: cleanString(item.subcategoryOther) || null,
+        brand: cleanString(item.brand) || null,
+        serial: cleanString(item.serial) || null,
+        quantity: Math.floor(toNumber(item.quantity, 0)),
+        buyPrice: toNumber(item.buyPrice, NaN),
+        sellPrice: toNumber(item.sellPrice, NaN),
+        notes: cleanString(item.notes) || null,
+      })),
+    };
+
+    if (!validatePayload(payload)) return;
 
     setSaving(true);
 
     try {
-      await createSupplierSupply(String(id), {
-        sourceType,
-        sourceDetails: sourceDetails.trim() || null,
-        documentRef: documentRef.trim() || null,
-        notes: notes.trim() || null,
-        alsoUpdateStock,
-        items: cleanItems,
-      });
+      await createSupplierSupply(String(id), payload);
 
-      toast.success("Delivery saved");
-      nav(`/app/suppliers/${id}`);
+      toast.success(
+        payload.alsoUpdateStock
+          ? "Supply saved and stock updated"
+          : "Supply saved"
+      );
+
+      navigate(`/app/suppliers/${id}`);
     } catch (err) {
       console.error(err);
-      toast.error(err?.message || "Failed to save delivery");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to save supplier supply");
     } finally {
       setSaving(false);
     }
   }
 
-  if (loadingSupplier) {
+  if (loading) {
+    return <PageSkeleton titleWidth="w-56" lines={4} variant="default" />;
+  }
+
+  if (!supplier) {
     return (
-      <div className="space-y-6">
-        <section className={cx(shell(), "overflow-hidden")}>
-          <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
-            <SkeletonLine className="h-3 w-24" />
-            <SkeletonLine className="mt-4 h-8 w-52" />
-            <SkeletonLine className="mt-3 h-4 w-80" />
+      <div className="space-y-6 overflow-x-hidden">
+        <section className={cx(pageCard(), "p-6 text-center")}>
+          <div className={cx("text-lg font-black tracking-[-0.03em]", strongText())}>
+            Supplier not found
           </div>
-          <div className="p-5 sm:p-6">
-            <div className={cx(panel(), "space-y-4 p-5 sm:p-6")}>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i}>
-                    <SkeletonLine className="mb-2 h-3 w-24" />
-                    <div className="h-11 animate-pulse rounded-2xl bg-[var(--color-surface)]" />
-                  </div>
-                ))}
-              </div>
-            </div>
+
+          <p className={cx("mx-auto mt-2 max-w-md text-sm font-semibold leading-6", mutedText())}>
+            This supplier could not be found, or you no longer have access to it.
+          </p>
+
+          <div className="mt-5">
+            <button type="button" onClick={() => navigate("/app/suppliers")} className={secondaryBtn()}>
+              Back to suppliers
+            </button>
           </div>
         </section>
       </div>
     );
   }
 
-  if (!supplier) return <p className={mutedText()}>Supplier not found.</p>;
-
   return (
-    <div className="space-y-6">
-      <section className={cx(shell(), "overflow-hidden")}>
+    <div className="space-y-6 overflow-x-hidden">
+      <section className={cx(pageCard(), "overflow-hidden")}>
         <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", mutedText())}>
-                Supplier deliveries
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0 max-w-3xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone="primary">Supplier stock</Badge>
+                <Badge tone="success">{currentBranchName}</Badge>
+                <Badge tone={form.alsoUpdateStock ? "success" : "warning"}>
+                  {form.alsoUpdateStock ? "Stock will be updated" : "Record only"}
+                </Badge>
               </div>
-              <h1 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
-                New Delivery
-              </h1>
-              <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                Supplier: <span className={strongText()}>{supplier.name}</span>
-              </p>
+
+              <SectionHeading
+                eyebrow="Suppliers"
+                title="Record supplier stock"
+                subtitle="Save items received from this supplier and choose whether the received quantities should be added to the current selling location immediately."
+              />
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => nav(`/app/suppliers/${id}`)}
-                className="inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-4 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90"
-              >
-                Back
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setHelpOpen(true)}
-                className="inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-4 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90"
-              >
-                Help
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => navigate(`/app/suppliers/${id}`)}
+              className={secondaryBtn()}
+              disabled={saving}
+            >
+              Back to supplier
+            </button>
           </div>
         </div>
 
-        <div className="p-5 sm:p-6">
-          <form onSubmit={submit} className="space-y-5">
-            <div className={cx(panel(), "p-5 sm:p-6")}>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Source type</label>
-                  <select
-                    className="app-input"
-                    value={sourceType}
-                    onChange={(e) => setSourceType(e.target.value)}
-                  >
-                    {SOURCE_TYPE_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+        <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-4">
+          <SummaryCard
+            label="Supplier"
+            value={supplier.name || "Supplier"}
+            note={supplier.phone || supplier.companyName || "Supplier profile"}
+            tone="info"
+          />
+          <SummaryCard
+            label="Receiving location"
+            value={currentBranchName}
+            note={currentLocationLabel || "Current selling location"}
+            tone="success"
+          />
+          <SummaryCard
+            label="Units"
+            value={totals.totalQuantity}
+            note={`${totals.itemLines} item line${totals.itemLines === 1 ? "" : "s"}`}
+            tone="primary"
+          />
+          <SummaryCard
+            label="Total cost"
+            value={formatMoney(totals.totalCost)}
+            note={`Expected sales: ${formatMoney(totals.expectedSales)}`}
+            tone="warning"
+          />
+        </div>
+      </section>
 
-                <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Source details</label>
-                  <input
-                    className="app-input"
-                    value={sourceDetails}
-                    onChange={(e) => setSourceDetails(e.target.value)}
-                    placeholder="Example: bought in Dubai"
-                  />
-                </div>
-
-                <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Document ref</label>
-                  <input
-                    className="app-input"
-                    value={documentRef}
-                    onChange={(e) => setDocumentRef(e.target.value)}
-                    placeholder="Invoice number / receipt number"
-                  />
-                </div>
-
-                <div>
-                  <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Notes</label>
-                  <textarea
-                    className="app-textarea w-full min-h-[108px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]"
-                    rows={4}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Example: delivered by John"
-                  />
-                </div>
-              </div>
-
-              <label className="mt-4 inline-flex items-center gap-2 text-sm text-[var(--color-text)]">
-                <input
-                  type="checkbox"
-                  checked={alsoUpdateStock}
-                  onChange={(e) => setAlsoUpdateStock(e.target.checked)}
-                />
-                Also update inventory stock
-              </label>
+      <form onSubmit={submit} className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-6">
+          <section className={cx(pageCard(), "overflow-hidden")}>
+            <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+              <SectionHeading
+                eyebrow="Supply details"
+                title="Source and document proof"
+                subtitle="Attach receipt, invoice, or purchase reference so the stock origin remains clear later."
+              />
             </div>
 
-            <div className={cx(panel(), "p-5 sm:p-6")}>
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <div className={cx("text-base font-black tracking-tight", strongText())}>Items</div>
-                  <div className={cx("mt-1 text-sm", mutedText())}>Add products in this delivery.</div>
-                </div>
+            <div className="space-y-5 p-5 sm:p-6">
+              <div className={cx(softPanel(), "p-5 sm:p-6")}>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label="How this stock came in">
+                    <select
+                      className={inputClass()}
+                      value={form.sourceType}
+                      onChange={(event) => setField("sourceType", event.target.value)}
+                    >
+                      {SOURCE_TYPES.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
 
-                <button
-                  type="button"
-                  onClick={addRow}
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface)] px-4 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90"
-                >
-                  + Add item
-                </button>
-              </div>
+                  <Field label="Receipt or invoice reference" hint="Optional, but useful for proof.">
+                    <input
+                      className={inputClass()}
+                      value={form.documentRef}
+                      onChange={(event) => setField("documentRef", event.target.value)}
+                      placeholder="Example: INV-2026-001"
+                    />
+                  </Field>
 
-              <div className="mt-4 rounded-[18px] bg-[var(--color-surface)] p-4">
-                <label className={cx("mb-1.5 block text-sm font-medium", strongText())}>Find product</label>
-                <input
-                  className="app-input"
-                  value={searchQ}
-                  onChange={(e) => setSearchQ(e.target.value)}
-                  placeholder="Type product name / code / brand..."
-                />
+                  <div className="md:col-span-2">
+                    <Field label="Source details">
+                      <input
+                        className={inputClass()}
+                        value={form.sourceDetails}
+                        onChange={(event) => setField("sourceDetails", event.target.value)}
+                        placeholder="Example: bought from supplier shop, received by manager..."
+                      />
+                    </Field>
+                  </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <div className={cx("text-xs", mutedText())}>Fill row:</div>
-                  <select
-                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-xs text-[var(--color-text)]"
-                    value={pickRowIndex}
-                    onChange={(e) => setPickRowIndex(Number(e.target.value || 0))}
-                  >
-                    {items.map((_, idx) => (
-                      <option key={idx} value={idx}>
-                        #{idx + 1}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div className="md:col-span-2">
+                    <label className={cx(softPanel(), "flex cursor-pointer items-start gap-3 p-4")}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(form.alsoUpdateStock)}
+                        onChange={(event) => setField("alsoUpdateStock", event.target.checked)}
+                        className="mt-1 h-4 w-4 rounded"
+                      />
 
-                {searchQ.trim() ? (
-                  <div className="mt-3">
-                    {searching ? (
-                      <div className={cx("text-sm", mutedText())}>Searching...</div>
-                    ) : results.length === 0 ? (
-                      <div className={cx("text-sm", mutedText())}>No results.</div>
-                    ) : (
-                      <div className="max-h-56 overflow-auto rounded-2xl bg-[var(--color-card)]">
-                        {results.map((p) => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => pickProduct(pickRowIndex, p)}
-                            className="block w-full border-b border-[var(--color-border)] px-4 py-3 text-left transition hover:bg-[var(--color-surface-2)]"
-                          >
-                            <div className={cx("text-sm font-semibold", strongText())}>{p.name}</div>
-                            <div className={cx("mt-1 text-xs", mutedText())}>
-                              {p.category || "—"} • Stock: {p.stockQty ?? 0} • {fmtMoney(p.sellPrice)}
-                            </div>
-                          </button>
-                        ))}
+                      <div>
+                        <div className={cx("text-sm font-black", strongText())}>
+                          Add these quantities to stock now
+                        </div>
+                        <div className={cx("mt-1 text-xs font-semibold leading-5", mutedText())}>
+                          Keep this enabled when the items have physically arrived at the current selling location.
+                        </div>
                       </div>
-                    )}
+                    </label>
                   </div>
-                ) : null}
-              </div>
 
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[980px]">
-                  <thead>
-                    <tr className="border-b border-[var(--color-border)]">
-                      <th className={cx("p-3 text-left text-[11px] font-semibold uppercase tracking-[0.16em]", mutedText())}>
-                        Product name
-                      </th>
-                      <th className={cx("p-3 text-center text-[11px] font-semibold uppercase tracking-[0.16em]", mutedText())}>
-                        Qty
-                      </th>
-                      <th className={cx("p-3 text-right text-[11px] font-semibold uppercase tracking-[0.16em]", mutedText())}>
-                        Buy
-                      </th>
-                      <th className={cx("p-3 text-right text-[11px] font-semibold uppercase tracking-[0.16em]", mutedText())}>
-                        Sell
-                      </th>
-                      <th className={cx("p-3 text-left text-[11px] font-semibold uppercase tracking-[0.16em]", mutedText())}>
-                        Serial
-                      </th>
-                      <th className={cx("p-3 text-left text-[11px] font-semibold uppercase tracking-[0.16em]", mutedText())}>
-                        Item notes
-                      </th>
-                      <th className={cx("p-3 text-right text-[11px] font-semibold uppercase tracking-[0.16em]", mutedText())}>
-                        Remove
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {items.map((it, idx) => (
-                      <tr key={idx} className="border-b border-[var(--color-border)] align-top">
-                        <td className="p-3">
-                          <input
-                            className="app-input"
-                            value={it.productName}
-                            onChange={(e) => setItem(idx, "productName", e.target.value)}
-                            placeholder="Example: iPhone 13 128GB"
-                          />
-                          <div className={cx("mt-1 text-xs", mutedText())}>
-                            {it.productId ? "Linked to inventory" : "Not linked"}
-                          </div>
-                        </td>
-
-                        <td className="p-3 text-center">
-                          <input
-                            type="number"
-                            min="1"
-                            className="w-24 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-center text-sm text-[var(--color-text)]"
-                            value={it.quantity}
-                            onChange={(e) => setItem(idx, "quantity", Number(e.target.value || 1))}
-                          />
-                        </td>
-
-                        <td className="p-3 text-right">
-                          <input
-                            type="number"
-                            min="0"
-                            className="w-32 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-right text-sm text-[var(--color-text)]"
-                            value={it.buyPrice}
-                            onChange={(e) => setItem(idx, "buyPrice", e.target.value)}
-                            placeholder="0"
-                          />
-                        </td>
-
-                        <td className="p-3 text-right">
-                          <input
-                            type="number"
-                            min="0"
-                            className="w-32 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-right text-sm text-[var(--color-text)]"
-                            value={it.sellPrice}
-                            onChange={(e) => setItem(idx, "sellPrice", e.target.value)}
-                            placeholder="0"
-                          />
-                        </td>
-
-                        <td className="p-3">
-                          <input
-                            className="w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-text)]"
-                            value={it.serial}
-                            onChange={(e) => setItem(idx, "serial", e.target.value)}
-                            placeholder="Only if product has serial"
-                          />
-                        </td>
-
-                        <td className="p-3">
-                          <textarea
-                            className="w-64 min-h-[92px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm leading-6 text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]"
-                            rows={3}
-                            value={it.notes}
-                            onChange={(e) => setItem(idx, "notes", e.target.value)}
-                            placeholder="Optional notes for this item"
-                          />
-                        </td>
-
-                        <td className="p-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => removeRow(idx)}
-                            className="text-sm font-semibold text-[var(--color-danger)] transition hover:opacity-80 disabled:opacity-60"
-                            disabled={items.length <= 1}
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className={cx("rounded-[18px] bg-[var(--color-surface)] p-4")}>
-                  <div className={cx("text-[10px] font-semibold uppercase tracking-[0.16em]", mutedText())}>
-                    Total buy
-                  </div>
-                  <div className={cx("mt-2 text-xl font-black tracking-tight", strongText())}>
-                    {fmtMoney(totals.totalBuy)}
-                  </div>
-                </div>
-
-                <div className={cx("rounded-[18px] bg-[var(--color-surface)] p-4")}>
-                  <div className={cx("text-[10px] font-semibold uppercase tracking-[0.16em]", mutedText())}>
-                    Total sell
-                  </div>
-                  <div className={cx("mt-2 text-xl font-black tracking-tight", strongText())}>
-                    {fmtMoney(totals.totalSell)}
+                  <div className="md:col-span-2">
+                    <Field label="Supply notes">
+                      <textarea
+                        className={textareaClass()}
+                        value={form.notes}
+                        onChange={(event) => setField("notes", event.target.value)}
+                        placeholder="Supplier promise, payment note, warranty terms, or receiving note..."
+                      />
+                    </Field>
                   </div>
                 </div>
               </div>
             </div>
+          </section>
 
+          {form.items.map((item, index) => (
+            <ItemCard
+              key={index}
+              item={item}
+              index={index}
+              canRemove={form.items.length > 1}
+              onChange={setItem}
+              onRemove={removeItem}
+            />
+          ))}
+
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className={cx("text-sm font-black", strongText())}>Need to add another item?</div>
+                <div className={cx("mt-1 text-xs font-semibold leading-5", mutedText())}>
+                  Add another line when the supplier delivered more than one product.
+                </div>
+              </div>
+
+              <button type="button" onClick={addItem} className={secondaryBtn()} disabled={saving}>
+                Add another item
+              </button>
+            </div>
+          </section>
+
+          <section className={cx(pageCard(), "p-5 sm:p-6")}>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                onClick={() => nav(`/app/suppliers/${id}`)}
-                className="inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90"
+                onClick={() => navigate(`/app/suppliers/${id}`)}
+                className={secondaryBtn()}
                 disabled={saving}
               >
                 Cancel
               </button>
 
-              <AsyncButton type="submit" loading={saving} loadingText="Saving..." variant="primary">
-                Save delivery
+              <AsyncButton type="submit" loading={saving} loadingText="Saving..." className={primaryBtn()}>
+                Save supplier stock
               </AsyncButton>
             </div>
-          </form>
-        </div>
-      </section>
-
-      <Modal open={helpOpen} title="Quick rules" onClose={() => setHelpOpen(false)}>
-        <div className={cx("space-y-2 text-sm", strongText())}>
-          <div>1. If you write a serial number, keep quantity = 1.</div>
-          <div>2. Use the search box to link items to inventory.</div>
-          <div>3. If stock update is on, inventory increases automatically.</div>
+          </section>
         </div>
 
-        <div className="mt-4 flex justify-end">
-          <AsyncButton type="button" variant="primary" onClick={() => setHelpOpen(false)}>
-            OK
-          </AsyncButton>
-        </div>
-      </Modal>
+        <PreviewPanel
+          supplier={supplier}
+          currentBranchName={currentBranchName}
+          currentLocationLabel={currentLocationLabel}
+          sourceType={form.sourceType}
+          documentRef={form.documentRef}
+          items={form.items}
+          alsoUpdateStock={form.alsoUpdateStock}
+        />
+      </form>
     </div>
   );
 }

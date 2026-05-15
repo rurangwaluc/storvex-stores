@@ -13,56 +13,56 @@ function cx(...xs) {
 }
 
 function cleanString(value) {
-  const s = String(value || "").trim();
-  return s || "";
+  const text = String(value || "").trim();
+  return text || "";
 }
 
 function formatMoney(value) {
-  const n = Number(value || 0);
-  const safe = Number.isFinite(n) ? n : 0;
+  const amount = Number(value || 0);
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
 
-  return `Rwf ${new Intl.NumberFormat("en-US", {
+  return `RWF ${new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
-  }).format(safe)}`;
+  }).format(safeAmount)}`;
 }
 
 function formatNumber(value) {
-  const n = Number(value || 0);
+  const amount = Number(value || 0);
 
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
-  }).format(Number.isFinite(n) ? n : 0);
+  }).format(Number.isFinite(amount) ? amount : 0);
 }
 
 function safeDate(value) {
-  const d = value ? new Date(value) : null;
-  if (!d || Number.isNaN(d.getTime())) return null;
-  return d;
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return null;
+  return date;
 }
 
 function formatDate(value) {
-  const d = safeDate(value);
-  if (!d) return "—";
+  const date = safeDate(value);
+  if (!date) return "—";
 
-  return d.toLocaleDateString("en-RW", {
+  return date.toLocaleDateString("en-RW", {
     dateStyle: "medium",
   });
 }
 
 function daysUntil(value) {
-  const d = safeDate(value);
-  if (!d) return null;
+  const date = safeDate(value);
+  if (!date) return null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const end = new Date(d);
+  const end = new Date(date);
   end.setHours(0, 0, 0, 0);
 
   return Math.round((end.getTime() - today.getTime()) / 86400000);
 }
 
-function activeBranchNameFromStorage() {
+function activeStoreLocationFromStorage() {
   const name = cleanString(localStorage.getItem("activeBranchName"));
   const code = cleanString(localStorage.getItem("activeBranchCode"));
 
@@ -70,7 +70,7 @@ function activeBranchNameFromStorage() {
   if (name) return name;
   if (code) return code;
 
-  return "this branch";
+  return "current store location";
 }
 
 function pageCard() {
@@ -92,21 +92,21 @@ function buttonBase() {
 function primaryBtn() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
 function secondaryBtn() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
 function successBtn() {
   return cx(
     buttonBase(),
-    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
@@ -149,16 +149,16 @@ function customerPhone(warranty) {
   );
 }
 
-function branchLabel(warranty) {
-  const branch = warranty?.branch || warranty?.sale?.branch || {};
-  const code = cleanString(branch?.code);
-  const name = cleanString(branch?.name);
+function storeLocationLabel(warranty) {
+  const location = warranty?.branch || warranty?.sale?.branch || {};
+  const code = cleanString(location?.code);
+  const name = cleanString(location?.name);
 
   if (code && name) return `${code} • ${name}`;
   if (name) return name;
   if (code) return code;
 
-  return activeBranchNameFromStorage();
+  return activeStoreLocationFromStorage();
 }
 
 function createdByName(warranty) {
@@ -181,9 +181,9 @@ function saleTotal(warranty) {
 }
 
 function warrantyStatus(warranty) {
-  const raw = String(warranty?.status || "").toUpperCase();
+  const rawStatus = String(warranty?.status || "").toUpperCase();
 
-  if (raw === "CANCELLED" || raw === "VOID") {
+  if (rawStatus === "CANCELLED" || rawStatus === "VOID") {
     return {
       label: "Cancelled",
       tone: "danger",
@@ -191,8 +191,8 @@ function warrantyStatus(warranty) {
     };
   }
 
-  const end = warranty?.endsAt || warranty?.endDate;
-  const days = daysUntil(end);
+  const endDate = warranty?.endsAt || warranty?.endDate;
+  const days = daysUntil(endDate);
 
   if (days === null) {
     return {
@@ -229,7 +229,7 @@ function matchesWarrantyQuery(warranty, query) {
   const q = query.trim().toLowerCase();
   if (!q) return true;
 
-  const unitText = warrantyUnits(warranty)
+  const coveredProductsText = warrantyUnits(warranty)
     .map((unit) =>
       [
         unit?.unitLabel,
@@ -240,7 +240,7 @@ function matchesWarrantyQuery(warranty, query) {
         unit?.productName,
       ]
         .filter(Boolean)
-        .join(" "),
+        .join(" ")
     )
     .join(" ");
 
@@ -249,10 +249,10 @@ function matchesWarrantyQuery(warranty, query) {
     saleReference(warranty),
     customerName(warranty),
     customerPhone(warranty),
-    branchLabel(warranty),
+    storeLocationLabel(warranty),
     createdByName(warranty),
     warranty?.policy,
-    unitText,
+    coveredProductsText,
   ]
     .map((item) => String(item || "").toLowerCase())
     .join(" ");
@@ -274,7 +274,7 @@ function StatusBadge({ tone = "neutral", children }) {
     <span
       className={cx(
         "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]",
-        cls,
+        cls
       )}
     >
       {children}
@@ -309,6 +309,7 @@ function ListSkeleton() {
 
       <section className={cx(pageCard(), "p-5")}>
         <SkeletonBlock className="h-12 w-full rounded-[18px]" />
+
         <div className="mt-5 grid gap-3">
           {[1, 2, 3, 4].map((item) => (
             <SkeletonBlock key={item} className="h-48 w-full rounded-[28px]" />
@@ -321,7 +322,14 @@ function ListSkeleton() {
 
 function SearchIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" strokeLinecap="round" />
     </svg>
@@ -330,7 +338,14 @@ function SearchIcon() {
 
 function PlusIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      aria-hidden="true"
+    >
       <path d="M12 5v14M5 12h14" strokeLinecap="round" />
     </svg>
   );
@@ -338,7 +353,14 @@ function PlusIcon() {
 
 function ShieldIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-3Z" />
       <path d="m9 12 2 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -396,6 +418,7 @@ function InfoTile({ label, value, tone = "neutral" }) {
       <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
         {label}
       </p>
+
       <p className={cx("mt-2 break-words text-sm font-black leading-6", valueClass)}>
         {value || "—"}
       </p>
@@ -431,7 +454,7 @@ function WarrantyCard({ warranty }) {
             ? "bg-red-500"
             : status.tone === "warning"
               ? "bg-amber-500"
-              : "bg-emerald-500",
+              : "bg-emerald-500"
         )}
       />
 
@@ -475,13 +498,20 @@ function WarrantyCard({ warranty }) {
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <InfoTile label="Covered products" value={formatNumber(units.length)} tone="success" />
           <InfoTile label="Starts" value={formatDate(warranty?.startsAt)} />
-          <InfoTile label="Ends" value={`${formatDate(warranty?.endsAt)} • ${status.note}`} tone={status.tone} />
+          <InfoTile
+            label="Ends"
+            value={`${formatDate(warranty?.endsAt)} • ${status.note}`}
+            tone={status.tone}
+          />
           <InfoTile label="Sale value" value={total ? formatMoney(total) : "Not shown"} />
         </div>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <InfoTile label="Branch" value={branchLabel(warranty)} />
-          <InfoTile label="Created by" value={`${createdByName(warranty)} • ${formatDate(warranty?.createdAt)}`} />
+          <InfoTile label="Store location" value={storeLocationLabel(warranty)} />
+          <InfoTile
+            label="Created by"
+            value={`${createdByName(warranty)} • ${formatDate(warranty?.createdAt)}`}
+          />
         </div>
 
         {cleanString(warranty?.policy) ? (
@@ -506,7 +536,9 @@ export default function WarrantiesList() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [activeBranchLabel, setActiveBranchLabel] = useState(() => activeBranchNameFromStorage());
+  const [activeStoreLocation, setActiveStoreLocation] = useState(() =>
+    activeStoreLocationFromStorage()
+  );
 
   useEffect(() => {
     mountedRef.current = true;
@@ -538,7 +570,7 @@ export default function WarrantiesList() {
 
       setWarranties(rows);
       setVisibleCount(PAGE_SIZE);
-      setActiveBranchLabel(activeBranchNameFromStorage());
+      setActiveStoreLocation(activeStoreLocationFromStorage());
     } catch (error) {
       if (!mountedRef.current) return;
 
@@ -561,17 +593,17 @@ export default function WarrantiesList() {
   useEffect(() => {
     void load();
 
-    function onBranchChanged() {
-      setActiveBranchLabel(activeBranchNameFromStorage());
+    function onStoreLocationChanged() {
+      setActiveStoreLocation(activeStoreLocationFromStorage());
       void load({ silent: true });
     }
 
-    window.addEventListener("storvex:branch-changed", onBranchChanged);
-    window.addEventListener("storvex:workspace-refreshed", onBranchChanged);
+    window.addEventListener("storvex:branch-changed", onStoreLocationChanged);
+    window.addEventListener("storvex:workspace-refreshed", onStoreLocationChanged);
 
     return () => {
-      window.removeEventListener("storvex:branch-changed", onBranchChanged);
-      window.removeEventListener("storvex:workspace-refreshed", onBranchChanged);
+      window.removeEventListener("storvex:branch-changed", onStoreLocationChanged);
+      window.removeEventListener("storvex:workspace-refreshed", onStoreLocationChanged);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -580,7 +612,10 @@ export default function WarrantiesList() {
     return warranties.filter((warranty) => {
       const status = warrantyStatus(warranty);
 
-      if (statusFilter !== "ALL" && status.label.toUpperCase().replace(/\s+/g, "_") !== statusFilter) {
+      if (
+        statusFilter !== "ALL" &&
+        status.label.toUpperCase().replace(/\s+/g, "_") !== statusFilter
+      ) {
         return false;
       }
 
@@ -597,7 +632,9 @@ export default function WarrantiesList() {
 
   const summary = useMemo(() => {
     const active = warranties.filter((item) => warrantyStatus(item).label === "Active").length;
-    const endingSoon = warranties.filter((item) => warrantyStatus(item).label === "Ending soon").length;
+    const endingSoon = warranties.filter(
+      (item) => warrantyStatus(item).label === "Ending soon"
+    ).length;
     const expired = warranties.filter((item) => warrantyStatus(item).label === "Expired").length;
     const coveredUnits = warranties.reduce((sum, item) => sum + warrantyUnits(item).length, 0);
 
@@ -635,8 +672,9 @@ export default function WarrantiesList() {
 
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--color-text-muted)]">
               Track product support records for{" "}
-              <span className="font-black text-[var(--color-text)]">{activeBranchLabel}</span>.
-              The first 10 warranties are shown first. Search, filter, or load more to find the rest.
+              <span className="font-black text-[var(--color-text)]">{activeStoreLocation}</span>.
+              The first 10 warranties are shown first. Search, filter, or load more to find the
+              rest.
             </p>
           </div>
 
@@ -658,11 +696,7 @@ export default function WarrantiesList() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          label="Warranties"
-          value={formatNumber(summary.total)}
-          note="Loaded in this branch view"
-        />
+        <SummaryCard label="Warranties" value={formatNumber(summary.total)} note="Loaded here" />
 
         <SummaryCard
           label="Active"
@@ -697,7 +731,7 @@ export default function WarrantiesList() {
               className={cx(inputClass(), "pl-11")}
               value={q}
               onChange={(event) => setQ(event.target.value)}
-              placeholder="Search by customer, phone, warranty, receipt, product, serial, or IMEI..."
+              placeholder="Search by customer, phone, warranty, receipt, product, serial, IMEI, or store location..."
             />
           </div>
 

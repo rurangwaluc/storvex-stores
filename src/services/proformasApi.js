@@ -1,17 +1,42 @@
-// src/services/proformasApi.js
 import { apiFetch } from "./apiClient";
-import { buildDocumentPrintUrl } from "./documentPrint";
+import { buildDocumentPrintUrl, openDocumentPrint } from "./documentPrint";
+
+function cleanString(value) {
+  const s = String(value || "").trim();
+  return s || "";
+}
 
 function normalizeQueryInput(query) {
   if (!query) return {};
+
   if (typeof query === "string") {
     const q = query.trim();
     return q ? { q } : {};
   }
-  if (typeof query === "object") {
-    return query;
+
+  if (typeof query === "object" && !Array.isArray(query)) {
+    return Object.entries(query).reduce((acc, [key, value]) => {
+      if (value === undefined || value === null) return acc;
+
+      const cleaned = typeof value === "string" ? value.trim() : value;
+      if (cleaned === "") return acc;
+
+      acc[key] = cleaned;
+      return acc;
+    }, {});
   }
+
   return {};
+}
+
+function normalizeId(id) {
+  const cleaned = cleanString(id);
+
+  if (!cleaned) {
+    throw new Error("Proforma was not selected");
+  }
+
+  return cleaned;
 }
 
 export function listProformas(query = "", options = {}) {
@@ -24,36 +49,46 @@ export function listProformas(query = "", options = {}) {
   });
 }
 
-export function getProformaById(id) {
-  return apiFetch(`/proformas/${encodeURIComponent(id)}`);
+export function getProformaById(id, options = {}) {
+  return apiFetch(`/proformas/${encodeURIComponent(normalizeId(id))}`, {
+    method: "GET",
+    ...(options || {}),
+  });
 }
 
-export function getProformaDetail(id) {
-  return getProformaById(id);
+export function getProformaDetail(id, options = {}) {
+  return getProformaById(id, options);
 }
 
-export function createProforma(payload) {
+export function createProforma(payload, options = {}) {
   return apiFetch("/proformas", {
     method: "POST",
-    body: payload,
+    body: payload || {},
+    ...(options || {}),
   });
 }
 
-export function updateProforma(id, payload) {
-  return apiFetch(`/proformas/${encodeURIComponent(id)}`, {
+export function updateProforma(id, payload, options = {}) {
+  return apiFetch(`/proformas/${encodeURIComponent(normalizeId(id))}`, {
     method: "PATCH",
-    body: payload,
+    body: payload || {},
+    ...(options || {}),
   });
 }
 
-export function deleteProforma(id) {
-  return apiFetch(`/proformas/${encodeURIComponent(id)}`, {
+export function deleteProforma(id, options = {}) {
+  return apiFetch(`/proformas/${encodeURIComponent(normalizeId(id))}`, {
     method: "DELETE",
+    ...(options || {}),
   });
 }
 
 export function getProformaPrintUrl(id, token) {
-  return buildDocumentPrintUrl("proformas", id, token);
+  return buildDocumentPrintUrl("proformas", normalizeId(id), token);
+}
+
+export function openProformaPrint(id, token) {
+  return openDocumentPrint("proformas", normalizeId(id), token);
 }
 
 export default {
@@ -64,4 +99,5 @@ export default {
   updateProforma,
   deleteProforma,
   getProformaPrintUrl,
+  openProformaPrint,
 };

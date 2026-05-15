@@ -1,206 +1,401 @@
-// src/pages/repairs/Repairs.jsx
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 
-import {
-  archiveRepair,
-  assignTechnician,
-  deleteRepair,
-  getRepairs,
-  updateRepair,
-} from "../../services/repairsApi";
-import { useEffect, useState } from "react";
+import AsyncButton from "../../components/ui/AsyncButton";
+import { listCustomers } from "../../services/customersApi";
+import { getRepair, updateRepair } from "../../services/repairsApi";
 
-import { Link } from "react-router-dom";
+function cx(...xs) {
+  return xs.filter(Boolean).join(" ");
+}
 
-export default function Repairs() {
-  const [repairs, setRepairs] = useState([]);
-  const [technicians, setTechnicians] = useState([]);
+const strong = () => "text-[var(--color-text)]";
+const muted = () => "text-[var(--color-text-muted)]";
+const soft = () => "text-[var(--color-text-soft)]";
+const card = () =>
+  "rounded-[28px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+const panel = () =>
+  "rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)]";
+const input = () => "app-input";
 
-  // Load repairs
-  async function loadRepairs() {
-    try {
-      const data = await getRepairs();
-      setRepairs(data || []);
-    } catch (e) {
-      console.error("Failed to load repairs:", e);
-      alert(e.message || "Failed to load repairs");
-    }
-  }
+function primaryBtn(disabled = false) {
+  return cx(
+    "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition hover:opacity-95",
+    disabled && "cursor-not-allowed opacity-60",
+  );
+}
 
-  // Load technicians (employees with role TECHNICIAN)
-  async function loadTechnicians() {
-    try {
-      const res = await fetch(
-        "http://localhost:5000/api/employees/technicians",
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("tenantToken")}`,
-          },
-        }
-      );
-      const data = await res.json();
-      if (!Array.isArray(data)) {
-        console.error("Expected array of technicians, got:", data);
-        setTechnicians([]);
-        return;
-      }
-      setTechnicians(data);
-    } catch (e) {
-      console.error("Failed to load technicians:", e);
-      setTechnicians([]);
-    }
-  }
+function secondaryBtn(disabled = false) {
+  return cx(
+    "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-5 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90",
+    disabled && "cursor-not-allowed opacity-60",
+  );
+}
+
+function normalizeCustomers(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.customers)) return data.customers;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+}
+
+function normalizeRepair(data) {
+  const repair = data?.repair || data || {};
+
+  return {
+    id: repair.id || null,
+    customerId: repair.customerId || "",
+    customer: repair.customer || null,
+    device: repair.device || "",
+    serial: repair.serial || "",
+    issue: repair.issue || "",
+    status: repair.status || "RECEIVED",
+    warrantyEnd: repair.warrantyEnd || "",
+    technician: repair.technician || null,
+    createdAt: repair.createdAt || null,
+  };
+}
+
+function toInputDate(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toISOString().slice(0, 10);
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString();
+}
+
+function FieldLabel({ children, required = false }) {
+  return (
+    <label className={cx("mb-1.5 block text-sm font-medium", strong())}>
+      {children}
+      {required ? <span className="ml-0.5 text-[var(--color-danger)]">*</span> : null}
+    </label>
+  );
+}
+
+function FieldHelp({ children }) {
+  return <p className={cx("mt-1.5 text-xs leading-5", muted())}>{children}</p>;
+}
+
+function EditSkeleton() {
+  return (
+    <div className="mx-auto max-w-2xl space-y-6">
+      <div className="space-y-3">
+        <div className="h-3 w-28 animate-pulse rounded-full bg-[var(--color-surface-2)]" />
+        <div className="h-9 w-56 animate-pulse rounded-full bg-[var(--color-surface-2)]" />
+        <div className="h-4 w-full max-w-xl animate-pulse rounded-full bg-[var(--color-surface-2)]" />
+      </div>
+
+      <div className={cx(card(), "space-y-5 p-5 sm:p-6")}>
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div key={index}>
+            <div className="mb-2 h-3 w-24 animate-pulse rounded-full bg-[var(--color-surface-2)]" />
+            <div className="h-11 animate-pulse rounded-2xl bg-[var(--color-surface-2)]" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function RepairEdit() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const mountedRef = useRef(true);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [customers, setCustomers] = useState([]);
+  const [repair, setRepair] = useState(null);
+
+  const [form, setForm] = useState({
+    customerId: "",
+    device: "",
+    serial: "",
+    issue: "",
+    warrantyEnd: "",
+  });
 
   useEffect(() => {
-    loadRepairs();
-    loadTechnicians();
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  // Delete repair
-  async function handleDelete(id) {
-    if (!confirm("Delete this repair?")) return;
-    try {
-      await deleteRepair(id);
-      loadRepairs();
-    } catch (e) {
-      console.error(e);
-      alert(e.message || "Failed to delete repair");
+  useEffect(() => {
+    async function load() {
+      if (!id) return;
+
+      try {
+        setLoading(true);
+
+        const [customersData, repairData] = await Promise.all([
+          listCustomers(),
+          getRepair(id),
+        ]);
+
+        if (!mountedRef.current) return;
+
+        const normalized = normalizeRepair(repairData);
+        const customerRows = normalizeCustomers(customersData).filter(
+          (customer) => customer.isActive !== false || customer.id === normalized.customerId,
+        );
+
+        setCustomers(customerRows);
+        setRepair(normalized);
+
+        setForm({
+          customerId: normalized.customerId || "",
+          device: normalized.device || "",
+          serial: normalized.serial || "",
+          issue: normalized.issue || "",
+          warrantyEnd: toInputDate(normalized.warrantyEnd),
+        });
+      } catch (error) {
+        if (!mountedRef.current) return;
+
+        toast.error(error?.message || "Failed to load repair");
+        setRepair(null);
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
     }
+
+    void load();
+  }, [id]);
+
+  function setField(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  // Assign technician by name
-  async function handleAssign(repairId) {
-    const techName = prompt("Enter technician name:");
-    if (!techName) return;
+  const selectedCustomer = useMemo(() => {
+    return customers.find((customer) => customer.id === form.customerId) || repair?.customer || null;
+  }, [customers, form.customerId, repair]);
 
-    // Find technician ID by name
-    const tech = technicians.find((t) => t.name === techName);
-    if (!tech) {
-      alert("Technician not found");
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    const device = String(form.device || "").trim();
+    const issue = String(form.issue || "").trim();
+    const serial = String(form.serial || "").trim();
+
+    if (!device) {
+      toast.error("Device name is required");
       return;
     }
 
+    if (!issue) {
+      toast.error("Issue description is required");
+      return;
+    }
+
+    setSaving(true);
+
     try {
-      await assignTechnician(repairId, tech.name); // backend expects name
-      loadRepairs();
-    } catch (e) {
-      console.error(e);
-      alert(e.message || "Failed to assign technician");
+      await updateRepair(id, {
+        device,
+        serial: serial || null,
+        issue,
+        warrantyEnd: form.warrantyEnd || null,
+      });
+
+      toast.success("Repair updated");
+      navigate("/app/repairs");
+    } catch (error) {
+      toast.error(error?.message || "Failed to update repair");
+    } finally {
+      setSaving(false);
     }
   }
 
-  // Update status
-  async function handleStatusChange(repairId, status) {
-    try {
-      await updateRepair(repairId, { status });
-      loadRepairs();
-    } catch (e) {
-      console.error(e);
-      alert(e.message || "Failed to update status");
-    }
+  if (loading) {
+    return <EditSkeleton />;
   }
 
-  // Archive repair
-  async function handleArchive(repairId) {
-    if (!confirm("Archive this repair?")) return;
-    try {
-      await archiveRepair(repairId);
-      loadRepairs();
-    } catch (e) {
-      console.error(e);
-      alert(e.message || "Failed to archive repair");
-    }
+  if (!repair) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <section className={cx(card(), "p-6 text-center")}>
+          <h1 className={cx("text-2xl font-black tracking-tight", strong())}>
+            Repair could not be loaded
+          </h1>
+
+          <p className={cx("mx-auto mt-2 max-w-xl text-sm leading-6", muted())}>
+            This repair was not found or cannot be opened from the current store location.
+          </p>
+
+          <div className="mt-6">
+            <Link to="/app/repairs" className={secondaryBtn()}>
+              Back to repairs
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Repairs</h1>
-        <Link
-          to="/repairs/new"
-          className="px-4 py-2 bg-black text-white rounded"
-        >
-          New Repair
+    <div className="mx-auto max-w-2xl space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", soft())}>
+            Operations
+          </div>
+
+          <h1 className={cx("mt-2 text-[1.7rem] font-black tracking-tight", strong())}>
+            Edit repair
+          </h1>
+
+          <p className={cx("mt-2 text-sm leading-6", muted())}>
+            Correct the intake details for this customer repair. Status and technician changes are handled from the repair list.
+          </p>
+        </div>
+
+        <Link to="/app/repairs" className={secondaryBtn(saving)}>
+          Back to repairs
         </Link>
       </div>
 
-      {repairs.length === 0 ? (
-        <p className="text-gray-500">No repairs found.</p>
-      ) : (
-        <table className="w-full bg-white rounded shadow">
-          <thead>
-            <tr className="border-b">
-              <th className="p-2 text-left">Customer</th>
-              <th className="p-2">Device</th>
-              <th className="p-2">Technician</th>
-              <th className="p-2">Status</th>
-              <th className="p-2">Actions</th>
-            </tr>
-          </thead>
+      <div className={cx(card(), "p-5 sm:p-6")}>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className={cx(panel(), "p-4")}>
+            <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", soft())}>
+              Repair summary
+            </div>
 
-          <tbody>
-            {repairs.map((r) => (
-              <tr key={r.id} className="border-b">
-                <td className="p-2">
-                  {r.customer?.name || "Unknown"} <br />
-                  <span className="text-xs text-gray-500">
-                    {r.customer?.phone || "N/A"}
-                  </span>
-                </td>
+            <div className={cx("mt-2 text-sm font-bold", strong())}>
+              {repair.device || "Repair"}
+            </div>
 
-                <td className="p-2">{r.device || "Unknown"}</td>
+            <div className={cx("mt-1 text-xs leading-5", muted())}>
+              Status: {repair.status || "RECEIVED"} • Logged: {formatDate(repair.createdAt)}
+              {repair.technician?.name ? ` • Technician: ${repair.technician.name}` : ""}
+            </div>
+          </div>
 
-                <td className="p-2">
-                  {r.technician?.name || "Unassigned"}{" "}
-                  <button
-                    onClick={() => handleAssign(r.id)}
-                    className="ml-2 px-2 py-1 bg-blue-600 text-white rounded"
-                  >
-                    Assign
-                  </button>
-                </td>
+          <div>
+            <FieldLabel>Customer</FieldLabel>
 
-                <td className="p-2">
-                  <select
-                    value={r.status || ""}
-                    onChange={(e) =>
-                      handleStatusChange(r.id, e.target.value)
-                    }
-                    className="border p-1"
-                  >
-                    <option value="RECEIVED">Received</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="DELIVERED">Delivered</option>
-                  </select>
-                </td>
+            <select
+              className={input()}
+              value={form.customerId}
+              disabled
+              onChange={(event) => setField("customerId", event.target.value)}
+            >
+              <option value="">Customer not shown</option>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                  {customer.phone ? ` — ${customer.phone}` : ""}
+                </option>
+              ))}
+            </select>
 
-                <td className="p-2 flex gap-2">
-                  <button
-                    onClick={() => handleArchive(r.id)}
-                    className="px-2 py-1 bg-orange-600 text-white rounded"
-                  >
-                    Archive
-                  </button>
+            <FieldHelp>
+              Customer cannot be changed here to keep the repair record traceable.
+            </FieldHelp>
+          </div>
 
-                  <button
-                    onClick={() => handleDelete(r.id)}
-                    className="px-2 py-1 bg-red-600 text-white rounded"
-                  >
-                    Delete
-                  </button>
+          {selectedCustomer ? (
+            <div className={cx(panel(), "p-4")}>
+              <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", soft())}>
+                Customer
+              </div>
+              <div className={cx("mt-2 text-sm font-bold", strong())}>
+                {selectedCustomer.name || "Customer"}
+              </div>
+              <div className={cx("mt-1 text-xs", muted())}>
+                {selectedCustomer.phone || "No phone saved"}
+              </div>
+            </div>
+          ) : null}
 
-                  <Link
-                    to={`/repairs/${r.id}/edit`}
-                    className="px-2 py-1 bg-green-600 text-white rounded"
-                  >
-                    Edit
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <FieldLabel required>Device</FieldLabel>
+
+              <input
+                className={input()}
+                placeholder="Example: Samsung Galaxy A54"
+                value={form.device}
+                onChange={(event) => setField("device", event.target.value)}
+                disabled={saving}
+                required
+              />
+            </div>
+
+            <div>
+              <FieldLabel>Serial / IMEI</FieldLabel>
+
+              <input
+                className={input()}
+                placeholder="Optional"
+                value={form.serial}
+                onChange={(event) => setField("serial", event.target.value)}
+                disabled={saving}
+              />
+
+              <FieldHelp>Helps identify the exact device if there is a dispute.</FieldHelp>
+            </div>
+          </div>
+
+          <div>
+            <FieldLabel required>Issue description</FieldLabel>
+
+            <textarea
+              className="min-h-[112px] w-full resize-y rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-ring)]"
+              placeholder="Describe the fault or complaint reported by the customer…"
+              value={form.issue}
+              onChange={(event) => setField("issue", event.target.value)}
+              disabled={saving}
+              required
+            />
+          </div>
+
+          <div className="max-w-xs">
+            <FieldLabel>Warranty end date</FieldLabel>
+
+            <input
+              type="date"
+              className={input()}
+              value={form.warrantyEnd}
+              onChange={(event) => setField("warrantyEnd", event.target.value)}
+              disabled={saving}
+            />
+
+            <FieldHelp>Leave blank if no warranty applies to this device.</FieldHelp>
+          </div>
+
+          <div className={cx(panel(), "p-4 text-sm leading-6", muted())}>
+            This screen only edits the repair intake details. Use the repairs list to assign a technician,
+            update progress, archive, or delete the repair.
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+            <Link to="/app/repairs" className={secondaryBtn(saving)}>
+              Cancel
+            </Link>
+
+            <AsyncButton type="submit" loading={saving} loadingText="Saving..." className={primaryBtn(saving)}>
+              Save repair
+            </AsyncButton>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

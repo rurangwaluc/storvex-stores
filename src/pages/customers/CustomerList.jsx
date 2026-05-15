@@ -1,69 +1,120 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+
 import { cn } from "../../lib/cn";
 import AsyncButton from "../../components/ui/AsyncButton";
 import TableSkeleton from "../../components/ui/TableSkeleton";
 import {
   createCustomer,
-  listCustomers,
-  updateCustomer,
   deactivateCustomer,
-  reactivateCustomer,
   getCustomerLedger,
+  listCustomers,
+  reactivateCustomer,
+  updateCustomer,
 } from "../../services/customersApi";
 
 const strong = () => "text-[var(--color-text)]";
 const muted = () => "text-[var(--color-text-muted)]";
-const card = () => "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
-const panel = () => "rounded-[22px] bg-[var(--color-surface-2)]";
+const soft = () => "text-[var(--color-text-soft)]";
 const danger = () => "text-[var(--color-danger)]";
 
-const fmt = (n) => `RWF ${Number(n || 0).toLocaleString()}`;
+const card = () =>
+  "rounded-[28px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 
-function fmtDate(v) {
-  if (!v) return "—";
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
+const panel = () =>
+  "rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)]";
+
+const raised = () =>
+  "rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-soft)]";
+
+function formatMoney(value) {
+  return `RWF ${Number(value || 0).toLocaleString()}`;
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString();
+}
+
+function normalizeCustomerResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.customers)) return data.customers;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+}
+
+function normalizeLedgerResponse(data) {
+  return data || {
+    customer: null,
+    summary: {
+      totalSales: 0,
+      totalAll: 0,
+      totalPaid: 0,
+      totalOutstanding: 0,
+    },
+    sales: [],
+  };
 }
 
 function PulseBar({ className = "" }) {
-  return <div className={cn("animate-pulse rounded-full bg-[var(--color-surface)]", className)} />;
+  return (
+    <div
+      className={cn(
+        "animate-pulse rounded-full bg-[var(--color-surface)]",
+        className,
+      )}
+    />
+  );
 }
 
 function Pill({ children, tone = "neutral" }) {
-  const cls = {
-    success: "bg-[#7cfcc6] text-[#0b3b2e]",
-    warning: "bg-[#ff9f43] text-[#402100]",
-    danger: "bg-[rgba(219,80,74,0.14)] text-[var(--color-danger)]",
-    neutral: "bg-[var(--color-surface)] text-[var(--color-text-muted)]",
-    info: "bg-[var(--color-primary-soft)] text-[var(--color-primary)]",
-  }[tone] || "bg-[var(--color-surface)] text-[var(--color-text-muted)]";
+  const cls =
+    tone === "success"
+      ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
+      : tone === "warning"
+        ? "bg-amber-500/14 text-amber-700 dark:text-amber-300"
+        : tone === "danger"
+          ? "bg-[rgba(219,80,74,0.14)] text-[var(--color-danger)]"
+          : tone === "info"
+            ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+            : "bg-[var(--color-surface)] text-[var(--color-text-muted)]";
 
   return (
     <span
-      className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold", cls)}
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",
+        cls,
+      )}
     >
       {children}
     </span>
   );
 }
 
-function InfoStat({ label, value }) {
+function InfoStat({ label, value, tone = "neutral" }) {
+  const valueClass =
+    tone === "danger" ? danger() : tone === "success" ? "text-emerald-600" : strong();
+
   return (
-    <div className={cn(panel(), "p-3")}>
+    <div className={cn(raised(), "p-3")}>
       <div className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", muted())}>
         {label}
       </div>
-      <div className={cn("mt-1.5 text-sm font-bold", strong())}>{value || "—"}</div>
+      <div className={cn("mt-1.5 text-sm font-bold", valueClass)}>{value || "—"}</div>
     </div>
   );
 }
 
-function EmptyState({ title, text }) {
+function EmptyState({ title, text, action = null }) {
   return (
-    <div className={cn(panel(), "px-5 py-10 text-center")}>
+    <div className={cn(panel(), "px-5 py-12 text-center")}>
       <div className={cn("text-sm font-semibold", strong())}>{title}</div>
-      <div className={cn("mt-1 text-xs leading-5", muted())}>{text}</div>
+      <div className={cn("mx-auto mt-1 max-w-md text-xs leading-5", muted())}>{text}</div>
+      {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );
 }
@@ -89,8 +140,8 @@ function CustomerListPageSkeleton() {
         </div>
 
         <div className="grid grid-cols-2 gap-3 px-5 py-5 sm:grid-cols-4 sm:px-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className={cn(panel(), "p-3")}>
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className={cn(panel(), "p-3")}>
               <PulseBar className="h-3 w-16" />
               <PulseBar className="mt-3 h-7 w-20" />
             </div>
@@ -111,8 +162,8 @@ function CustomerListPageSkeleton() {
         </div>
 
         <div className="space-y-3 p-4 md:hidden">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className={cn(panel(), "space-y-2 p-4")}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className={cn(panel(), "space-y-2 p-4")}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 space-y-1.5">
                   <PulseBar className="h-4 w-36" />
@@ -146,49 +197,66 @@ const EMPTY_FORM = {
 };
 
 function CustomerFormModal({ initial, onSave, onClose, busy }) {
-  const [form, setForm] = useState({ ...EMPTY_FORM, ...initial });
+  const [form, setForm] = useState({ ...EMPTY_FORM, ...(initial || {}) });
   const isEdit = Boolean(initial?.id);
 
-  function set(key, value) {
+  function setField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    if (!form.name.trim()) {
-      toast.error("Name is required");
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    if (!String(form.name || "").trim()) {
+      toast.error("Customer name is required");
       return;
     }
-    if (!form.phone.trim()) {
-      toast.error("Phone is required");
+
+    if (!String(form.phone || "").trim()) {
+      toast.error("Phone number is required");
       return;
     }
+
     onSave(form);
   }
 
-  const inputCls = "app-input";
-  const textAreaCls =
-    "app-textarea w-full min-h-[120px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]";
-  const lbl = cn("mb-1.5 block text-sm font-medium", strong());
+  const labelClass = cn("mb-1.5 block text-sm font-medium", strong());
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <button
+        type="button"
+        aria-label="Close customer form"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={busy ? undefined : onClose}
+      />
+
       <div
         className={cn(
           card(),
-          "relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6"
+          "relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6",
         )}
       >
-        <div className="mb-5 flex items-center justify-between">
-          <div className={cn("text-lg font-black tracking-tight", strong())}>
-            {isEdit ? "Edit customer" : "New customer"}
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <div>
+            <div className={cn("text-lg font-black tracking-tight", strong())}>
+              {isEdit ? "Edit customer" : "New customer"}
+            </div>
+            <div className={cn("mt-1 text-xs leading-5", muted())}>
+              {isEdit
+                ? "Update customer details while keeping their history connected."
+                : "Create a customer profile for sales, credit follow-up, and communication."}
+            </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className={cn("rounded-xl p-1.5 transition hover:opacity-75", muted())}
+            disabled={busy}
+            className={cn(
+              "rounded-xl p-1.5 transition hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-60",
+              muted(),
+            )}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path
@@ -204,79 +272,79 @@ function CustomerFormModal({ initial, onSave, onClose, busy }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className={lbl}>
+              <label className={labelClass}>
                 Name <span className={danger()}>*</span>
               </label>
               <input
-                className={inputCls}
-                value={form.name}
-                onChange={(e) => set("name", e.target.value)}
+                className="app-input"
+                value={form.name || ""}
+                onChange={(event) => setField("name", event.target.value)}
                 placeholder="Full name"
                 required
               />
             </div>
 
             <div>
-              <label className={lbl}>
+              <label className={labelClass}>
                 Phone <span className={danger()}>*</span>
               </label>
               <input
-                className={inputCls}
-                value={form.phone}
-                onChange={(e) => set("phone", e.target.value)}
+                className="app-input"
+                value={form.phone || ""}
+                onChange={(event) => setField("phone", event.target.value)}
                 placeholder="07x xxx xxxx"
                 required
               />
             </div>
 
             <div>
-              <label className={lbl}>Email</label>
+              <label className={labelClass}>Email</label>
               <input
-                className={inputCls}
+                className="app-input"
                 type="email"
-                value={form.email}
-                onChange={(e) => set("email", e.target.value)}
+                value={form.email || ""}
+                onChange={(event) => setField("email", event.target.value)}
                 placeholder="email@example.com"
               />
             </div>
 
             <div>
-              <label className={lbl}>Address</label>
+              <label className={labelClass}>Address</label>
               <input
-                className={inputCls}
-                value={form.address}
-                onChange={(e) => set("address", e.target.value)}
+                className="app-input"
+                value={form.address || ""}
+                onChange={(event) => setField("address", event.target.value)}
                 placeholder="Physical address"
               />
             </div>
 
             <div>
-              <label className={lbl}>TIN number</label>
+              <label className={labelClass}>TIN number</label>
               <input
-                className={inputCls}
-                value={form.tinNumber}
-                onChange={(e) => set("tinNumber", e.target.value)}
+                className="app-input"
+                value={form.tinNumber || ""}
+                onChange={(event) => setField("tinNumber", event.target.value)}
                 placeholder="TIN / VAT number"
               />
             </div>
 
             <div>
-              <label className={lbl}>ID number</label>
+              <label className={labelClass}>ID number</label>
               <input
-                className={inputCls}
-                value={form.idNumber}
-                onChange={(e) => set("idNumber", e.target.value)}
+                className="app-input"
+                value={form.idNumber || ""}
+                onChange={(event) => setField("idNumber", event.target.value)}
                 placeholder="National ID / Passport"
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className={lbl}>Notes</label>
+              <label className={labelClass}>Notes</label>
               <textarea
-                className={textAreaCls}
+                className="min-h-[120px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]"
                 rows={5}
-                value={form.notes}
-                onChange={(e) => set("notes", e.target.value)}
+                value={form.notes || ""}
+                onChange={(event) => setField("notes", event.target.value)}
                 placeholder="Internal notes about this customer…"
               />
             </div>
@@ -286,23 +354,27 @@ function CustomerFormModal({ initial, onSave, onClose, busy }) {
             <div
               className={cn(
                 "relative h-6 w-11 rounded-full transition",
-                form.whatsappOptIn ? "bg-[var(--color-primary)]" : "bg-[var(--color-surface)]"
+                form.whatsappOptIn ? "bg-[var(--color-primary)]" : "bg-[var(--color-surface)]",
               )}
             >
               <div
                 className={cn(
                   "absolute top-0.5 h-5 w-5 rounded-full bg-[var(--color-card)] shadow transition-transform",
-                  form.whatsappOptIn ? "translate-x-5" : "translate-x-0.5"
+                  form.whatsappOptIn ? "translate-x-5" : "translate-x-0.5",
                 )}
               />
+
               <input
                 type="checkbox"
                 className="sr-only"
-                checked={form.whatsappOptIn}
-                onChange={(e) => set("whatsappOptIn", e.target.checked)}
+                checked={Boolean(form.whatsappOptIn)}
+                onChange={(event) => setField("whatsappOptIn", event.target.checked)}
               />
             </div>
-            <span className={cn("text-sm font-medium", strong())}>WhatsApp opt-in</span>
+
+            <span className={cn("text-sm font-medium", strong())}>
+              Customer accepts WhatsApp updates
+            </span>
           </label>
 
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
@@ -334,34 +406,57 @@ function CustomerFormModal({ initial, onSave, onClose, busy }) {
 
 function LedgerDrawer({ customerId, onClose }) {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(null);
+  const [ledger, setLedger] = useState(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
-    (async () => {
+    async function loadLedger() {
       try {
-        const result = await getCustomerLedger(customerId);
-        if (!cancelled) setData(result);
-      } catch (e) {
-        if (!cancelled) toast.error(e?.message || "Failed to load ledger");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+        setLoading(true);
 
-    return () => {
-      cancelled = true;
-    };
+        const result = await getCustomerLedger(customerId, {}, { signal: controller.signal });
+
+        if (!controller.signal.aborted) {
+          setLedger(normalizeLedgerResponse(result));
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          toast.error(error?.message || "Failed to load customer history");
+          setLedger(null);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadLedger();
+
+    return () => controller.abort();
   }, [customerId]);
+
+  const sales = Array.isArray(ledger?.sales) ? ledger.sales : [];
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <button
+        type="button"
+        aria-label="Close customer history"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
       <div className={cn(card(), "relative z-10 flex w-full max-w-xl flex-col overflow-hidden")}>
-        <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
-          <div className={cn("text-lg font-black tracking-tight", strong())}>
-            {loading ? "Loading..." : data?.customer?.name || "Ledger"}
+        <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4">
+          <div>
+            <div className={cn("text-lg font-black tracking-tight", strong())}>
+              {loading ? "Loading..." : ledger?.customer?.name || "Customer history"}
+            </div>
+            <div className={cn("mt-1 text-xs", muted())}>
+              Purchases, payments, and outstanding balance
+            </div>
           </div>
 
           <button
@@ -380,43 +475,47 @@ function LedgerDrawer({ customerId, onClose }) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto p-5">
           {loading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className={cn(panel(), "space-y-2 p-4")}>
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className={cn(panel(), "space-y-2 p-4")}>
                 <PulseBar className="h-3 w-32" />
                 <PulseBar className="h-3 w-full" />
                 <PulseBar className="h-3 w-3/4" />
               </div>
             ))
-          ) : !data ? (
-            <EmptyState title="No ledger data" text="Could not load customer history." />
+          ) : !ledger ? (
+            <EmptyState title="No customer history" text="Could not load this customer's history." />
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3">
-                <InfoStat label="Total sales" value={data.summary?.totalSales ?? "—"} />
-                <InfoStat label="Total value" value={fmt(data.summary?.totalAll)} />
-                <InfoStat label="Total paid" value={fmt(data.summary?.totalPaid)} />
-                <InfoStat label="Outstanding" value={fmt(data.summary?.totalOutstanding)} />
+                <InfoStat label="Sales" value={ledger.summary?.totalSales ?? "0"} />
+                <InfoStat label="Total value" value={formatMoney(ledger.summary?.totalAll)} />
+                <InfoStat label="Paid" value={formatMoney(ledger.summary?.totalPaid)} tone="success" />
+                <InfoStat
+                  label="Outstanding"
+                  value={formatMoney(ledger.summary?.totalOutstanding)}
+                  tone={Number(ledger.summary?.totalOutstanding || 0) > 0 ? "danger" : "success"}
+                />
               </div>
 
-              {data.sales?.length > 0 ? (
+              {sales.length > 0 ? (
                 <div className="space-y-3">
                   <div className={cn("text-sm font-bold", strong())}>Sales history</div>
 
-                  {data.sales.map((sale) => (
+                  {sales.map((sale) => (
                     <div key={sale.id} className={cn(panel(), "p-3")}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <div className={cn("text-sm font-bold", strong())}>
-                            {sale.receiptNumber || sale.invoiceNumber || sale.id.slice(-8)}
+                            {sale.receiptNumber || sale.invoiceNumber || sale.id?.slice(-8) || "Sale"}
                           </div>
-                          <div className={cn("text-xs", muted())}>{fmtDate(sale.createdAt)}</div>
+                          <div className={cn("text-xs", muted())}>{formatDate(sale.createdAt)}</div>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
                           <Pill tone={sale.saleType === "CREDIT" ? "warning" : "success"}>
-                            {sale.saleType}
+                            {sale.saleType || "SALE"}
                           </Pill>
 
                           <Pill
@@ -424,20 +523,31 @@ function LedgerDrawer({ customerId, onClose }) {
                               sale.status === "PAID"
                                 ? "success"
                                 : sale.status === "OVERDUE"
-                                ? "danger"
-                                : "warning"
+                                  ? "danger"
+                                  : "warning"
                             }
                           >
-                            {sale.status}
+                            {sale.status || "OPEN"}
                           </Pill>
 
-                          <span className={cn("text-sm font-bold", strong())}>{fmt(sale.total)}</span>
+                          <span className={cn("text-sm font-bold", strong())}>
+                            {formatMoney(sale.total)}
+                          </span>
                         </div>
                       </div>
 
                       {Number(sale.balanceDue || 0) > 0 ? (
                         <div className={cn("mt-1.5 text-xs font-semibold", danger())}>
-                          Balance due: {fmt(sale.balanceDue)}
+                          Balance due: {formatMoney(sale.balanceDue)}
+                        </div>
+                      ) : null}
+
+                      {Array.isArray(sale.payments) && sale.payments.length > 0 ? (
+                        <div className={cn("mt-2 text-xs leading-5", muted())}>
+                          Payments:{" "}
+                          {sale.payments
+                            .map((payment) => `${formatMoney(payment.amount)} ${payment.method || ""}`.trim())
+                            .join(" · ")}
                         </div>
                       ) : null}
                     </div>
@@ -468,7 +578,13 @@ function ConfirmModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <button
+        type="button"
+        aria-label="Close confirmation"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={busy ? undefined : onClose}
+      />
+
       <div className={cn(card(), "relative z-10 w-full max-w-sm space-y-4 p-6")}>
         <div className={cn("text-base font-black tracking-tight", strong())}>{title}</div>
         <div className={cn("text-sm leading-6", muted())}>{message}</div>
@@ -479,7 +595,10 @@ function ConfirmModal({
             loadingText="Working..."
             variant={isDanger ? "secondary" : "primary"}
             onClick={onConfirm}
-            className={cn("flex-1", isDanger && "!bg-[var(--color-danger)] text-white hover:opacity-95")}
+            className={cn(
+              "flex-1",
+              isDanger && "!bg-[var(--color-danger)] text-white hover:opacity-95",
+            )}
           >
             {confirmLabel}
           </AsyncButton>
@@ -495,6 +614,8 @@ function ConfirmModal({
 
 export default function CustomerList() {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
   const [customers, setCustomers] = useState([]);
   const [q, setQ] = useState("");
   const [showInactive, setShowInactive] = useState(false);
@@ -507,41 +628,51 @@ export default function CustomerList() {
   const [confirmBusy, setConfirmBusy] = useState(false);
 
   const [ledgerId, setLedgerId] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
 
   const abortRef = useRef(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
     mountedRef.current = true;
+
     return () => {
       mountedRef.current = false;
+      if (abortRef.current) abortRef.current.abort();
     };
   }, []);
 
-  async function load(opts = {}) {
+  async function load(options = {}) {
     if (abortRef.current) abortRef.current.abort();
 
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-    if (!opts.silent) setLoading(true);
-    else setRefreshing(true);
+    if (options.silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
 
     try {
-      const data = await listCustomers({
-        q: q.trim() || undefined,
-        includeInactive: showInactive,
-      });
+      const data = await listCustomers(
+        {
+          q: q.trim() || undefined,
+          includeInactive: showInactive,
+        },
+        { signal: controller.signal },
+      );
 
-      if (!mountedRef.current || ctrl.signal.aborted) return;
-      setCustomers(Array.isArray(data) ? data : []);
-    } catch (e) {
-      if (ctrl.signal.aborted) return;
-      toast.error(e?.message || "Failed to load customers");
+      if (!mountedRef.current || controller.signal.aborted) return;
+
+      setCustomers(normalizeCustomerResponse(data));
+    } catch (error) {
+      if (controller.signal.aborted) return;
+
+      toast.error(error?.message || "Failed to load customers");
       setCustomers([]);
     } finally {
-      if (!mountedRef.current || ctrl.signal.aborted) return;
+      if (!mountedRef.current || controller.signal.aborted) return;
+
       setLoading(false);
       setRefreshing(false);
     }
@@ -553,22 +684,22 @@ export default function CustomerList() {
   }, [showInactive]);
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timeout = setTimeout(() => {
       void load({ silent: true });
     }, 250);
 
-    return () => clearTimeout(t);
+    return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
   const filtered = useMemo(() => {
-    const qLow = q.trim().toLowerCase();
+    const query = q.trim().toLowerCase();
 
     return customers.filter((customer) => {
       if (!showInactive && customer.isActive === false) return false;
-      if (!qLow) return true;
+      if (!query) return true;
 
-      const hay = [
+      const haystack = [
         customer.name,
         customer.phone,
         customer.email,
@@ -579,21 +710,21 @@ export default function CustomerList() {
         .join(" ")
         .toLowerCase();
 
-      return hay.includes(qLow);
+      return haystack.includes(query);
     });
   }, [customers, q, showInactive]);
 
   const stats = useMemo(
     () => ({
-      total: customers.filter((customer) => customer.isActive !== false).length,
+      active: customers.filter((customer) => customer.isActive !== false).length,
       inactive: customers.filter((customer) => customer.isActive === false).length,
       withDebt: customers.filter((customer) => Number(customer.outstanding || 0) > 0).length,
       totalDebt: customers.reduce(
         (sum, customer) => sum + Number(customer.outstanding || 0),
-        0
+        0,
       ),
     }),
-    [customers]
+    [customers],
   );
 
   function openCreate() {
@@ -610,23 +741,45 @@ export default function CustomerList() {
     setFormBusy(true);
 
     try {
+      const payload = {
+        name: String(form.name || "").trim(),
+        phone: String(form.phone || "").trim(),
+        email: String(form.email || "").trim() || null,
+        address: String(form.address || "").trim() || null,
+        tinNumber: String(form.tinNumber || "").trim() || null,
+        idNumber: String(form.idNumber || "").trim() || null,
+        notes: String(form.notes || "").trim() || null,
+        whatsappOptIn: Boolean(form.whatsappOptIn),
+      };
+
       if (editTarget?.id) {
-        const updated = await updateCustomer(editTarget.id, form);
-        setCustomers((prev) =>
-          prev.map((customer) =>
-            customer.id === editTarget.id ? { ...customer, ...updated } : customer
-          )
+        const updated = await updateCustomer(editTarget.id, payload);
+
+        setCustomers((current) =>
+          current.map((customer) =>
+            customer.id === editTarget.id
+              ? {
+                  ...customer,
+                  ...updated,
+                  outstanding: customer.outstanding || updated?.outstanding || 0,
+                }
+              : customer,
+          ),
         );
+
         toast.success("Customer updated");
       } else {
-        const created = await createCustomer(form);
-        setCustomers((prev) => [{ ...created, outstanding: 0 }, ...prev]);
+        const created = await createCustomer(payload);
+
+        setCustomers((current) => [{ ...created, outstanding: 0 }, ...current]);
+
         toast.success("Customer created");
       }
 
       setShowForm(false);
-    } catch (e) {
-      toast.error(e?.message || "Failed to save customer");
+      setEditTarget(null);
+    } catch (error) {
+      toast.error(error?.message || "Failed to save customer");
     } finally {
       if (mountedRef.current) setFormBusy(false);
     }
@@ -639,17 +792,19 @@ export default function CustomerList() {
 
     try {
       await deactivateCustomer(confirmTarget.customer.id);
-      setCustomers((prev) =>
-        prev.map((customer) =>
+
+      setCustomers((current) =>
+        current.map((customer) =>
           customer.id === confirmTarget.customer.id
             ? { ...customer, isActive: false }
-            : customer
-        )
+            : customer,
+        ),
       );
+
       toast.success("Customer deactivated");
       setConfirmTarget(null);
-    } catch (e) {
-      toast.error(e?.message || "Failed to deactivate");
+    } catch (error) {
+      toast.error(error?.message || "Failed to deactivate customer");
     } finally {
       if (mountedRef.current) setConfirmBusy(false);
     }
@@ -662,17 +817,24 @@ export default function CustomerList() {
 
     try {
       const updated = await reactivateCustomer(confirmTarget.customer.id);
-      setCustomers((prev) =>
-        prev.map((customer) =>
+
+      setCustomers((current) =>
+        current.map((customer) =>
           customer.id === confirmTarget.customer.id
-            ? { ...customer, ...updated, isActive: true }
-            : customer
-        )
+            ? {
+                ...customer,
+                ...updated,
+                isActive: true,
+                outstanding: customer.outstanding || updated?.outstanding || 0,
+              }
+            : customer,
+        ),
       );
+
       toast.success("Customer reactivated");
       setConfirmTarget(null);
-    } catch (e) {
-      toast.error(e?.message || "Failed to reactivate");
+    } catch (error) {
+      toast.error(error?.message || "Failed to reactivate customer");
     } finally {
       if (mountedRef.current) setConfirmBusy(false);
     }
@@ -684,110 +846,79 @@ export default function CustomerList() {
 
   return (
     <div className="space-y-6">
-      <div className={cn(card(), "overflow-hidden")}>
+      <section className={cn(card(), "overflow-hidden")}>
         <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <div className={cn("text-[11px] font-semibold uppercase tracking-[0.18em]", muted())}>
+              <div className={cn("text-[11px] font-semibold uppercase tracking-[0.18em]", soft())}>
                 CRM
               </div>
+
               <h1
                 className={cn(
                   "mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]",
-                  strong()
+                  strong(),
                 )}
               >
                 Customers
               </h1>
-              <p className={cn("mt-2 text-sm leading-6", muted())}>
-                Manage customer profiles, view purchase history, and track outstanding balances.
+
+              <p className={cn("mt-2 max-w-3xl text-sm leading-6", muted())}>
+                Manage customer profiles, purchase history, WhatsApp communication preference,
+                and outstanding balances in one place.
               </p>
             </div>
 
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <AsyncButton
                 loading={refreshing}
-                loadingText=""
+                loadingText="Refreshing..."
                 variant="secondary"
                 onClick={() => load({ silent: true })}
               >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className={refreshing ? "animate-spin" : ""}
-                >
-                  <path
-                    d="M20 12a8 8 0 10-2.34 5.66M20 12V6m0 6h-6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
                 Refresh
               </AsyncButton>
 
               <AsyncButton loading={false} variant="primary" onClick={openCreate}>
-                + New customer
+                New customer
               </AsyncButton>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 px-5 py-5 sm:grid-cols-4 sm:px-6">
-          <div className={cn(panel(), "p-3")}>
-            <div className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", muted())}>
-              Active
-            </div>
-            <div className={cn("mt-2 text-2xl font-black", strong())}>{stats.total}</div>
-          </div>
-
-          <div className={cn(panel(), "p-3")}>
-            <div className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", muted())}>
-              With debt
-            </div>
-            <div className={cn("mt-2 text-2xl font-black", danger())}>{stats.withDebt}</div>
-          </div>
-
-          <div className={cn(panel(), "p-3")}>
-            <div className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", muted())}>
-              Total debt
-            </div>
-            <div className={cn("mt-2 text-xl font-black", danger())}>{fmt(stats.totalDebt)}</div>
-          </div>
-
-          <div className={cn(panel(), "p-3")}>
-            <div className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", muted())}>
-              Inactive
-            </div>
-            <div className={cn("mt-2 text-2xl font-black", strong())}>{stats.inactive}</div>
-          </div>
+          <InfoStat label="Active" value={stats.active} />
+          <InfoStat label="With balance" value={stats.withDebt} tone={stats.withDebt > 0 ? "danger" : "success"} />
+          <InfoStat
+            label="Total balance"
+            value={formatMoney(stats.totalDebt)}
+            tone={stats.totalDebt > 0 ? "danger" : "success"}
+          />
+          <InfoStat label="Inactive" value={stats.inactive} />
         </div>
-      </div>
+      </section>
 
-      <div className={cn(card(), "overflow-hidden")}>
+      <section className={cn(card(), "overflow-hidden")}>
         <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <input
               className="app-input max-w-xs"
-              placeholder="Search name · phone · email · TIN · ID…"
+              placeholder="Search name, phone, email, TIN, or ID…"
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(event) => setQ(event.target.value)}
             />
 
             <button
               type="button"
-              onClick={() => setShowInactive((v) => !v)}
+              onClick={() => setShowInactive((current) => !current)}
               className={cn(
                 "inline-flex h-11 items-center rounded-2xl border px-4 text-sm font-semibold transition",
                 showInactive
                   ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
-                  : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
+                  : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90",
               )}
             >
-              {showInactive ? "Showing all" : "Active only"}
+              {showInactive ? "Showing all customers" : "Active customers only"}
             </button>
           </div>
         </div>
@@ -797,17 +928,17 @@ export default function CustomerList() {
             <thead>
               <tr className="border-b border-[var(--color-border)]">
                 {["Name & contact", "TIN / ID", "WhatsApp", "Outstanding", "Status", ""].map(
-                  (h) => (
+                  (heading) => (
                     <th
-                      key={h}
+                      key={heading}
                       className={cn(
                         "px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.16em]",
-                        muted()
+                        muted(),
                       )}
                     >
-                      {h}
+                      {heading}
                     </th>
-                  )
+                  ),
                 )}
               </tr>
             </thead>
@@ -820,7 +951,7 @@ export default function CustomerList() {
                   <td colSpan={6} className="px-5 py-10 text-center">
                     <div className={cn("text-sm font-semibold", strong())}>No customers found</div>
                     <div className={cn("mt-1 text-xs", muted())}>
-                      Try a different search or create a new customer.
+                      Try another search or create a new customer.
                     </div>
                   </td>
                 </tr>
@@ -830,7 +961,7 @@ export default function CustomerList() {
                     key={customer.id}
                     className={cn(
                       "border-b border-[var(--color-border)] transition hover:bg-[var(--color-surface-2)]",
-                      customer.isActive === false && "opacity-50"
+                      customer.isActive === false && "opacity-50",
                     )}
                   >
                     <td className="px-5 py-3">
@@ -851,14 +982,14 @@ export default function CustomerList() {
 
                     <td className="px-5 py-3">
                       <Pill tone={customer.whatsappOptIn ? "success" : "neutral"}>
-                        {customer.whatsappOptIn ? "Opted in" : "No"}
+                        {customer.whatsappOptIn ? "Accepted" : "Not accepted"}
                       </Pill>
                     </td>
 
                     <td className="px-5 py-3">
                       {Number(customer.outstanding || 0) > 0 ? (
                         <span className={cn("text-sm font-bold", danger())}>
-                          {fmt(customer.outstanding)}
+                          {formatMoney(customer.outstanding)}
                         </span>
                       ) : (
                         <span className={cn("text-sm", muted())}>—</span>
@@ -874,43 +1005,37 @@ export default function CustomerList() {
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
+                          type="button"
                           onClick={() => setLedgerId(customer.id)}
                           className={cn(
                             "rounded-xl px-3 py-1.5 text-xs font-semibold transition hover:opacity-80",
-                            muted()
+                            muted(),
                           )}
                         >
-                          Ledger
+                          History
                         </button>
 
                         <button
+                          type="button"
                           onClick={() => openEdit(customer)}
-                          className={cn(
-                            "rounded-xl px-3 py-1.5 text-xs font-semibold transition bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
-                          )}
+                          className="rounded-xl bg-[var(--color-surface-2)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:opacity-90"
                         >
                           Edit
                         </button>
 
                         {customer.isActive !== false ? (
                           <button
-                            onClick={() =>
-                              setConfirmTarget({ customer, action: "deactivate" })
-                            }
-                            className={cn(
-                              "rounded-xl px-3 py-1.5 text-xs font-semibold text-[var(--color-danger)] transition hover:opacity-80"
-                            )}
+                            type="button"
+                            onClick={() => setConfirmTarget({ customer, action: "deactivate" })}
+                            className="rounded-xl px-3 py-1.5 text-xs font-semibold text-[var(--color-danger)] transition hover:opacity-80"
                           >
                             Deactivate
                           </button>
                         ) : (
                           <button
-                            onClick={() =>
-                              setConfirmTarget({ customer, action: "reactivate" })
-                            }
-                            className={cn(
-                              "rounded-xl px-3 py-1.5 text-xs font-semibold text-[var(--color-primary)] transition hover:opacity-80"
-                            )}
+                            type="button"
+                            onClick={() => setConfirmTarget({ customer, action: "reactivate" })}
+                            className="rounded-xl px-3 py-1.5 text-xs font-semibold text-[var(--color-primary)] transition hover:opacity-80"
                           >
                             Reactivate
                           </button>
@@ -926,8 +1051,8 @@ export default function CustomerList() {
 
         <div className="space-y-3 p-4 md:hidden">
           {loading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className={cn(panel(), "space-y-2 p-4")}>
+            Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className={cn(panel(), "space-y-2 p-4")}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 space-y-1.5">
                     <div className="h-4 w-36 animate-pulse rounded-full bg-[var(--color-surface)]" />
@@ -947,7 +1072,9 @@ export default function CustomerList() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className={cn("truncate text-sm font-bold", strong())}>{customer.name}</div>
+                    <div className={cn("truncate text-sm font-bold", strong())}>
+                      {customer.name}
+                    </div>
                     <div className={cn("mt-0.5 text-xs", muted())}>{customer.phone}</div>
                     {customer.email ? (
                       <div className={cn("text-xs", muted())}>{customer.email}</div>
@@ -958,33 +1085,33 @@ export default function CustomerList() {
                     <Pill tone={customer.isActive !== false ? "success" : "neutral"}>
                       {customer.isActive !== false ? "Active" : "Inactive"}
                     </Pill>
+
                     {Number(customer.outstanding || 0) > 0 ? (
-                      <Pill tone="danger">{fmt(customer.outstanding)}</Pill>
+                      <Pill tone="danger">{formatMoney(customer.outstanding)}</Pill>
                     ) : null}
                   </div>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
+                    type="button"
                     onClick={() => setLedgerId(customer.id)}
-                    className={cn(
-                      "rounded-2xl bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)]"
-                    )}
+                    className="rounded-2xl bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)]"
                   >
-                    Ledger
+                    History
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => openEdit(customer)}
-                    className={cn(
-                      "rounded-2xl bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)]"
-                    )}
+                    className="rounded-2xl bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)]"
                   >
                     Edit
                   </button>
 
                   {customer.isActive !== false ? (
                     <button
+                      type="button"
                       onClick={() => setConfirmTarget({ customer, action: "deactivate" })}
                       className="rounded-2xl px-3 py-1.5 text-xs font-semibold text-[var(--color-danger)]"
                     >
@@ -992,6 +1119,7 @@ export default function CustomerList() {
                     </button>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => setConfirmTarget({ customer, action: "reactivate" })}
                       className="rounded-2xl px-3 py-1.5 text-xs font-semibold text-[var(--color-primary)]"
                     >
@@ -1006,16 +1134,20 @@ export default function CustomerList() {
 
         {!loading ? (
           <div className={cn("border-t border-[var(--color-border)] px-5 py-3 text-xs", muted())}>
-            Showing {filtered.length} of {customers.length} customer(s)
+            Showing {filtered.length} of {customers.length} customer{customers.length === 1 ? "" : "s"}
           </div>
         ) : null}
-      </div>
+      </section>
 
       {showForm ? (
         <CustomerFormModal
           initial={editTarget}
           onSave={handleSave}
-          onClose={() => setShowForm(false)}
+          onClose={() => {
+            if (formBusy) return;
+            setShowForm(false);
+            setEditTarget(null);
+          }}
           busy={formBusy}
         />
       ) : null}
@@ -1029,14 +1161,17 @@ export default function CustomerList() {
           }
           message={
             confirmTarget.action === "deactivate"
-              ? `This will hide ${confirmTarget.customer.name} from active lists. Their history is preserved.`
+              ? `This will hide ${confirmTarget.customer.name} from active customer lists. Their history stays saved.`
               : `This will make ${confirmTarget.customer.name} active again.`
           }
           confirmLabel={confirmTarget.action === "deactivate" ? "Deactivate" : "Reactivate"}
           onConfirm={
             confirmTarget.action === "deactivate" ? handleDeactivate : handleReactivate
           }
-          onClose={() => setConfirmTarget(null)}
+          onClose={() => {
+            if (confirmBusy) return;
+            setConfirmTarget(null);
+          }}
           busy={confirmBusy}
           danger={confirmTarget.action === "deactivate"}
         />

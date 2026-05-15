@@ -8,8 +8,8 @@ import { deleteDeliveryNote } from "../../services/deliveryNotesApi";
 import { deleteProforma } from "../../services/proformasApi";
 import { deleteWarranty } from "../../services/warrantiesApi";
 
-function cx(...xs) {
-  return xs.filter(Boolean).join(" ");
+function cx(...classes) {
+  return classes.filter(Boolean).join(" ");
 }
 
 function shell() {
@@ -28,11 +28,11 @@ function mutedText() {
   return "text-[var(--color-text-muted)]";
 }
 
-function softBtn() {
+function softButtonClass() {
   return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-4 text-sm font-semibold text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function dangerBtn() {
+function dangerButtonClass() {
   return "inline-flex h-11 items-center justify-center rounded-2xl bg-[rgba(219,80,74,0.12)] px-4 text-sm font-semibold text-[var(--color-danger)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
@@ -47,33 +47,19 @@ function PillLink({ to, children }) {
   );
 }
 
-function ConfirmDeleteModal({
-  open,
-  title,
-  body,
-  deleting,
-  onCancel,
-  onConfirm,
-}) {
+function ConfirmDeleteModal({ open, title, body, deleting, onCancel, onConfirm }) {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={deleting ? undefined : onCancel}
-      />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={deleting ? undefined : onCancel} />
+
       <div className={cx(shell(), "relative z-10 w-full max-w-md p-5")}>
         <h3 className={cx("text-lg font-black tracking-tight", strongText())}>{title}</h3>
         <p className={cx("mt-2 text-sm leading-6", mutedText())}>{body}</p>
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <AsyncButton
-            type="button"
-            onClick={onCancel}
-            disabled={deleting}
-            variant="secondary"
-          >
+          <AsyncButton type="button" onClick={onCancel} disabled={deleting} variant="secondary">
             Cancel
           </AsyncButton>
 
@@ -82,7 +68,7 @@ function ConfirmDeleteModal({
             onClick={onConfirm}
             loading={deleting}
             loadingText="Deleting..."
-            className={dangerBtn()}
+            className={dangerButtonClass()}
           >
             Delete
           </AsyncButton>
@@ -149,12 +135,14 @@ async function deleteByType(resource, id) {
   if (resource === "delivery-notes") return deleteDeliveryNote(id);
   if (resource === "proformas") return deleteProforma(id);
   if (resource === "warranties") return deleteWarranty(id);
-  throw new Error("Delete is not supported for this document type");
+
+  throw new Error("This document cannot be deleted from this screen");
 }
 
 export default function DocumentPreviewRoute() {
   const navigate = useNavigate();
   const { resource, id } = useParams();
+
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -187,9 +175,9 @@ export default function DocumentPreviewRoute() {
       await deleteByType(resource, id);
       toast.success(`${meta.singularLabel} deleted`);
       navigate(meta.backTo, { replace: true });
-    } catch (err) {
-      console.error(err);
-      toast.error(err?.message || `Failed to delete ${meta.singularLabel}`);
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || `Failed to delete ${meta.singularLabel}`);
     } finally {
       setDeleting(false);
       setShowDelete(false);
@@ -213,7 +201,7 @@ export default function DocumentPreviewRoute() {
         <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <PillLink to="/app/documents">Document Center</PillLink>
+              <PillLink to="/app/documents">Document Centre</PillLink>
               <span className={mutedText()}>/</span>
               <PillLink to={meta.backTo}>{meta.backLabel}</PillLink>
               <span className={mutedText()}>/</span>
@@ -227,28 +215,29 @@ export default function DocumentPreviewRoute() {
                 <div className={cx("text-[11px] font-semibold uppercase tracking-[0.18em]", mutedText())}>
                   Documents
                 </div>
+
                 <h1 className={cx("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strongText())}>
                   {meta.title}
                 </h1>
+
                 <p className={cx("mt-2 text-sm leading-6", mutedText())}>
-                  This is the live backend renderer preview. Brand colors, company details,
-                  and document settings are reflected here directly.
+                  Preview the printable document with your store branding, customer details, and document settings.
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <button type="button" onClick={() => navigate(-1)} className={softBtn()}>
+                <button type="button" onClick={() => navigate(-1)} className={softButtonClass()}>
                   Go back
                 </button>
 
                 {editUrl ? (
-                  <Link to={editUrl} className={softBtn()}>
+                  <Link to={editUrl} className={softButtonClass()}>
                     Edit
                   </Link>
                 ) : null}
 
                 {meta.createTo && meta.createLabel ? (
-                  <Link to={meta.createTo} className={softBtn()}>
+                  <Link to={meta.createTo} className={softButtonClass()}>
                     {meta.createLabel}
                   </Link>
                 ) : null}
@@ -257,19 +246,15 @@ export default function DocumentPreviewRoute() {
                   <button
                     type="button"
                     onClick={() => setShowDelete(true)}
-                    className={dangerBtn()}
+                    className={dangerButtonClass()}
                     disabled={deleting}
                   >
                     {deleting ? "Deleting..." : "Delete"}
                   </button>
                 ) : null}
 
-                <AsyncButton
-                  type="button"
-                  variant="primary"
-                  onClick={() => openDocumentPrint(resource, id)}
-                >
-                  Open Print Tab
+                <AsyncButton type="button" variant="primary" onClick={() => openDocumentPrint(resource, id)}>
+                  Open print page
                 </AsyncButton>
               </div>
             </div>
@@ -285,9 +270,7 @@ export default function DocumentPreviewRoute() {
                 className="h-[76vh] w-full rounded-[18px] bg-white"
               />
             ) : (
-              <div className={cx("p-8 text-sm", mutedText())}>
-                Preview URL is not available.
-              </div>
+              <div className={cx("p-8 text-sm", mutedText())}>Preview is not available.</div>
             )}
           </div>
         </div>

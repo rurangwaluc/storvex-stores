@@ -12,34 +12,34 @@ function cx(...xs) {
 }
 
 function cleanString(value) {
-  const s = String(value || "").trim();
-  return s || "";
+  const text = String(value || "").trim();
+  return text || "";
 }
 
 function formatMoney(value) {
-  const n = Number(value || 0);
-  const safe = Number.isFinite(n) ? n : 0;
+  const amount = Number(value || 0);
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
 
-  return `Rwf ${new Intl.NumberFormat("en-US", {
+  return `RWF ${new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
-  }).format(safe)}`;
+  }).format(safeAmount)}`;
 }
 
 function formatNumber(value) {
-  const n = Number(value || 0);
+  const amount = Number(value || 0);
 
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
-  }).format(Number.isFinite(n) ? n : 0);
+  }).format(Number.isFinite(amount) ? amount : 0);
 }
 
 function formatDate(value) {
   if (!value) return "—";
 
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
 
-  return d.toLocaleDateString("en-RW", {
+  return date.toLocaleDateString("en-RW", {
     dateStyle: "medium",
   });
 }
@@ -47,33 +47,33 @@ function formatDate(value) {
 function toInputDate(value) {
   if (!value) return "";
 
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
 
-  return d.toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10);
 }
 
 function addMonthsToDate(dateText, months) {
-  const d = dateText ? new Date(dateText) : new Date();
+  const date = dateText ? new Date(dateText) : new Date();
 
-  if (Number.isNaN(d.getTime())) return "";
+  if (Number.isNaN(date.getTime())) return "";
 
-  d.setMonth(d.getMonth() + Number(months || 0));
+  date.setMonth(date.getMonth() + Number(months || 0));
 
-  return d.toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10);
 }
 
 function addDaysToDate(dateText, days) {
-  const d = dateText ? new Date(dateText) : new Date();
+  const date = dateText ? new Date(dateText) : new Date();
 
-  if (Number.isNaN(d.getTime())) return "";
+  if (Number.isNaN(date.getTime())) return "";
 
-  d.setDate(d.getDate() + Number(days || 0));
+  date.setDate(date.getDate() + Number(days || 0));
 
-  return d.toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10);
 }
 
-function activeBranchNameFromStorage() {
+function activeStoreLocationFromStorage() {
   const name = cleanString(localStorage.getItem("activeBranchName"));
   const code = cleanString(localStorage.getItem("activeBranchCode"));
 
@@ -81,7 +81,7 @@ function activeBranchNameFromStorage() {
   if (name) return name;
   if (code) return code;
 
-  return "this branch";
+  return "current store location";
 }
 
 function pageCard() {
@@ -107,28 +107,21 @@ function buttonBase() {
 function primaryBtn() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
 function secondaryBtn() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
 function successBtn() {
   return cx(
     buttonBase(),
-    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
-  );
-}
-
-function warningBtn() {
-  return cx(
-    buttonBase(),
-    "bg-amber-500 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
@@ -174,23 +167,24 @@ function cashierName(saleOrWarranty) {
   );
 }
 
-function branchLabel(sale) {
-  const code = cleanString(sale?.branch?.code);
-  const name = cleanString(sale?.branch?.name);
+function storeLocationLabel(sale) {
+  const location = sale?.branch || {};
+  const code = cleanString(location?.code);
+  const name = cleanString(location?.name);
 
   if (code && name) return `${code} • ${name}`;
   if (name) return name;
   if (code) return code;
 
-  return activeBranchNameFromStorage();
+  return activeStoreLocationFromStorage();
 }
 
 function saleStatusTone(status) {
-  const s = String(status || "").toUpperCase();
+  const text = String(status || "").toUpperCase();
 
-  if (["PAID", "COMPLETED", "ACTIVE"].includes(s)) return "success";
-  if (["PARTIAL", "UNPAID", "PENDING"].includes(s)) return "warning";
-  if (["CANCELLED", "EXPIRED", "OVERDUE"].includes(s)) return "danger";
+  if (["PAID", "COMPLETED", "ACTIVE"].includes(text)) return "success";
+  if (["PARTIAL", "UNPAID", "PENDING"].includes(text)) return "warning";
+  if (["CANCELLED", "EXPIRED", "OVERDUE"].includes(text)) return "danger";
 
   return "neutral";
 }
@@ -264,11 +258,7 @@ function itemName(item) {
 }
 
 function itemSerial(item) {
-  return (
-    cleanString(item?.product?.serial) ||
-    cleanString(item?.serial) ||
-    ""
-  );
+  return cleanString(item?.product?.serial) || cleanString(item?.serial) || "";
 }
 
 function itemQuantity(item) {
@@ -293,7 +283,7 @@ function buildSelectableItemsFromSaleAndWarranty(sale, warranty) {
         imei2: unit?.imei2 || "",
         unitLabel: unit?.unitLabel || "",
       },
-    ]),
+    ])
   );
 
   return saleItems.map((item, index) => {
@@ -330,7 +320,7 @@ function StatusBadge({ tone = "neutral", children }) {
     <span
       className={cx(
         "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]",
-        cls,
+        cls
       )}
     >
       {children}
@@ -375,7 +365,14 @@ function EditSkeleton() {
 
 function ShieldIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-3Z" />
       <path d="m9 12 2 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -433,6 +430,7 @@ function InfoTile({ label, value, tone = "neutral" }) {
       <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
         {label}
       </p>
+
       <p className={cx("mt-2 break-words text-sm font-black leading-6", valueClass)}>
         {value || "—"}
       </p>
@@ -444,6 +442,7 @@ function EmptyState({ title, text }) {
   return (
     <div className="rounded-[28px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)] p-8 text-center">
       <h3 className="text-base font-black text-[var(--color-text)]">{title}</h3>
+
       <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-[var(--color-text-muted)]">
         {text}
       </p>
@@ -458,7 +457,7 @@ function CoveredItemCard({ item, index, onChange }) {
         "rounded-[24px] border p-4 transition",
         item.checked
           ? "border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-soft)]"
-          : "border-[var(--color-border)] bg-[var(--color-surface-2)] opacity-75",
+          : "border-[var(--color-border)] bg-[var(--color-surface-2)] opacity-75"
       )}
     >
       <div className="flex items-start gap-3">
@@ -565,7 +564,9 @@ export default function WarrantyEdit() {
   });
 
   const [selectableItems, setSelectableItems] = useState([]);
-  const [activeBranchLabel, setActiveBranchLabel] = useState(() => activeBranchNameFromStorage());
+  const [activeStoreLocation, setActiveStoreLocation] = useState(() =>
+    activeStoreLocationFromStorage()
+  );
 
   useEffect(() => {
     mountedRef.current = true;
@@ -581,7 +582,7 @@ export default function WarrantyEdit() {
 
   function updateSelectableItem(index, key, value) {
     setSelectableItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [key]: value } : item)),
+      prev.map((item, i) => (i === index ? { ...item, [key]: value } : item))
     );
   }
 
@@ -599,7 +600,7 @@ export default function WarrantyEdit() {
       const normalizedWarranty = normalizeWarrantyDetail(warrantyRaw);
 
       if (!normalizedWarranty?.saleId) {
-        throw new Error("Warranty sale is missing");
+        throw new Error("Linked sale is missing");
       }
 
       const saleRaw = await getSale(normalizedWarranty.saleId);
@@ -609,7 +610,7 @@ export default function WarrantyEdit() {
 
       setWarranty(normalizedWarranty);
       setSale(normalizedSale);
-      setActiveBranchLabel(branchLabel(normalizedSale));
+      setActiveStoreLocation(storeLocationLabel(normalizedSale));
 
       setForm({
         policy: normalizedWarranty.policy || "",
@@ -628,7 +629,7 @@ export default function WarrantyEdit() {
       });
 
       setSelectableItems(
-        buildSelectableItemsFromSaleAndWarranty(normalizedSale, normalizedWarranty),
+        buildSelectableItemsFromSaleAndWarranty(normalizedSale, normalizedWarranty)
       );
     } catch (error) {
       if (!mountedRef.current) return;
@@ -638,6 +639,10 @@ export default function WarrantyEdit() {
       if (!handleSubscriptionBlockedError(error, { toastId: "warranty-edit-load-blocked" })) {
         toast.error(error?.message || "Failed to load warranty");
       }
+
+      setWarranty(null);
+      setSale(null);
+      setSelectableItems([]);
     } finally {
       if (mountedRef.current) {
         setLoading(false);
@@ -651,17 +656,17 @@ export default function WarrantyEdit() {
   }, [id]);
 
   useEffect(() => {
-    function onBranchChanged() {
-      setActiveBranchLabel(activeBranchNameFromStorage());
+    function onStoreLocationChanged() {
+      setActiveStoreLocation(activeStoreLocationFromStorage());
       void loadWarranty();
     }
 
-    window.addEventListener("storvex:branch-changed", onBranchChanged);
-    window.addEventListener("storvex:workspace-refreshed", onBranchChanged);
+    window.addEventListener("storvex:branch-changed", onStoreLocationChanged);
+    window.addEventListener("storvex:workspace-refreshed", onStoreLocationChanged);
 
     return () => {
-      window.removeEventListener("storvex:branch-changed", onBranchChanged);
-      window.removeEventListener("storvex:workspace-refreshed", onBranchChanged);
+      window.removeEventListener("storvex:branch-changed", onStoreLocationChanged);
+      window.removeEventListener("storvex:workspace-refreshed", onStoreLocationChanged);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -682,10 +687,7 @@ export default function WarrantyEdit() {
 
   const selectedCoveredItems = useMemo(() => {
     return selectableItems.filter(
-      (item) =>
-        item.checked &&
-        cleanString(item.saleItemId) &&
-        cleanString(item.productId),
+      (item) => item.checked && cleanString(item.saleItemId) && cleanString(item.productId)
     );
   }, [selectableItems]);
 
@@ -753,7 +755,7 @@ export default function WarrantyEdit() {
           </h1>
 
           <p className="mx-auto mt-2 max-w-xl text-sm font-medium leading-6 text-[var(--color-text-muted)]">
-            This warranty was not found or cannot be opened from this branch.
+            This warranty was not found or cannot be opened from the current store location.
           </p>
 
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
@@ -791,8 +793,10 @@ export default function WarrantyEdit() {
                 {warrantyReferenceLabel(warranty)}
               </span>{" "}
               for{" "}
-              <span className="font-black text-[var(--color-text)]">{activeBranchLabel}</span>.
-              Keep the warranty clear, accurate, and linked to the original sale.
+              <span className="font-black text-[var(--color-text)]">
+                {activeStoreLocation}
+              </span>
+              . Keep the warranty clear, accurate, and linked to the original sale.
             </p>
           </div>
 
@@ -852,6 +856,7 @@ export default function WarrantyEdit() {
               <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
                 1. Linked sale
               </h2>
+
               <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
                 This warranty stays attached to the original sale.
               </p>
@@ -874,7 +879,7 @@ export default function WarrantyEdit() {
                     </p>
 
                     <p className="mt-2 text-xs font-bold text-[var(--color-text-muted)]">
-                      {formatDate(sale?.createdAt)} • {formatMoney(sale?.total)} • Cashier:{" "}
+                      {formatDate(sale?.createdAt)} • {formatMoney(sale?.total)} • Staff:{" "}
                       {cashierName(sale)}
                     </p>
                   </div>
@@ -899,6 +904,7 @@ export default function WarrantyEdit() {
               <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
                 2. Warranty terms
               </h2>
+
               <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
                 Update coverage dates and terms shown on the customer certificate.
               </p>
@@ -935,7 +941,9 @@ export default function WarrantyEdit() {
                 </span>
                 <input
                   value={form.durationMonths}
-                  onChange={(event) => updateField("durationMonths", event.target.value.replace(/[^\d]/g, ""))}
+                  onChange={(event) =>
+                    updateField("durationMonths", event.target.value.replace(/[^\d]/g, ""))
+                  }
                   className={inputClass()}
                   inputMode="numeric"
                   placeholder="Example: 12"
@@ -948,7 +956,9 @@ export default function WarrantyEdit() {
                 </span>
                 <input
                   value={form.durationDays}
-                  onChange={(event) => updateField("durationDays", event.target.value.replace(/[^\d]/g, ""))}
+                  onChange={(event) =>
+                    updateField("durationDays", event.target.value.replace(/[^\d]/g, ""))
+                  }
                   className={inputClass()}
                   inputMode="numeric"
                   placeholder="Optional"
@@ -976,6 +986,7 @@ export default function WarrantyEdit() {
                 <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
                   3. Covered products
                 </h2>
+
                 <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
                   Keep checked only the sold products that should remain covered.
                 </p>
@@ -1066,11 +1077,7 @@ export default function WarrantyEdit() {
             </div>
 
             <div className="mt-5 flex flex-col gap-2">
-              <AsyncButton
-                type="submit"
-                loading={saving}
-                className={successBtn()}
-              >
+              <AsyncButton type="submit" loading={saving} className={successBtn()}>
                 <ShieldIcon />
                 Save warranty
               </AsyncButton>

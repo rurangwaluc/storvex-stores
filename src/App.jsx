@@ -26,6 +26,7 @@ import CashDrawer from "./pages/pos/CashDrawer";
 
 import RepairCreate from "./pages/repairs/RepairCreate";
 import Repairs from "./pages/repairs/Repairs";
+import RepairEdit from "./pages/repairs/RepairEdit";
 
 import Reports from "./pages/reports/Reports";
 import CashFlowReport from "./pages/reports/CashFlowReport";
@@ -337,8 +338,9 @@ export default function App() {
               <Route path="repairs" element={<Repairs />} />
             </Route>
 
-            <Route element={<RequireRole roles={["OWNER", "CASHIER"]} />}>
+            <Route element={<RequireRole roles={["OWNER", "CASHIER", "MANAGER", "TECHNICIAN"]} />}>
               <Route path="repairs/new" element={<RepairCreate />} />
+              <Route path="/app/repairs/:id/edit" element={<RepairEdit />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/app" replace />} />

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { cn } from "../../lib/cn";
+
 import AsyncButton from "../../components/ui/AsyncButton";
+import { cn } from "../../lib/cn";
 import { createDeliveryNote } from "../../services/deliveryNotesApi";
 import { searchProducts } from "../../services/inventoryApi";
 
@@ -23,10 +24,9 @@ function inputClass() {
 function textareaClass() {
   return [
     "w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]",
-    "px-4 py-3 text-sm leading-6 text-[var(--color-text)]",
+    "min-h-[132px] resize-y px-4 py-3 text-sm leading-6 text-[var(--color-text)]",
     "outline-none transition placeholder:text-[var(--color-text-muted)]",
     "focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]",
-    "resize-y min-h-[132px]",
     "shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
   ].join(" ");
 }
@@ -71,7 +71,7 @@ function ProductSearchResult({ product, onPick }) {
     >
       <div className={cn("text-sm font-semibold", strong())}>{product.name}</div>
       <div className={cn("mt-1 text-xs", muted())}>
-        {product.category || "—"} • Stock: {product.stockQty ?? 0}
+        {product.category || "No category"} • Available stock: {product.stockQty ?? 0}
       </div>
     </button>
   );
@@ -111,16 +111,20 @@ export default function DeliveryNoteCreate() {
       setSearching(true);
       const data = await searchProducts(q, 20);
       setResults(Array.isArray(data?.products) ? data.products : []);
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
       setResults([]);
     } finally {
       setSearching(false);
     }
   }
 
-  function setItem(i, k, v) {
-    setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, [k]: v } : it)));
+  function setItem(index, key, value) {
+    setItems((prev) =>
+      prev.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: value } : item
+      )
+    );
   }
 
   function addRow() {
@@ -131,29 +135,29 @@ export default function DeliveryNoteCreate() {
     });
   }
 
-  function removeRow(i) {
+  function removeRow(index) {
     setItems((prev) => {
       if (prev.length === 1) return prev;
-      return prev.filter((_, idx) => idx !== i);
+      return prev.filter((_, itemIndex) => itemIndex !== index);
     });
 
     setTargetRow((prev) => {
-      if (prev === i) return 0;
-      if (prev > i) return prev - 1;
+      if (prev === index) return 0;
+      if (prev > index) return prev - 1;
       return prev;
     });
   }
 
-  function pickProduct(i, product) {
+  function pickProduct(index, product) {
     setItems((prev) =>
-      prev.map((it, idx) =>
-        idx === i
+      prev.map((item, itemIndex) =>
+        itemIndex === index
           ? {
-              ...it,
-              productId: product.id,
+              ...item,
+              productId: product.id || "",
               productName: product.name || "",
             }
-          : it
+          : item
       )
     );
 
@@ -163,13 +167,13 @@ export default function DeliveryNoteCreate() {
 
   const normalizedItems = useMemo(() => {
     return items
-      .map((it) => ({
-        productId: it.productId || null,
-        productName: String(it.productName || "").trim(),
-        serial: String(it.serial || "").trim() || null,
-        quantity: Number(it.quantity),
+      .map((item) => ({
+        productId: item.productId || null,
+        productName: String(item.productName || "").trim(),
+        serial: String(item.serial || "").trim() || null,
+        quantity: Number(item.quantity),
       }))
-      .filter((it) => it.productName);
+      .filter((item) => item.productName);
   }, [items]);
 
   async function submit(e) {
@@ -182,7 +186,7 @@ export default function DeliveryNoteCreate() {
     }
 
     if (normalizedItems.length === 0) {
-      toast.error("Add at least 1 item");
+      toast.error("Add at least one item");
       return;
     }
 
@@ -216,9 +220,9 @@ export default function DeliveryNoteCreate() {
       }
 
       nav("/app/documents/delivery-notes");
-    } catch (e) {
-      console.error(e);
-      toast.error(e?.message || "Failed to create delivery note");
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to create delivery note");
     } finally {
       setSaving(false);
     }
@@ -238,8 +242,8 @@ export default function DeliveryNoteCreate() {
             </h1>
 
             <p className={cn("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", muted())}>
-              This is for deliveries from your store to a customer, not supplier intake. Keep
-              handover details clean, traceable, and print-ready.
+              Create proof that goods moved from your store to the customer. Keep the
+              handover clean, traceable, and print-ready.
             </p>
           </div>
 
@@ -248,7 +252,7 @@ export default function DeliveryNoteCreate() {
               Back to Delivery Notes
             </Link>
             <Link to="/app/documents" className={smallBtn()}>
-              Document Center
+              Document Centre
             </Link>
           </div>
         </div>
@@ -310,7 +314,7 @@ export default function DeliveryNoteCreate() {
                   className={inputClass()}
                   value={receivedBy}
                   onChange={(e) => setReceivedBy(e.target.value)}
-                  placeholder="Customer / representative"
+                  placeholder="Customer or representative"
                 />
               </div>
 
@@ -355,7 +359,7 @@ export default function DeliveryNoteCreate() {
               <div>
                 <label className={labelClass()}>Find product</label>
                 <div className={cn("-mt-1 text-xs", soft())}>
-                  Fill row <span className="font-semibold">#{targetRow + 1}</span>
+                  Fill item <span className="font-semibold">#{targetRow + 1}</span>
                 </div>
               </div>
 
@@ -408,7 +412,9 @@ export default function DeliveryNoteCreate() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className={cn("text-sm font-semibold", strong())}>Item {index + 1}</div>
+                      <div className={cn("text-sm font-semibold", strong())}>
+                        Item {index + 1}
+                      </div>
                       <div className={cn("mt-1 text-xs", soft())}>
                         This line will appear on the delivery note.
                       </div>
@@ -439,7 +445,7 @@ export default function DeliveryNoteCreate() {
                         placeholder="Delivered item name"
                       />
                       <div className={cn("mt-1 text-xs", soft())}>
-                        {item.productId ? "Linked to inventory" : "Not linked to inventory"}
+                        {item.productId ? "Selected from inventory" : "Manual item"}
                       </div>
                     </div>
 

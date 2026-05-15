@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { cn } from "../../lib/cn";
+
 import AsyncButton from "../../components/ui/AsyncButton";
+import { cn } from "../../lib/cn";
 import { getProformaById, updateProforma } from "../../services/proformasApi";
 
 const strong = () => "text-[var(--color-text)]";
@@ -22,10 +23,9 @@ function inputClass() {
 function textareaClass() {
   return [
     "w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]",
-    "px-4 py-3 text-sm leading-6 text-[var(--color-text)]",
+    "min-h-[120px] resize-y px-4 py-3 text-sm leading-6 text-[var(--color-text)]",
     "outline-none transition placeholder:text-[var(--color-text-muted)]",
     "focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]",
-    "resize-y min-h-[120px]",
     "shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
   ].join(" ");
 }
@@ -34,7 +34,7 @@ function smallBtn() {
   return "inline-flex h-9 items-center justify-center rounded-xl bg-[var(--color-card)] px-3 text-sm font-medium text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function summaryRow(label, value, strongValue = false) {
+function SummaryRow({ label, value, strongValue = false }) {
   return (
     <div className="flex items-center justify-between gap-4 py-2">
       <span className={cn("text-sm", muted())}>{label}</span>
@@ -55,39 +55,44 @@ function badgeClass(kind = "neutral") {
   if (kind === "success") {
     return "inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300";
   }
+
   if (kind === "warning") {
     return "inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300";
   }
+
   if (kind === "danger") {
     return "inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300";
   }
-  return "inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-700 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))] dark:text-[rgb(var(--text-muted))]";
+
+  return "inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-muted)]";
 }
 
 function statusKind(status) {
-  const s = String(status || "").toUpperCase();
-  if (["SENT", "CONVERTED", "ACTIVE"].includes(s)) return "success";
-  if (["DRAFT", "PENDING"].includes(s)) return "warning";
-  if (["CANCELLED", "EXPIRED"].includes(s)) return "danger";
+  const value = String(status || "").toUpperCase();
+
+  if (["SENT", "CONVERTED", "ACTIVE"].includes(value)) return "success";
+  if (["DRAFT", "PENDING"].includes(value)) return "warning";
+  if (["CANCELLED", "EXPIRED"].includes(value)) return "danger";
+
   return "neutral";
 }
 
 function formatDate(value) {
   if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString();
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString();
 }
 
 function toInputDate(value) {
   if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 10);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
 }
 
-function money(n, currency = "RWF") {
-  return `${currency} ${Number(n || 0).toLocaleString()}`;
+function money(value, currency = "RWF") {
+  return `${currency} ${Number(value || 0).toLocaleString()}`;
 }
 
 function emptyItem() {
@@ -160,7 +165,7 @@ function EditSkeleton() {
           ))}
         </div>
 
-        <section className={cn(shell(), "h-[300px] p-4 md:p-5 animate-pulse")} />
+        <section className={cn(shell(), "h-[300px] animate-pulse p-4 md:p-5")} />
       </div>
     </div>
   );
@@ -191,6 +196,7 @@ export default function ProformaEdit() {
 
   useEffect(() => {
     mountedRef.current = true;
+
     return () => {
       mountedRef.current = false;
     };
@@ -202,6 +208,7 @@ export default function ProformaEdit() {
 
       try {
         setLoading(true);
+
         const raw = await getProformaById(id);
         const doc = normalizeProforma(raw);
 
@@ -238,8 +245,8 @@ export default function ProformaEdit() {
 
   function updateItem(index, key, value) {
     setItems((prev) =>
-      prev.map((item, i) =>
-        i === index
+      prev.map((item, itemIndex) =>
+        itemIndex === index
           ? {
               ...item,
               [key]:
@@ -257,7 +264,7 @@ export default function ProformaEdit() {
   function removeItem(index) {
     setItems((prev) => {
       if (prev.length === 1) return prev;
-      return prev.filter((_, i) => i !== index);
+      return prev.filter((_, itemIndex) => itemIndex !== index);
     });
   }
 
@@ -307,7 +314,7 @@ export default function ProformaEdit() {
         items: normalizedItems.map((item) => ({
           productId: item.productId || undefined,
           productName: item.productName.trim(),
-          serial: item.serial.trim() || undefined,
+          serial: String(item.serial || "").trim() || undefined,
           quantity: Number(item.quantity || 1),
           unitPrice: Number(item.unitPrice || 0),
         })),
@@ -341,7 +348,8 @@ export default function ProformaEdit() {
             </h1>
 
             <p className={cn("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", muted())}>
-              Revise customer details, quotation items, validity, and commercial notes without losing the premium document flow.
+              Revise customer details, quotation items, validity, and commercial notes without
+              losing the premium document flow.
             </p>
           </div>
 
@@ -390,7 +398,9 @@ export default function ProformaEdit() {
           </section>
 
           <section className={cn(panel(), "p-4 md:p-5")}>
-            <h2 className={cn("text-base font-semibold", strong())}>Customer and commercial details</h2>
+            <h2 className={cn("text-base font-semibold", strong())}>
+              Customer and commercial details
+            </h2>
             <p className={cn("mt-1 text-sm", muted())}>
               Keep the quotation details clear, credible, and ready for approval.
             </p>
@@ -471,7 +481,7 @@ export default function ProformaEdit() {
                 <label className={labelClass()}>Currency</label>
                 <input
                   value={form.currency}
-                  onChange={(e) => updateField("currency", e.target.value)}
+                  onChange={(e) => updateField("currency", e.target.value.toUpperCase())}
                   className={inputClass()}
                   placeholder="RWF"
                 />
@@ -513,7 +523,7 @@ export default function ProformaEdit() {
               </div>
 
               <button type="button" onClick={addItem} className={smallBtn()}>
-                Add Item
+                Add item
               </button>
             </div>
 
@@ -614,13 +624,17 @@ export default function ProformaEdit() {
             </div>
 
             <div className="mt-5 divide-y divide-[var(--color-border)]">
-              {summaryRow("Document", documentData?.number || "—")}
-              {summaryRow("Customer", form.customerName || "—")}
-              {summaryRow("Prepared by", form.preparedBy || "—")}
-              {summaryRow("Status", form.status || "DRAFT")}
-              {summaryRow("Validity", form.validUntil || "—")}
-              {summaryRow("Items", String(normalizedItems.length))}
-              {summaryRow("Subtotal", money(subtotal, form.currency || "RWF"), true)}
+              <SummaryRow label="Document" value={documentData?.number || "—"} />
+              <SummaryRow label="Customer" value={form.customerName || "—"} />
+              <SummaryRow label="Prepared by" value={form.preparedBy || "—"} />
+              <SummaryRow label="Status" value={form.status || "DRAFT"} />
+              <SummaryRow label="Validity" value={form.validUntil || "—"} />
+              <SummaryRow label="Items" value={String(normalizedItems.length)} />
+              <SummaryRow
+                label="Subtotal"
+                value={money(subtotal, form.currency || "RWF")}
+                strongValue
+              />
             </div>
 
             <div className="mt-5 flex flex-col gap-2">

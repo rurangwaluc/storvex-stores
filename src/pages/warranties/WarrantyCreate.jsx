@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import AsyncButton from "../../components/ui/AsyncButton";
-import { cn } from "../../lib/cn";
 import { createWarranty } from "../../services/warrantiesApi";
 import { getSale, listSales } from "../../services/posApi";
 import { handleSubscriptionBlockedError } from "../../utils/subscriptionError";
@@ -15,34 +14,34 @@ function cx(...xs) {
 }
 
 function cleanString(value) {
-  const s = String(value || "").trim();
-  return s || "";
+  const text = String(value || "").trim();
+  return text || "";
 }
 
 function formatMoney(value) {
-  const n = Number(value || 0);
-  const safe = Number.isFinite(n) ? n : 0;
+  const amount = Number(value || 0);
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
 
-  return `Rwf ${new Intl.NumberFormat("en-US", {
+  return `RWF ${new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
-  }).format(safe)}`;
+  }).format(safeAmount)}`;
 }
 
 function formatNumber(value) {
-  const n = Number(value || 0);
+  const amount = Number(value || 0);
 
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
-  }).format(Number.isFinite(n) ? n : 0);
+  }).format(Number.isFinite(amount) ? amount : 0);
 }
 
 function formatDate(value) {
   if (!value) return "—";
 
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
 
-  return d.toLocaleDateString("en-RW", {
+  return date.toLocaleDateString("en-RW", {
     dateStyle: "medium",
   });
 }
@@ -52,26 +51,26 @@ function todayInputDate() {
 }
 
 function addMonthsToDate(dateText, months) {
-  const d = dateText ? new Date(dateText) : new Date();
+  const date = dateText ? new Date(dateText) : new Date();
 
-  if (Number.isNaN(d.getTime())) return "";
+  if (Number.isNaN(date.getTime())) return "";
 
-  d.setMonth(d.getMonth() + Number(months || 0));
+  date.setMonth(date.getMonth() + Number(months || 0));
 
-  return d.toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10);
 }
 
 function addDaysToDate(dateText, days) {
-  const d = dateText ? new Date(dateText) : new Date();
+  const date = dateText ? new Date(dateText) : new Date();
 
-  if (Number.isNaN(d.getTime())) return "";
+  if (Number.isNaN(date.getTime())) return "";
 
-  d.setDate(d.getDate() + Number(days || 0));
+  date.setDate(date.getDate() + Number(days || 0));
 
-  return d.toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10);
 }
 
-function activeBranchNameFromStorage() {
+function activeStoreLocationFromStorage() {
   const name = cleanString(localStorage.getItem("activeBranchName"));
   const code = cleanString(localStorage.getItem("activeBranchCode"));
 
@@ -79,7 +78,7 @@ function activeBranchNameFromStorage() {
   if (name) return name;
   if (code) return code;
 
-  return "this branch";
+  return "current store location";
 }
 
 function pageCard() {
@@ -105,21 +104,21 @@ function buttonBase() {
 function primaryBtn() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
 function secondaryBtn() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
 function successBtn() {
   return cx(
     buttonBase(),
-    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
@@ -149,30 +148,27 @@ function customerPhone(sale) {
 }
 
 function cashierName(sale) {
-  return (
-    cleanString(sale?.cashier?.name) ||
-    cleanString(sale?.cashierName) ||
-    "—"
-  );
+  return cleanString(sale?.cashier?.name) || cleanString(sale?.cashierName) || "—";
 }
 
-function branchLabel(sale) {
-  const code = cleanString(sale?.branch?.code);
-  const name = cleanString(sale?.branch?.name);
+function storeLocationLabel(sale) {
+  const location = sale?.branch || {};
+  const code = cleanString(location?.code);
+  const name = cleanString(location?.name);
 
   if (code && name) return `${code} • ${name}`;
   if (name) return name;
   if (code) return code;
 
-  return activeBranchNameFromStorage();
+  return activeStoreLocationFromStorage();
 }
 
 function saleStatusTone(status) {
-  const s = String(status || "").toUpperCase();
+  const text = String(status || "").toUpperCase();
 
-  if (["PAID", "COMPLETED", "ACTIVE"].includes(s)) return "success";
-  if (["PARTIAL", "UNPAID", "PENDING"].includes(s)) return "warning";
-  if (["CANCELLED", "EXPIRED", "OVERDUE"].includes(s)) return "danger";
+  if (["PAID", "COMPLETED", "ACTIVE"].includes(text)) return "success";
+  if (["PARTIAL", "UNPAID", "PENDING"].includes(text)) return "warning";
+  if (["CANCELLED", "EXPIRED", "OVERDUE"].includes(text)) return "danger";
 
   return "neutral";
 }
@@ -190,7 +186,7 @@ function matchesSaleQuery(sale, query) {
     cashierName(sale),
     sale?.saleType,
     sale?.status,
-    branchLabel(sale),
+    storeLocationLabel(sale),
   ]
     .map((item) => String(item || "").toLowerCase())
     .join(" ");
@@ -236,11 +232,7 @@ function itemName(item) {
 }
 
 function itemSerial(item) {
-  return (
-    cleanString(item?.product?.serial) ||
-    cleanString(item?.serial) ||
-    ""
-  );
+  return cleanString(item?.product?.serial) || cleanString(item?.serial) || "";
 }
 
 function itemQuantity(item) {
@@ -282,7 +274,7 @@ function StatusBadge({ tone = "neutral", children }) {
     <span
       className={cx(
         "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]",
-        cls,
+        cls
       )}
     >
       {children}
@@ -327,7 +319,14 @@ function CreateSkeleton() {
 
 function SearchIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" strokeLinecap="round" />
     </svg>
@@ -336,7 +335,14 @@ function SearchIcon() {
 
 function ShieldIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-3Z" />
       <path d="m9 12 2 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -394,6 +400,7 @@ function InfoTile({ label, value, tone = "neutral" }) {
       <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
         {label}
       </p>
+
       <p className={cx("mt-2 break-words text-sm font-black leading-6", valueClass)}>
         {value || "—"}
       </p>
@@ -408,7 +415,7 @@ function SaleOption({ sale, selected, onClick }) {
       onClick={onClick}
       className={cx(
         "w-full border-b border-[var(--color-border)] px-4 py-4 text-left transition last:border-b-0",
-        selected ? "bg-[var(--color-surface-2)]" : "hover:bg-[var(--color-surface-2)]",
+        selected ? "bg-[var(--color-surface-2)]" : "hover:bg-[var(--color-surface-2)]"
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -428,7 +435,7 @@ function SaleOption({ sale, selected, onClick }) {
           </p>
 
           <p className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">
-            {formatDate(sale?.createdAt)} • Cashier: {cashierName(sale)}
+            {formatDate(sale?.createdAt)} • Staff: {cashierName(sale)}
           </p>
         </div>
 
@@ -444,6 +451,7 @@ function EmptyState({ title, text }) {
   return (
     <div className="rounded-[28px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)] p-8 text-center">
       <h3 className="text-base font-black text-[var(--color-text)]">{title}</h3>
+
       <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-[var(--color-text-muted)]">
         {text}
       </p>
@@ -458,7 +466,7 @@ function CoveredItemCard({ item, index, onChange }) {
         "rounded-[24px] border p-4 transition",
         item.checked
           ? "border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-soft)]"
-          : "border-[var(--color-border)] bg-[var(--color-surface-2)] opacity-75",
+          : "border-[var(--color-border)] bg-[var(--color-surface-2)] opacity-75"
       )}
     >
       <div className="flex items-start gap-3">
@@ -571,7 +579,9 @@ export default function WarrantyCreate() {
   const [selectedSaleLoading, setSelectedSaleLoading] = useState(false);
   const [selectableItems, setSelectableItems] = useState([]);
 
-  const [activeBranchLabel, setActiveBranchLabel] = useState(() => activeBranchNameFromStorage());
+  const [activeStoreLocation, setActiveStoreLocation] = useState(() =>
+    activeStoreLocationFromStorage()
+  );
 
   useEffect(() => {
     mountedRef.current = true;
@@ -587,7 +597,7 @@ export default function WarrantyCreate() {
 
   function updateSelectableItem(index, key, value) {
     setSelectableItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [key]: value } : item)),
+      prev.map((item, i) => (i === index ? { ...item, [key]: value } : item))
     );
   }
 
@@ -610,7 +620,7 @@ export default function WarrantyCreate() {
           : [];
 
       setAllSales(rows);
-      setActiveBranchLabel(activeBranchNameFromStorage());
+      setActiveStoreLocation(activeStoreLocationFromStorage());
     } catch (error) {
       if (!mountedRef.current) return;
 
@@ -631,8 +641,8 @@ export default function WarrantyCreate() {
   useEffect(() => {
     void loadSales();
 
-    function onBranchChanged() {
-      setActiveBranchLabel(activeBranchNameFromStorage());
+    function onStoreLocationChanged() {
+      setActiveStoreLocation(activeStoreLocationFromStorage());
       setSelectedSale(null);
       setSelectableItems([]);
       setSaleQuery("");
@@ -640,25 +650,25 @@ export default function WarrantyCreate() {
       void loadSales({ silent: true });
     }
 
-    window.addEventListener("storvex:branch-changed", onBranchChanged);
-    window.addEventListener("storvex:workspace-refreshed", onBranchChanged);
+    window.addEventListener("storvex:branch-changed", onStoreLocationChanged);
+    window.addEventListener("storvex:workspace-refreshed", onStoreLocationChanged);
 
     return () => {
-      window.removeEventListener("storvex:branch-changed", onBranchChanged);
-      window.removeEventListener("storvex:workspace-refreshed", onBranchChanged);
+      window.removeEventListener("storvex:branch-changed", onStoreLocationChanged);
+      window.removeEventListener("storvex:workspace-refreshed", onStoreLocationChanged);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    function onDocClick(event) {
+    function onDocumentClick(event) {
       if (!dropdownRef.current?.contains(event.target)) {
         setShowDropdown(false);
       }
     }
 
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    document.addEventListener("mousedown", onDocumentClick);
+    return () => document.removeEventListener("mousedown", onDocumentClick);
   }, []);
 
   useEffect(() => {
@@ -681,10 +691,7 @@ export default function WarrantyCreate() {
 
   const selectedCoveredItems = useMemo(() => {
     return selectableItems.filter(
-      (item) =>
-        item.checked &&
-        cleanString(item.saleItemId) &&
-        cleanString(item.productId),
+      (item) => item.checked && cleanString(item.saleItemId) && cleanString(item.productId)
     );
   }, [selectableItems]);
 
@@ -804,8 +811,10 @@ export default function WarrantyCreate() {
 
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--color-text-muted)]">
               Choose a real sale from{" "}
-              <span className="font-black text-[var(--color-text)]">{activeBranchLabel}</span>,
-              select the sold products to cover, and issue a clean warranty certificate.
+              <span className="font-black text-[var(--color-text)]">
+                {activeStoreLocation}
+              </span>
+              , select the sold products to cover, and issue a clean warranty certificate.
             </p>
           </div>
 
@@ -829,7 +838,11 @@ export default function WarrantyCreate() {
         <SummaryCard
           label="Selected sale"
           value={selectedSale ? saleReferenceLabel(selectedSale) : "None"}
-          note={selectedSale ? `${customerName(selectedSale)} • ${customerPhone(selectedSale)}` : "Choose a sale first"}
+          note={
+            selectedSale
+              ? `${customerName(selectedSale)} • ${customerPhone(selectedSale)}`
+              : "Choose a sale first"
+          }
           tone={selectedSale ? "success" : "warning"}
         />
 
@@ -861,8 +874,9 @@ export default function WarrantyCreate() {
               <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
                 1. Choose sale
               </h2>
+
               <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
-                Search by receipt, customer, phone, cashier, or branch.
+                Search by receipt, customer, phone, staff member, or store location.
               </p>
             </div>
 
@@ -879,7 +893,7 @@ export default function WarrantyCreate() {
                 }}
                 onFocus={() => setShowDropdown(true)}
                 className={cx(inputClass(), "pl-11")}
-                placeholder="Search sale, customer, phone, or receipt..."
+                placeholder="Search sale, customer, phone, receipt, or location..."
               />
 
               {showDropdown ? (
@@ -923,8 +937,8 @@ export default function WarrantyCreate() {
                     </p>
 
                     <p className="mt-2 text-xs font-bold text-[var(--color-text-muted)]">
-                      {formatDate(selectedSale?.createdAt)} • {formatMoney(selectedSale?.total)} • Cashier:{" "}
-                      {cashierName(selectedSale)}
+                      {formatDate(selectedSale?.createdAt)} • {formatMoney(selectedSale?.total)} •
+                      Staff: {cashierName(selectedSale)}
                     </p>
                   </div>
 
@@ -950,6 +964,7 @@ export default function WarrantyCreate() {
               <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
                 2. Warranty terms
               </h2>
+
               <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
                 Choose coverage dates and write clear terms the customer can understand.
               </p>
@@ -986,7 +1001,9 @@ export default function WarrantyCreate() {
                 </span>
                 <input
                   value={form.durationMonths}
-                  onChange={(event) => updateField("durationMonths", event.target.value.replace(/[^\d]/g, ""))}
+                  onChange={(event) =>
+                    updateField("durationMonths", event.target.value.replace(/[^\d]/g, ""))
+                  }
                   className={inputClass()}
                   inputMode="numeric"
                   placeholder="Example: 12"
@@ -999,7 +1016,9 @@ export default function WarrantyCreate() {
                 </span>
                 <input
                   value={form.durationDays}
-                  onChange={(event) => updateField("durationDays", event.target.value.replace(/[^\d]/g, ""))}
+                  onChange={(event) =>
+                    updateField("durationDays", event.target.value.replace(/[^\d]/g, ""))
+                  }
                   className={inputClass()}
                   inputMode="numeric"
                   placeholder="Optional"
@@ -1027,6 +1046,7 @@ export default function WarrantyCreate() {
                 <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
                   3. Covered products
                 </h2>
+
                 <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
                   Keep checked only the products that should be covered by this warranty.
                 </p>
@@ -1097,21 +1117,25 @@ export default function WarrantyCreate() {
 
               <InfoTile
                 label="Customer"
-                value={selectedSale ? `${customerName(selectedSale)} • ${customerPhone(selectedSale)}` : "—"}
+                value={
+                  selectedSale
+                    ? `${customerName(selectedSale)} • ${customerPhone(selectedSale)}`
+                    : "—"
+                }
               />
 
               <InfoTile label="Covered products" value={formatNumber(totalCoveredItems)} />
               <InfoTile label="Starts" value={form.startsAt || "—"} />
               <InfoTile label="Ends" value={form.endsAt || "Auto / derived"} />
-              <InfoTile label="Terms" value={cleanString(form.policy) ? "Provided" : "Missing"} tone={cleanString(form.policy) ? "success" : "warning"} />
+              <InfoTile
+                label="Terms"
+                value={cleanString(form.policy) ? "Provided" : "Missing"}
+                tone={cleanString(form.policy) ? "success" : "warning"}
+              />
             </div>
 
             <div className="mt-5 flex flex-col gap-2">
-              <AsyncButton
-                type="submit"
-                loading={saving}
-                className={successBtn()}
-              >
+              <AsyncButton type="submit" loading={saving} className={successBtn()}>
                 <ShieldIcon />
                 Create warranty
               </AsyncButton>

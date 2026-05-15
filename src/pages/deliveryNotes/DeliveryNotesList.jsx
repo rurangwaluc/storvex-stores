@@ -1,11 +1,17 @@
-// src/pages/deliveryNotes/DeliveryNotesList.jsx
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-import { listDeliveryNotes } from "../../services/deliveryNotesApi";
+import AsyncButton from "../../components/ui/AsyncButton";
 import TableSkeleton from "../../components/ui/TableSkeleton";
+import { listDeliveryNotes } from "../../services/deliveryNotesApi";
+
+function fmtDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString();
+}
 
 export default function DeliveryNotesList() {
   const nav = useNavigate();
@@ -16,12 +22,12 @@ export default function DeliveryNotesList() {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
 
-  // cancel in-flight request when query changes
   const abortRef = useRef(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
     mountedRef.current = true;
+
     return () => {
       mountedRef.current = false;
       if (abortRef.current) abortRef.current.abort();
@@ -29,8 +35,8 @@ export default function DeliveryNotesList() {
   }, []);
 
   async function load(currentQuery) {
-    // cancel previous
     if (abortRef.current) abortRef.current.abort();
+
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -39,18 +45,17 @@ export default function DeliveryNotesList() {
     try {
       const data = await listDeliveryNotes(
         { q: currentQuery || undefined },
-        { signal: controller.signal } // if service supports it; safe if ignored
+        { signal: controller.signal }
       );
 
       if (!mountedRef.current || controller.signal.aborted) return;
 
       setRows(Array.isArray(data?.deliveryNotes) ? data.deliveryNotes : []);
-    } catch (e) {
-      // ignore abort errors
+    } catch (err) {
       if (controller.signal.aborted) return;
 
-      console.error(e);
-      toast.error(e?.message || "Failed to load delivery notes");
+      console.error(err);
+      toast.error(err?.message || "Failed to load delivery notes");
       setRows([]);
     } finally {
       if (!mountedRef.current || controller.signal.aborted) return;
@@ -58,53 +63,82 @@ export default function DeliveryNotesList() {
     }
   }
 
-  // single debounced loader (handles initial load too)
   useEffect(() => {
-    const t = setTimeout(() => {
-      load(query);
+    const timer = setTimeout(() => {
+      void load(query);
     }, 250);
 
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Delivery Notes</h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Proof of delivery from your store to a customer.
-          </p>
+    <div className="space-y-5">
+      <section className="rounded-[28px] bg-[var(--color-card)] p-5 shadow-[var(--shadow-card)] md:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
+              Document Centre
+            </div>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-text)] md:text-3xl">
+              Delivery Notes
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
+              Proof of delivery from your store to a customer.
+            </p>
+          </div>
+
+          <AsyncButton
+            type="button"
+            variant="primary"
+            loading={false}
+            disabled={loading}
+            onClick={() => nav("/app/documents/delivery-notes/create")}
+          >
+            New delivery note
+          </AsyncButton>
+        </div>
+      </section>
+
+      <section className="rounded-[28px] bg-[var(--color-card)] p-5 shadow-[var(--shadow-card)] md:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search customer name or phone..."
+            className="app-input w-full sm:max-w-md"
+          />
+
+          <AsyncButton
+            type="button"
+            variant="secondary"
+            loading={loading}
+            loadingText="Loading..."
+            onClick={() => load(query)}
+          >
+            Refresh
+          </AsyncButton>
         </div>
 
-        <button
-          type="button"
-          onClick={() => nav("/app/delivery-notes/new")}
-          disabled={loading}
-          className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-medium disabled:opacity-60"
-        >
-          New delivery note
-        </button>
-      </div>
-
-      <div className="bg-white border border-stone-200 rounded-xl p-4 shadow-sm space-y-3">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search customer name / phone…"
-          className="w-full lg:w-96 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500"
-        />
-
-        <div className="overflow-x-auto">
-          <table className="w-full border border-stone-200 rounded-lg overflow-hidden">
-            <thead className="bg-stone-50">
-              <tr className="border-b border-stone-200">
-                <th className="p-3 text-left text-sm text-slate-700">#</th>
-                <th className="p-3 text-left text-sm text-slate-700">Date</th>
-                <th className="p-3 text-left text-sm text-slate-700">Customer</th>
-                <th className="p-3 text-left text-sm text-slate-700">Phone</th>
-                <th className="p-3 text-right text-sm text-slate-700">Actions</th>
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)]">
+            <thead className="bg-[var(--color-surface-2)]">
+              <tr className="border-b border-[var(--color-border)]">
+                <th className="p-3 text-left text-sm font-semibold text-[var(--color-text-muted)]">
+                  Number
+                </th>
+                <th className="p-3 text-left text-sm font-semibold text-[var(--color-text-muted)]">
+                  Date
+                </th>
+                <th className="p-3 text-left text-sm font-semibold text-[var(--color-text-muted)]">
+                  Customer
+                </th>
+                <th className="p-3 text-left text-sm font-semibold text-[var(--color-text-muted)]">
+                  Phone
+                </th>
+                <th className="p-3 text-right text-sm font-semibold text-[var(--color-text-muted)]">
+                  Actions
+                </th>
               </tr>
             </thead>
 
@@ -112,18 +146,24 @@ export default function DeliveryNotesList() {
               {loading ? <TableSkeleton rows={6} cols={5} /> : null}
 
               {!loading &&
-                rows.map((r) => (
-                  <tr key={r.id} className="border-b border-stone-200">
-                    <td className="p-3 text-sm text-slate-900 font-medium">{r.number}</td>
-                    <td className="p-3 text-sm text-slate-700">
-                      {r.date ? new Date(r.date).toLocaleDateString() : "—"}
+                rows.map((row) => (
+                  <tr key={row.id} className="border-b border-[var(--color-border)]">
+                    <td className="p-3 text-sm font-medium text-[var(--color-text)]">
+                      {row.number || "—"}
                     </td>
-                    <td className="p-3 text-sm text-slate-900">{r.customerName}</td>
-                    <td className="p-3 text-sm text-slate-700">{r.customerPhone || "—"}</td>
+                    <td className="p-3 text-sm text-[var(--color-text-muted)]">
+                      {fmtDate(row.date || row.createdAt)}
+                    </td>
+                    <td className="p-3 text-sm text-[var(--color-text)]">
+                      {row.customerName || "—"}
+                    </td>
+                    <td className="p-3 text-sm text-[var(--color-text-muted)]">
+                      {row.customerPhone || "—"}
+                    </td>
                     <td className="p-3 text-right text-sm">
                       <Link
-                        to={`/app/delivery-notes/${r.id}`}
-                        className="text-emerald-700 hover:underline"
+                        to={`/app/documents/delivery-notes/${encodeURIComponent(row.id)}/preview`}
+                        className="font-semibold text-[var(--color-primary)] hover:underline"
                       >
                         View / Print
                       </Link>
@@ -133,7 +173,10 @@ export default function DeliveryNotesList() {
 
               {!loading && rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-6 text-center text-sm text-slate-500">
+                  <td
+                    colSpan={5}
+                    className="p-6 text-center text-sm text-[var(--color-text-muted)]"
+                  >
                     No delivery notes found.
                   </td>
                 </tr>
@@ -141,11 +184,11 @@ export default function DeliveryNotesList() {
             </tbody>
           </table>
 
-          <p className="text-xs text-slate-500 mt-3">
+          <p className="mt-3 text-xs text-[var(--color-text-muted)]">
             Tip: print the note and let both sides sign.
           </p>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

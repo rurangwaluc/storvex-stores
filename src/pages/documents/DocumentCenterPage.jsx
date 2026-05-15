@@ -1,31 +1,96 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { cn } from "../../lib/cn";
+
 import AsyncButton from "../../components/ui/AsyncButton";
-
-import { listReceipts } from "../../services/receiptsApi";
+import { cn } from "../../lib/cn";
+import { listDeliveryNotes, deleteDeliveryNote } from "../../services/deliveryNotesApi";
 import { listInvoices } from "../../services/invoicesApi";
-import {
-  listDeliveryNotes,
-  deleteDeliveryNote,
-} from "../../services/deliveryNotesApi";
-import { listWarranties, deleteWarranty } from "../../services/warrantiesApi";
 import { listProformas, deleteProforma } from "../../services/proformasApi";
-import {
-  buildDocumentPrintUrl,
-  openDocumentPrint,
-} from "../../services/documentPrint";
+import { listReceipts } from "../../services/receiptsApi";
+import { listWarranties, deleteWarranty } from "../../services/warrantiesApi";
+import { buildDocumentPrintUrl, openDocumentPrint } from "../../services/documentPrint";
 
-const S = () => "text-[var(--color-text)]";
-const M = () => "text-[var(--color-text-muted)]";
-const card = () => "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
-const panel = () => "rounded-[22px] bg-[var(--color-surface-2)]";
+const TYPE_KEYS = ["receipts", "invoices", "delivery-notes", "proformas", "warranties"];
+const PAGE_TITLE = "Document Centre • Storvex";
 
-const TYPE_CFG = {
+function textStrong() {
+  return "text-[var(--color-text)]";
+}
+
+function textMuted() {
+  return "text-[var(--color-text-muted)]";
+}
+
+function cardClass() {
+  return "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function formatAmount(value) {
+  return Number(value || 0).toLocaleString();
+}
+
+function formatMoney(value) {
+  if (value == null) return null;
+  return `${formatAmount(value)} RWF`;
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatDateShort(value) {
+  if (!value) return "";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function statusClass(status) {
+  const value = String(status || "").toUpperCase();
+
+  if (["PAID", "DELIVERED", "ACTIVE", "COMPLETED", "CONVERTED", "SENT"].includes(value)) {
+    return "badge-success";
+  }
+
+  if (["PARTIAL", "DRAFT", "PENDING", "EXPIRING", "EXPIRING SOON", "PROFORMA", "INVOICE"].includes(value)) {
+    return "badge-warning";
+  }
+
+  if (["OVERDUE", "EXPIRED", "CANCELLED", "RETURNED"].includes(value)) {
+    return "badge-danger";
+  }
+
+  return "badge-neutral";
+}
+
+async function deleteDocument(type, id) {
+  if (type === "delivery-notes") return deleteDeliveryNote(id);
+  if (type === "proformas") return deleteProforma(id);
+  if (type === "warranties") return deleteWarranty(id);
+
+  throw new Error("This document cannot be deleted from this screen");
+}
+
+const TYPE_CONFIG = {
   receipts: {
     label: "Receipts",
-    abbr: "RC",
+    shortLabel: "RC",
     tabLabel: "Receipts",
     iconBg: "bg-emerald-500/10",
     iconText: "text-emerald-600 dark:text-emerald-400",
@@ -36,26 +101,23 @@ const TYPE_CFG = {
     singular: "receipt",
     createTo: null,
     editTo: () => null,
-    fetch: (q) => listReceipts(q),
-    normalize: (rows) =>
-      (Array.isArray(rows?.receipts) ? rows.receipts : []).map((r) => ({
-        id: r.id,
+    fetch: (query) => listReceipts(query),
+    normalize: (response) =>
+      (Array.isArray(response?.receipts) ? response.receipts : []).map((item) => ({
+        id: item.id,
         type: "receipts",
-        num: r.receiptNumber || r.number || r.id?.slice(-8),
-        cust: r.customer?.name || r.customerName || "Walk-in",
-        phone: r.customer?.phone || r.customerPhone || "",
-        status: r.status || r.saleType || "PAID",
-        amount: Number(r.total || 0),
-        date: r.createdAt || r.date || null,
-        hint:
-          Number(r.balanceDue || 0) > 0
-            ? `Balance: ${fmtAmt(r.balanceDue)} RWF`
-            : null,
+        number: item.receiptNumber || item.number || item.id?.slice(-8),
+        customerName: item.customer?.name || item.customerName || "Walk-in customer",
+        customerPhone: item.customer?.phone || item.customerPhone || "",
+        status: item.status || item.saleType || "PAID",
+        amount: Number(item.total || 0),
+        date: item.createdAt || item.date || null,
+        note: Number(item.balanceDue || 0) > 0 ? `Balance: ${formatAmount(item.balanceDue)} RWF` : null,
       })),
   },
   invoices: {
     label: "Invoices",
-    abbr: "IN",
+    shortLabel: "IN",
     tabLabel: "Invoices",
     iconBg: "bg-[var(--color-primary-soft)]",
     iconText: "text-[var(--color-primary)]",
@@ -66,26 +128,23 @@ const TYPE_CFG = {
     singular: "invoice",
     createTo: null,
     editTo: () => null,
-    fetch: (q) => listInvoices(q),
-    normalize: (rows) =>
-      (Array.isArray(rows?.invoices) ? rows.invoices : []).map((r) => ({
-        id: r.id,
+    fetch: (query) => listInvoices(query),
+    normalize: (response) =>
+      (Array.isArray(response?.invoices) ? response.invoices : []).map((item) => ({
+        id: item.id,
         type: "invoices",
-        num: r.invoiceNumber || r.number || r.id?.slice(-8),
-        cust: r.customer?.name || r.customerName || "Walk-in",
-        phone: r.customer?.phone || r.customerPhone || "",
-        status: r.status || "INVOICE",
-        amount: Number(r.total || 0),
-        date: r.createdAt || r.date || null,
-        hint:
-          Number(r.balanceDue || 0) > 0
-            ? `Balance: ${fmtAmt(r.balanceDue)} RWF`
-            : null,
+        number: item.invoiceNumber || item.number || item.id?.slice(-8),
+        customerName: item.customer?.name || item.customerName || "Walk-in customer",
+        customerPhone: item.customer?.phone || item.customerPhone || "",
+        status: item.status || "INVOICE",
+        amount: Number(item.total || 0),
+        date: item.createdAt || item.date || null,
+        note: Number(item.balanceDue || 0) > 0 ? `Balance: ${formatAmount(item.balanceDue)} RWF` : null,
       })),
   },
   "delivery-notes": {
     label: "Delivery Notes",
-    abbr: "DN",
+    shortLabel: "DN",
     tabLabel: "Delivery",
     iconBg: "bg-amber-500/10",
     iconText: "text-amber-600 dark:text-amber-400",
@@ -96,23 +155,23 @@ const TYPE_CFG = {
     singular: "delivery note",
     createTo: "/app/documents/delivery-notes/create",
     editTo: (id) => `/app/documents/delivery-notes/${encodeURIComponent(id)}/edit`,
-    fetch: (q) => listDeliveryNotes(q),
-    normalize: (rows) =>
-      (Array.isArray(rows?.deliveryNotes) ? rows.deliveryNotes : []).map((r) => ({
-        id: r.id,
+    fetch: (query) => listDeliveryNotes(query),
+    normalize: (response) =>
+      (Array.isArray(response?.deliveryNotes) ? response.deliveryNotes : []).map((item) => ({
+        id: item.id,
         type: "delivery-notes",
-        num: r.number || r.id?.slice(-8),
-        cust: r.customerName || r.customer?.name || "Customer",
-        phone: r.customerPhone || r.customer?.phone || "",
-        status: r.status || "DELIVERED",
+        number: item.number || item.id?.slice(-8),
+        customerName: item.customerName || item.customer?.name || "Customer",
+        customerPhone: item.customerPhone || item.customer?.phone || "",
+        status: item.status || "DELIVERED",
         amount: null,
-        date: r.createdAt || r.date || null,
-        hint: r.itemsCount ? `${r.itemsCount} item(s)` : null,
+        date: item.createdAt || item.date || null,
+        note: item.itemsCount ? `${item.itemsCount} item(s)` : null,
       })),
   },
   proformas: {
     label: "Proformas",
-    abbr: "PF",
+    shortLabel: "PF",
     tabLabel: "Proformas",
     iconBg: "bg-purple-500/10",
     iconText: "text-purple-600 dark:text-purple-400",
@@ -123,23 +182,23 @@ const TYPE_CFG = {
     singular: "proforma",
     createTo: "/app/documents/proformas/create",
     editTo: (id) => `/app/documents/proformas/${encodeURIComponent(id)}/edit`,
-    fetch: (q) => listProformas(q),
-    normalize: (rows) =>
-      (Array.isArray(rows?.proformas) ? rows.proformas : []).map((r) => ({
-        id: r.id,
+    fetch: (query) => listProformas(query),
+    normalize: (response) =>
+      (Array.isArray(response?.proformas) ? response.proformas : []).map((item) => ({
+        id: item.id,
         type: "proformas",
-        num: r.number || r.id?.slice(-8),
-        cust: r.customerName || r.customer?.name || "Customer",
-        phone: r.customerPhone || r.customer?.phone || "",
-        status: r.status || "DRAFT",
-        amount: Number(r.total || 0),
-        date: r.createdAt || null,
-        hint: r.validUntil ? `Valid until ${fmtDate(r.validUntil)}` : null,
+        number: item.number || item.id?.slice(-8),
+        customerName: item.customerName || item.customer?.name || "Customer",
+        customerPhone: item.customerPhone || item.customer?.phone || "",
+        status: item.status || "DRAFT",
+        amount: Number(item.total || 0),
+        date: item.createdAt || null,
+        note: item.validUntil ? `Valid until ${formatDate(item.validUntil)}` : null,
       })),
   },
   warranties: {
     label: "Warranties",
-    abbr: "WR",
+    shortLabel: "WR",
     tabLabel: "Warranty",
     iconBg: "bg-teal-500/10",
     iconText: "text-teal-600 dark:text-teal-400",
@@ -150,89 +209,27 @@ const TYPE_CFG = {
     singular: "warranty",
     createTo: "/app/documents/warranties/create",
     editTo: (id) => `/app/documents/warranties/${encodeURIComponent(id)}/edit`,
-    fetch: (q) => listWarranties(q),
-    normalize: (rows) =>
-      (Array.isArray(rows?.warranties) ? rows.warranties : []).map((r) => ({
-        id: r.id,
+    fetch: (query) => listWarranties(query),
+    normalize: (response) =>
+      (Array.isArray(response?.warranties) ? response.warranties : []).map((item) => ({
+        id: item.id,
         type: "warranties",
-        num: r.number || r.id?.slice(-8),
-        cust: r.customerName || r.customer?.name || "Customer",
-        phone: r.customerPhone || r.customer?.phone || "",
-        status: r.status || "ACTIVE",
+        number: item.number || item.id?.slice(-8),
+        customerName: item.customerName || item.customer?.name || "Customer",
+        customerPhone: item.customerPhone || item.customer?.phone || "",
+        status: item.status || "ACTIVE",
         amount: null,
-        date: r.createdAt || null,
-        hint: r.endsAt ? `Ends ${fmtDate(r.endsAt)}` : null,
+        date: item.createdAt || null,
+        note: item.endsAt ? `Ends ${formatDate(item.endsAt)}` : null,
       })),
   },
 };
 
-const TYPE_KEYS = ["receipts", "invoices", "delivery-notes", "proformas", "warranties"];
-
-function fmtAmt(n) {
-  return Number(n || 0).toLocaleString();
-}
-
-function fmtMoney(n) {
-  return n == null ? null : `${fmtAmt(n)} RWF`;
-}
-
-function fmtDate(v) {
-  if (!v) return "—";
-  const d = new Date(v);
-  return Number.isNaN(d.getTime())
-    ? "—"
-    : d.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-}
-
-function fmtDateShort(v) {
-  if (!v) return "";
-  const d = new Date(v);
-  return Number.isNaN(d.getTime())
-    ? ""
-    : d.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-}
-
-function statusCls(s) {
-  const v = String(s || "").toUpperCase();
-  if (["PAID", "DELIVERED", "ACTIVE", "COMPLETED", "CONVERTED", "SENT"].includes(v)) {
-    return "badge-success";
-  }
-  if (
-    ["PARTIAL", "DRAFT", "PENDING", "EXPIRING", "EXPIRING SOON", "PROFORMA", "INVOICE"].includes(
-      v
-    )
-  ) {
-    return "badge-warning";
-  }
-  if (["OVERDUE", "EXPIRED", "CANCELLED", "RETURNED"].includes(v)) {
-    return "badge-danger";
-  }
-  return "badge-neutral";
-}
-
-async function deleteDoc(type, id) {
-  if (type === "delivery-notes") return deleteDeliveryNote(id);
-  if (type === "proformas") return deleteProforma(id);
-  if (type === "warranties") return deleteWarranty(id);
-  throw new Error("Delete not supported for this document type");
-}
-
 function RowSkeleton({ count = 8 }) {
   return (
     <div className="divide-y divide-[var(--color-border)]">
-      {Array.from({ length: count }).map((_, i) => (
-        <div
-          key={i}
-          className="flex items-start gap-3 px-4 py-4 animate-pulse sm:px-5"
-        >
+      {Array.from({ length: count }).map((_, index) => (
+        <div key={index} className="flex animate-pulse items-start gap-3 px-4 py-4 sm:px-5">
           <div className="h-[38px] w-[38px] shrink-0 rounded-[10px] bg-[var(--color-surface)]" />
           <div className="min-w-0 flex-1 space-y-2 pt-0.5">
             <div className="h-3.5 w-32 rounded-full bg-[var(--color-surface)]" />
@@ -249,8 +246,8 @@ function RowSkeleton({ count = 8 }) {
   );
 }
 
-function DocRow({ doc, selected, onClick }) {
-  const cfg = TYPE_CFG[doc.type];
+function DocumentRow({ document, selected, onClick }) {
+  const config = TYPE_CONFIG[document.type];
 
   return (
     <button
@@ -268,33 +265,41 @@ function DocRow({ doc, selected, onClick }) {
       <div
         className={cn(
           "flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] text-[11px] font-black",
-          cfg.iconBg,
-          cfg.iconText
+          config.iconBg,
+          config.iconText
         )}
       >
-        {cfg.abbr}
+        {config.shortLabel}
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className={cn("truncate text-[13.5px] font-bold leading-snug", S())}>{doc.num}</div>
-        <div className={cn("mt-0.5 truncate text-xs leading-snug", M())}>
-          {doc.cust}
-          {doc.phone ? ` · ${doc.phone}` : ""}
+        <div className={cn("truncate text-[13.5px] font-bold leading-snug", textStrong())}>
+          {document.number}
+        </div>
+
+        <div className={cn("mt-0.5 truncate text-xs leading-snug", textMuted())}>
+          {document.customerName}
+          {document.customerPhone ? ` · ${document.customerPhone}` : ""}
         </div>
 
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <span className={statusCls(doc.status)}>{doc.status}</span>
-          {doc.hint ? <span className={cn("text-[11px] font-medium", M())}>{doc.hint}</span> : null}
+          <span className={statusClass(document.status)}>{document.status}</span>
+          {document.note ? (
+            <span className={cn("text-[11px] font-medium", textMuted())}>{document.note}</span>
+          ) : null}
         </div>
       </div>
 
       <div className="w-[92px] shrink-0 text-right">
-        {doc.amount != null && doc.amount > 0 ? (
-          <div className={cn("truncate text-sm font-bold tabular-nums", S())}>{fmtMoney(doc.amount)}</div>
-        ) : doc.hint && doc.amount == null ? (
-          <div className={cn("truncate text-[12px] font-semibold", M())}>{doc.hint}</div>
+        {document.amount != null && document.amount > 0 ? (
+          <div className={cn("truncate text-sm font-bold tabular-nums", textStrong())}>
+            {formatMoney(document.amount)}
+          </div>
+        ) : document.note && document.amount == null ? (
+          <div className={cn("truncate text-[12px] font-semibold", textMuted())}>{document.note}</div>
         ) : null}
-        <div className={cn("mt-0.5 text-[11px]", M())}>{fmtDateShort(doc.date)}</div>
+
+        <div className={cn("mt-0.5 text-[11px]", textMuted())}>{formatDateShort(document.date)}</div>
       </div>
     </button>
   );
@@ -306,11 +311,13 @@ function EmptyList({ query }) {
       <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-2xl">
         📄
       </div>
-      <div className={cn("text-sm font-bold", S())}>
+
+      <div className={cn("text-sm font-bold", textStrong())}>
         {query ? `No results for "${query}"` : "No documents yet"}
       </div>
-      <div className={cn("mt-1 text-xs leading-5", M())}>
-        {query ? "Try a different search term." : "Documents will appear here once created."}
+
+      <div className={cn("mt-1 text-xs leading-5", textMuted())}>
+        {query ? "Try a different search term." : "Documents will appear here once they are created."}
       </div>
     </div>
   );
@@ -323,11 +330,13 @@ function PreviewPlaceholder() {
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-3xl">
           📄
         </div>
-        <div className={cn("text-base font-black tracking-tight", S())}>
+
+        <div className={cn("text-base font-black tracking-tight", textStrong())}>
           Select a document to preview
         </div>
-        <div className={cn("mx-auto mt-2 max-w-[260px] text-sm leading-6", M())}>
-          Open any row from the left to view the live A4 renderer with your store branding.
+
+        <div className={cn("mx-auto mt-2 max-w-[260px] text-sm leading-6", textMuted())}>
+          Open any row from the list to preview the printable document with your store branding.
         </div>
       </div>
     </div>
@@ -345,9 +354,10 @@ function ConfirmModal({ open, title, body, loading, onCancel, onConfirm }) {
           if (!loading) onCancel();
         }}
       />
-      <div className={cn(card(), "relative z-10 w-full max-w-md p-6 space-y-4")}>
-        <div className={cn("text-base font-black tracking-tight", S())}>{title}</div>
-        <div className={cn("text-sm leading-6", M())}>{body}</div>
+
+      <div className={cn(cardClass(), "relative z-10 w-full max-w-md space-y-4 p-6")}>
+        <div className={cn("text-base font-black tracking-tight", textStrong())}>{title}</div>
+        <div className={cn("text-sm leading-6", textMuted())}>{body}</div>
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <AsyncButton variant="secondary" onClick={onCancel} disabled={loading}>
@@ -368,17 +378,17 @@ function ConfirmModal({ open, title, body, loading, onCancel, onConfirm }) {
   );
 }
 
-function PreviewBar({ doc, onBack, onDelete, deleting }) {
-  const cfg = TYPE_CFG[doc.type];
-  const editUrl = cfg.editTo?.(doc.id);
+function PreviewBar({ document, onBack, onDelete, deleting }) {
+  const config = TYPE_CONFIG[document.type];
+  const editUrl = config.editTo?.(document.id);
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 sm:px-5">
       <div className="mr-auto min-w-0">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className={cn("truncate text-sm font-bold", S())}>{doc.num}</span>
-          <span className={cn("hidden text-xs md:inline", M())}>
-            {cfg.label} Preview · Live A4 Renderer
+          <span className={cn("truncate text-sm font-bold", textStrong())}>{document.number}</span>
+          <span className={cn("hidden text-xs md:inline", textMuted())}>
+            {config.label} Preview · Printable layout
           </span>
         </div>
       </div>
@@ -388,7 +398,7 @@ function PreviewBar({ doc, onBack, onDelete, deleting }) {
         onClick={onBack}
         className={cn(
           "inline-flex h-9 items-center gap-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 text-xs font-semibold transition hover:opacity-90",
-          M()
+          textMuted()
         )}
       >
         ← Back to list
@@ -399,18 +409,18 @@ function PreviewBar({ doc, onBack, onDelete, deleting }) {
           to={editUrl}
           className={cn(
             "inline-flex h-9 items-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 text-xs font-semibold transition hover:opacity-90",
-            S()
+            textStrong()
           )}
         >
           Edit
         </Link>
       ) : null}
 
-      {cfg.canDelete ? (
+      {config.canDelete ? (
         <AsyncButton
           loading={deleting}
           loadingText=""
-          onClick={() => onDelete(doc)}
+          onClick={() => onDelete(document)}
           className="h-9 rounded-2xl bg-[rgba(219,80,74,0.1)] px-3 text-xs font-semibold text-[var(--color-danger)] transition hover:opacity-90 disabled:opacity-60"
         >
           Delete
@@ -420,7 +430,7 @@ function PreviewBar({ doc, onBack, onDelete, deleting }) {
       <AsyncButton
         loading={false}
         variant="primary"
-        onClick={() => openDocumentPrint(cfg.resource, doc.id)}
+        onClick={() => openDocumentPrint(config.resource, document.id)}
         className="h-9 gap-1.5 rounded-2xl px-4 text-xs font-semibold"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -431,7 +441,7 @@ function PreviewBar({ doc, onBack, onDelete, deleting }) {
             strokeLinejoin="round"
           />
         </svg>
-        Print A4
+        Print
       </AsyncButton>
     </div>
   );
@@ -440,17 +450,17 @@ function PreviewBar({ doc, onBack, onDelete, deleting }) {
 function PreviewPanel({ selected, onBack, onDelete, deleting }) {
   if (!selected) return <PreviewPlaceholder />;
 
-  const cfg = TYPE_CFG[selected.type];
-  const printUrl = buildDocumentPrintUrl(cfg.resource, selected.id);
+  const config = TYPE_CONFIG[selected.type];
+  const printUrl = buildDocumentPrintUrl(config.resource, selected.id);
 
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <PreviewBar doc={selected} onBack={onBack} onDelete={onDelete} deleting={deleting} />
+      <PreviewBar document={selected} onBack={onBack} onDelete={onDelete} deleting={deleting} />
 
       <div className="min-h-0 flex-1 overflow-hidden p-3 sm:p-4">
         <iframe
           key={printUrl}
-          title={`${cfg.label} ${selected.id}`}
+          title={`${config.label} ${selected.id}`}
           src={printUrl}
           className="h-full w-full rounded-[18px] border border-[var(--color-border)] bg-white"
           loading="lazy"
@@ -462,9 +472,9 @@ function PreviewPanel({ selected, onBack, onDelete, deleting }) {
 
 export default function DocumentCenterPage() {
   const [activeTab, setActiveTab] = useState("all");
-  const [q, setQ] = useState("");
-  const [draftQ, setDraftQ] = useState("");
-  const [allDocs, setAllDocs] = useState({});
+  const [query, setQuery] = useState("");
+  const [draftQuery, setDraftQuery] = useState("");
+  const [allDocuments, setAllDocuments] = useState({});
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -476,7 +486,8 @@ export default function DocumentCenterPage() {
 
   useEffect(() => {
     mountedRef.current = true;
-    document.title = "Document Centre • Storvex";
+    document.title = PAGE_TITLE;
+
     return () => {
       mountedRef.current = false;
     };
@@ -488,27 +499,30 @@ export default function DocumentCenterPage() {
       else setRefreshing(true);
 
       try {
-        const results = await Promise.allSettled(TYPE_KEYS.map((k) => TYPE_CFG[k].fetch(q)));
+        const results = await Promise.allSettled(TYPE_KEYS.map((key) => TYPE_CONFIG[key].fetch(query)));
 
         if (!mountedRef.current) return;
 
         const next = {};
-        TYPE_KEYS.forEach((k, i) => {
-          const result = results[i];
-          next[k] = result.status === "fulfilled" ? TYPE_CFG[k].normalize(result.value) : [];
+
+        TYPE_KEYS.forEach((key, index) => {
+          const result = results[index];
+          next[key] = result.status === "fulfilled" ? TYPE_CONFIG[key].normalize(result.value) : [];
         });
 
-        setAllDocs(next);
-        setCounts(Object.fromEntries(TYPE_KEYS.map((k) => [k, next[k].length])));
+        setAllDocuments(next);
+        setCounts(Object.fromEntries(TYPE_KEYS.map((key) => [key, next[key].length])));
 
         if (selected) {
-          const freshSelected = TYPE_KEYS.flatMap((k) => next[k]).find(
-            (d) => d.id === selected.id && d.type === selected.type
+          const freshSelected = TYPE_KEYS.flatMap((key) => next[key]).find(
+            (item) => item.id === selected.id && item.type === selected.type
           );
+
           setSelected(freshSelected || null);
         }
-      } catch {
+      } catch (error) {
         if (!mountedRef.current) return;
+        console.error(error);
         toast.error("Failed to load documents");
       } finally {
         if (!mountedRef.current) return;
@@ -516,7 +530,7 @@ export default function DocumentCenterPage() {
         setRefreshing(false);
       }
     },
-    [q, selected]
+    [query, selected]
   );
 
   useEffect(() => {
@@ -524,21 +538,21 @@ export default function DocumentCenterPage() {
   }, [load]);
 
   useEffect(() => {
-    const t = setTimeout(() => setQ(draftQ.trim()), 350);
-    return () => clearTimeout(t);
-  }, [draftQ]);
+    const timer = setTimeout(() => setQuery(draftQuery.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [draftQuery]);
 
-  const visibleDocs = useMemo(() => {
-    const src =
+  const visibleDocuments = useMemo(() => {
+    const source =
       activeTab === "all"
-        ? TYPE_KEYS.flatMap((k) => allDocs[k] || [])
-        : allDocs[activeTab] || [];
+        ? TYPE_KEYS.flatMap((key) => allDocuments[key] || [])
+        : allDocuments[activeTab] || [];
 
-    return [...src].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-  }, [allDocs, activeTab]);
+    return [...source].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  }, [allDocuments, activeTab]);
 
   const totalCount = useMemo(
-    () => TYPE_KEYS.reduce((sum, k) => sum + (counts[k] || 0), 0),
+    () => TYPE_KEYS.reduce((sum, key) => sum + (counts[key] || 0), 0),
     [counts]
   );
 
@@ -548,8 +562,8 @@ export default function DocumentCenterPage() {
     setDeleting(true);
 
     try {
-      await deleteDoc(deleteTarget.type, deleteTarget.id);
-      toast.success(`${TYPE_CFG[deleteTarget.type].singular} deleted`);
+      await deleteDocument(deleteTarget.type, deleteTarget.id);
+      toast.success(`${TYPE_CONFIG[deleteTarget.type].singular} deleted`);
 
       if (selected?.id === deleteTarget.id && selected?.type === deleteTarget.type) {
         setSelected(null);
@@ -557,8 +571,9 @@ export default function DocumentCenterPage() {
 
       setDeleteTarget(null);
       await load({ silent: true });
-    } catch (err) {
-      toast.error(err?.message || "Failed to delete");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Failed to delete document");
     } finally {
       if (mountedRef.current) setDeleting(false);
     }
@@ -573,8 +588,8 @@ export default function DocumentCenterPage() {
     { key: "warranties", label: "Warranty", count: counts.warranties || 0 },
   ];
 
-  const activeCfg = activeTab !== "all" ? TYPE_CFG[activeTab] : null;
-  const showCreate = Boolean(activeCfg?.canCreate && activeCfg?.createTo);
+  const activeConfig = activeTab !== "all" ? TYPE_CONFIG[activeTab] : null;
+  const showCreate = Boolean(activeConfig?.canCreate && activeConfig?.createTo);
 
   const monthChip = new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -582,7 +597,7 @@ export default function DocumentCenterPage() {
   });
 
   return (
-    <div className={cn(card(), "h-[calc(100vh-84px)] overflow-hidden")}>
+    <div className={cn(cardClass(), "h-[calc(100vh-84px)] overflow-hidden")}>
       <div className="flex h-full min-w-0 overflow-hidden">
         <div
           className={cn(
@@ -593,9 +608,9 @@ export default function DocumentCenterPage() {
           <div className="border-b border-[var(--color-border)] px-4 py-4 sm:px-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h1 className={cn("text-xl font-black tracking-tight", S())}>Document Centre</h1>
-                <p className={cn("mt-0.5 text-xs", M())}>
-                  All receipts, invoices, delivery notes and warranties
+                <h1 className={cn("text-xl font-black tracking-tight", textStrong())}>Document Centre</h1>
+                <p className={cn("mt-0.5 text-xs", textMuted())}>
+                  Receipts, invoices, delivery notes, proformas, and warranties
                 </p>
               </div>
 
@@ -613,6 +628,7 @@ export default function DocumentCenterPage() {
                     viewBox="0 0 24 24"
                     fill="none"
                     className={refreshing ? "animate-spin" : ""}
+                    aria-hidden="true"
                   >
                     <path
                       d="M20 12a8 8 0 10-2.34 5.66M20 12V6m0 6h-6"
@@ -626,7 +642,7 @@ export default function DocumentCenterPage() {
 
                 {showCreate ? (
                   <Link
-                    to={activeCfg.createTo}
+                    to={activeConfig.createTo}
                     className="inline-flex h-8 items-center rounded-[10px] bg-[var(--color-primary)] px-3 text-xs font-semibold text-white transition hover:opacity-95"
                   >
                     + New
@@ -672,10 +688,11 @@ export default function DocumentCenterPage() {
                 <svg
                   className={cn(
                     "pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2",
-                    M()
+                    textMuted()
                   )}
                   viewBox="0 0 24 24"
                   fill="none"
+                  aria-hidden="true"
                 >
                   <path
                     d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z"
@@ -692,15 +709,15 @@ export default function DocumentCenterPage() {
                     "focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]"
                   )}
                   placeholder="Search by customer or document number..."
-                  value={draftQ}
-                  onChange={(e) => setDraftQ(e.target.value)}
+                  value={draftQuery}
+                  onChange={(event) => setDraftQuery(event.target.value)}
                 />
               </div>
 
               <div
                 className={cn(
                   "flex shrink-0 items-center justify-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-[11px] font-medium",
-                  M()
+                  textMuted()
                 )}
               >
                 📅 {monthChip}
@@ -711,23 +728,23 @@ export default function DocumentCenterPage() {
           <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
             {loading ? (
               <RowSkeleton count={9} />
-            ) : visibleDocs.length === 0 ? (
-              <EmptyList query={q} />
+            ) : visibleDocuments.length === 0 ? (
+              <EmptyList query={query} />
             ) : (
-              visibleDocs.map((doc) => (
-                <DocRow
-                  key={`${doc.type}-${doc.id}`}
-                  doc={doc}
-                  selected={selected?.id === doc.id && selected?.type === doc.type}
-                  onClick={() => setSelected(doc)}
+              visibleDocuments.map((document) => (
+                <DocumentRow
+                  key={`${document.type}-${document.id}`}
+                  document={document}
+                  selected={selected?.id === document.id && selected?.type === document.type}
+                  onClick={() => setSelected(document)}
                 />
               ))
             )}
           </div>
 
-          {!loading && visibleDocs.length > 0 ? (
-            <div className={cn("border-t border-[var(--color-border)] px-4 py-2 text-[11px] sm:px-5", M())}>
-              {visibleDocs.length} document(s) · Select any row to preview
+          {!loading && visibleDocuments.length > 0 ? (
+            <div className={cn("border-t border-[var(--color-border)] px-4 py-2 text-[11px] sm:px-5", textMuted())}>
+              {visibleDocuments.length} document(s) · Select any row to preview
             </div>
           ) : null}
         </div>
@@ -749,8 +766,8 @@ export default function DocumentCenterPage() {
 
       <ConfirmModal
         open={Boolean(deleteTarget)}
-        title={`Delete ${deleteTarget ? TYPE_CFG[deleteTarget.type]?.singular : "document"}?`}
-        body={`"${deleteTarget?.num || "This document"}" will be permanently removed. This cannot be undone.`}
+        title={`Delete ${deleteTarget ? TYPE_CONFIG[deleteTarget.type]?.singular : "document"}?`}
+        body={`"${deleteTarget?.number || "This document"}" will be permanently removed. This cannot be undone.`}
         loading={deleting}
         onCancel={() => {
           if (!deleting) setDeleteTarget(null);

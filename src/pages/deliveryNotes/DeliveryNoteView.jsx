@@ -11,8 +11,8 @@ const soft = () => "text-[var(--color-text-soft)]";
 const shell = () => "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
 const panel = () => "rounded-[24px] bg-[var(--color-surface-2)]";
 
-function safeStr(x) {
-  return x == null ? "" : String(x);
+function safeStr(value) {
+  return value == null ? "" : String(value);
 }
 
 function formatDate(value) {
@@ -30,14 +30,17 @@ function badgeClass(kind = "neutral") {
   if (kind === "success") {
     return "inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300";
   }
-  return "inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-700 dark:border-[rgb(var(--border))] dark:bg-[rgb(var(--bg-muted))] dark:text-[rgb(var(--text-muted))]";
+
+  return "inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-muted)]";
 }
 
 function SummaryRow({ label, value }) {
   return (
     <div className="flex items-center justify-between gap-4 py-2">
       <span className="text-sm text-[var(--color-text-muted)]">{label}</span>
-      <span className="text-right text-sm font-medium text-[var(--color-text)]">{value}</span>
+      <span className="text-right text-sm font-medium text-[var(--color-text)]">
+        {value}
+      </span>
     </div>
   );
 }
@@ -85,20 +88,17 @@ function ViewSkeleton() {
           ))}
         </div>
 
-        <div className="mt-6">
-          <div className="h-5 w-16 animate-pulse rounded-full bg-[var(--color-surface)]" />
-          <div className="mt-4 space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className={`${panel()} p-4`}>
-                <div className="grid grid-cols-[40px_minmax(0,1fr)_140px_80px] gap-3">
-                  <div className="h-4 w-6 animate-pulse rounded-full bg-[var(--color-surface)]" />
-                  <div className="h-4 w-full animate-pulse rounded-full bg-[var(--color-surface)]" />
-                  <div className="h-4 w-full animate-pulse rounded-full bg-[var(--color-surface)]" />
-                  <div className="h-4 w-full animate-pulse rounded-full bg-[var(--color-surface)]" />
-                </div>
+        <div className="mt-6 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className={`${panel()} p-4`}>
+              <div className="grid grid-cols-[40px_minmax(0,1fr)_140px_80px] gap-3">
+                <div className="h-4 w-6 animate-pulse rounded-full bg-[var(--color-surface)]" />
+                <div className="h-4 w-full animate-pulse rounded-full bg-[var(--color-surface)]" />
+                <div className="h-4 w-full animate-pulse rounded-full bg-[var(--color-surface)]" />
+                <div className="h-4 w-full animate-pulse rounded-full bg-[var(--color-surface)]" />
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </section>
     </div>
@@ -118,9 +118,9 @@ export default function DeliveryNoteView() {
       setLoading(true);
       const data = await getDeliveryNoteById(String(id));
       setNote(data?.deliveryNote || data || null);
-    } catch (e) {
-      console.error(e);
-      toast.error(e?.message || "Failed to load delivery note");
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to load delivery note");
       setNote(null);
     } finally {
       setLoading(false);
@@ -133,7 +133,9 @@ export default function DeliveryNoteView() {
       setNote(null);
       return;
     }
+
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function handleProfessionalPrint() {
@@ -148,10 +150,10 @@ export default function DeliveryNoteView() {
 
     try {
       setPrinting(true);
-      await openDeliveryNotePrint(id);
-    } catch (e) {
-      console.error(e);
-      toast.error(e?.message || "Failed to open print view");
+      openDeliveryNotePrint(id);
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to open print view");
     } finally {
       setTimeout(() => setPrinting(false), 350);
     }
@@ -249,7 +251,9 @@ export default function DeliveryNoteView() {
 
           <div className="text-left lg:text-right">
             <div className={`text-xs uppercase tracking-[0.14em] ${soft()}`}>Number</div>
-            <div className={`mt-1 text-lg font-semibold ${strong()}`}>{note.number || "—"}</div>
+            <div className={`mt-1 text-lg font-semibold ${strong()}`}>
+              {note.number || "—"}
+            </div>
             <div className={`mt-3 text-xs uppercase tracking-[0.14em] ${soft()}`}>Date</div>
             <div className={`mt-1 text-sm ${strong()}`}>
               {formatDate(note.date || note.createdAt)}
@@ -311,18 +315,20 @@ export default function DeliveryNoteView() {
 
               <tbody>
                 {items.length ? (
-                  items.map((it, idx) => (
+                  items.map((item, index) => (
                     <tr
-                      key={it.id || idx}
+                      key={item.id || index}
                       className="border-b border-[var(--color-border)] bg-[var(--color-card)]"
                     >
-                      <td className={`px-4 py-3 text-sm ${muted()}`}>{idx + 1}</td>
+                      <td className={`px-4 py-3 text-sm ${muted()}`}>{index + 1}</td>
                       <td className={`px-4 py-3 text-sm font-medium ${strong()}`}>
-                        {safeStr(it.productName) || "—"}
+                        {safeStr(item.productName) || "—"}
                       </td>
-                      <td className={`px-4 py-3 text-sm ${muted()}`}>{it.serial || "—"}</td>
+                      <td className={`px-4 py-3 text-sm ${muted()}`}>
+                        {item.serial || "—"}
+                      </td>
                       <td className={`px-4 py-3 text-right text-sm font-medium ${strong()}`}>
-                        {it.quantity ?? 1}
+                        {item.quantity ?? 1}
                       </td>
                     </tr>
                   ))
@@ -349,12 +355,12 @@ export default function DeliveryNoteView() {
 
         <div className="mt-8 grid gap-8 md:grid-cols-2">
           <div>
-            <div className={`text-sm ${muted()}`}>Delivered by (Signature)</div>
+            <div className={`text-sm ${muted()}`}>Delivered by signature</div>
             <div className="mt-10 border-t border-[var(--color-border)]" />
           </div>
 
           <div>
-            <div className={`text-sm ${muted()}`}>Received by (Signature)</div>
+            <div className={`text-sm ${muted()}`}>Received by signature</div>
             <div className="mt-10 border-t border-[var(--color-border)]" />
           </div>
         </div>

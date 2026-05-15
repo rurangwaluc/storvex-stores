@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { cn } from "../../lib/cn";
+
 import AsyncButton from "../../components/ui/AsyncButton";
+import { cn } from "../../lib/cn";
 import { createProforma } from "../../services/proformasApi";
 
 const strong = () => "text-[var(--color-text)]";
@@ -18,10 +19,9 @@ function inputClass() {
 function textareaClass() {
   return [
     "w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]",
-    "px-4 py-3 text-sm leading-6 text-[var(--color-text)]",
+    "min-h-[120px] resize-y px-4 py-3 text-sm leading-6 text-[var(--color-text)]",
     "outline-none transition placeholder:text-[var(--color-text-muted)]",
     "focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-ring)]",
-    "resize-y min-h-[120px]",
     "shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
   ].join(" ");
 }
@@ -31,14 +31,14 @@ function labelClass() {
 }
 
 function smallBtn() {
-  return "inline-flex h-9 items-center justify-center rounded-xl bg-[var(--color-card)] px-3 text-sm font-medium text-[var(--color-text)] transition hover:opacity-90";
+  return "inline-flex h-9 items-center justify-center rounded-xl bg-[var(--color-card)] px-3 text-sm font-medium text-[var(--color-text)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60";
 }
 
-function money(n, currency = "RWF") {
-  return `${currency} ${Number(n || 0).toLocaleString()}`;
+function money(value, currency = "RWF") {
+  return `${currency} ${Number(value || 0).toLocaleString()}`;
 }
 
-function summaryRow(label, value, strongValue = false) {
+function SummaryRow({ label, value, strongValue = false }) {
   return (
     <div className="flex items-center justify-between gap-4 py-2">
       <span className={cn("text-sm", muted())}>{label}</span>
@@ -66,8 +66,8 @@ function makeEmptyItem() {
 }
 
 function toNumber(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
 }
 
 export default function ProformaCreate() {
@@ -95,7 +95,9 @@ export default function ProformaCreate() {
 
   function updateItem(index, key, value) {
     setItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [key]: value } : item))
+      prev.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: value } : item
+      )
     );
   }
 
@@ -106,7 +108,7 @@ export default function ProformaCreate() {
   function removeItem(index) {
     setItems((prev) => {
       if (prev.length === 1) return prev;
-      return prev.filter((_, i) => i !== index);
+      return prev.filter((_, itemIndex) => itemIndex !== index);
     });
   }
 
@@ -114,6 +116,7 @@ export default function ProformaCreate() {
     return items.map((item) => {
       const quantity = Math.max(1, parseInt(item.quantity || 1, 10) || 1);
       const unitPrice = Math.max(0, toNumber(item.unitPrice));
+
       return {
         ...item,
         quantity,
@@ -123,10 +126,13 @@ export default function ProformaCreate() {
     });
   }, [items]);
 
-  const subtotal = useMemo(
-    () => normalizedItems.reduce((sum, item) => sum + Number(item.total || 0), 0),
-    [normalizedItems]
-  );
+  const validItemsCount = useMemo(() => {
+    return normalizedItems.filter((item) => String(item.productName || "").trim()).length;
+  }, [normalizedItems]);
+
+  const subtotal = useMemo(() => {
+    return normalizedItems.reduce((sum, item) => sum + Number(item.total || 0), 0);
+  }, [normalizedItems]);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -137,10 +143,10 @@ export default function ProformaCreate() {
     }
 
     const validItems = normalizedItems
-      .filter((item) => item.productName.trim())
+      .filter((item) => String(item.productName || "").trim())
       .map((item) => ({
         productName: item.productName.trim(),
-        serial: item.serial.trim() || undefined,
+        serial: String(item.serial || "").trim() || undefined,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
       }));
@@ -162,7 +168,7 @@ export default function ProformaCreate() {
         preparedBy: form.preparedBy.trim() || undefined,
         reference: form.reference.trim() || undefined,
         notes: form.notes.trim() || undefined,
-        currency: form.currency || "RWF",
+        currency: form.currency.trim() || "RWF",
         status: form.status || "DRAFT",
         items: validItems,
       };
@@ -200,7 +206,8 @@ export default function ProformaCreate() {
             </h1>
 
             <p className={cn("mt-3 max-w-3xl text-sm leading-6 md:text-[15px]", muted())}>
-              Build a branded proforma that can be previewed, printed, and shared with a customer before final payment.
+              Build a branded quotation that can be previewed, printed, and shared with a
+              customer before final payment.
             </p>
           </div>
 
@@ -209,7 +216,7 @@ export default function ProformaCreate() {
               Back to Proformas
             </Link>
             <Link to="/app/documents" className={smallBtn()}>
-              Document Center
+              Document Centre
             </Link>
           </div>
         </div>
@@ -220,7 +227,7 @@ export default function ProformaCreate() {
           <section className={cn(panel(), "p-4 md:p-5")}>
             <h2 className={cn("text-base font-semibold", strong())}>Customer details</h2>
             <p className={cn("mt-1 text-sm", muted())}>
-              Add only the details that matter for the document.
+              Add only the details that matter for the quotation.
             </p>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -300,7 +307,9 @@ export default function ProformaCreate() {
                   className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-card)] p-4"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div className={cn("text-sm font-semibold", strong())}>Item {index + 1}</div>
+                    <div className={cn("text-sm font-semibold", strong())}>
+                      Item {index + 1}
+                    </div>
 
                     <button
                       type="button"
@@ -329,7 +338,7 @@ export default function ProformaCreate() {
                         value={item.serial}
                         onChange={(e) => updateItem(index, "serial", e.target.value)}
                         className={inputClass()}
-                        placeholder="Serial / IMEI / identifier"
+                        placeholder="Serial, IMEI, or identifier"
                       />
                     </div>
 
@@ -443,13 +452,13 @@ export default function ProformaCreate() {
             </div>
 
             <div className="mt-5 divide-y divide-[var(--color-border)]">
-              {summaryRow("Items", String(normalizedItems.filter((x) => x.productName.trim()).length))}
-              {summaryRow("Currency", form.currency || "RWF")}
-              {summaryRow("Prepared by", form.preparedBy || "—")}
-              {summaryRow("Valid until", form.validUntil || "—")}
-              {summaryRow("Status", form.status || "DRAFT")}
-              {summaryRow("Subtotal", money(subtotal, form.currency || "RWF"), true)}
-              {summaryRow("Total", money(subtotal, form.currency || "RWF"), true)}
+              <SummaryRow label="Items" value={String(validItemsCount)} />
+              <SummaryRow label="Currency" value={form.currency || "RWF"} />
+              <SummaryRow label="Prepared by" value={form.preparedBy || "—"} />
+              <SummaryRow label="Valid until" value={form.validUntil || "—"} />
+              <SummaryRow label="Status" value={form.status || "DRAFT"} />
+              <SummaryRow label="Subtotal" value={money(subtotal, form.currency || "RWF")} strongValue />
+              <SummaryRow label="Total" value={money(subtotal, form.currency || "RWF")} strongValue />
             </div>
 
             <div className="mt-5 flex flex-col gap-2">

@@ -1,12 +1,14 @@
-// src/services/documentPrint.js
 import apiClient from "./apiClient";
 
+function trimSlashes(value) {
+  return String(value || "").replace(/^\/+|\/+$/g, "");
+}
+
 export function getApiBaseUrl() {
-  return (
-    apiClient.defaults.baseURL ||
-    import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") ||
-    "http://localhost:5000/api"
-  );
+  const fromClient = apiClient?.defaults?.baseURL;
+  const fromEnv = import.meta.env.VITE_API_BASE_URL;
+
+  return String(fromClient || fromEnv || "http://localhost:5000/api").replace(/\/+$/, "");
 }
 
 export function getAuthToken() {
@@ -16,10 +18,19 @@ export function getAuthToken() {
 export function buildDocumentPrintUrl(resource, id, token) {
   const authToken = token || getAuthToken();
   const base = getApiBaseUrl();
-  const safeResource = String(resource || "").replace(/^\/+|\/+$/g, "");
-  const safeId = encodeURIComponent(String(id || ""));
+  const safeResource = trimSlashes(resource);
+  const safeId = encodeURIComponent(String(id || "").trim());
 
-  return `${base}/${safeResource}/${safeId}/print?token=${encodeURIComponent(authToken)}`;
+  if (!safeResource) {
+    throw new Error("Document type was not selected");
+  }
+
+  if (!safeId) {
+    throw new Error("Document was not selected");
+  }
+
+  const tokenPart = authToken ? `?token=${encodeURIComponent(authToken)}` : "";
+  return `${base}/${safeResource}/${safeId}/print${tokenPart}`;
 }
 
 export function openDocumentPrint(resource, id, token) {
@@ -27,3 +38,10 @@ export function openDocumentPrint(resource, id, token) {
   window.open(url, "_blank", "noopener,noreferrer");
   return url;
 }
+
+export default {
+  getApiBaseUrl,
+  getAuthToken,
+  buildDocumentPrintUrl,
+  openDocumentPrint,
+};

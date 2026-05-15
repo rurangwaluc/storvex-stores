@@ -1,504 +1,744 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+// frontend-stores/src/pages/suppliers/SuppliersList.jsx
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { cn } from "../../lib/cn";
+
 import AsyncButton from "../../components/ui/AsyncButton";
-import TableSkeleton from "../../components/ui/TableSkeleton";
+import PageSkeleton from "../../components/ui/PageSkeleton";
 import {
   activateSupplier,
   deactivateSupplier,
   listSuppliers,
 } from "../../services/suppliersApi";
 
-const strong = () => "text-[var(--color-text)]";
-const muted = () => "text-[var(--color-text-muted)]";
-const card = () => "rounded-[28px] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
-const panel = () => "rounded-[22px] bg-[var(--color-surface-2)]";
+const PAGE_SIZE = 12;
 
-function PulseBar({ className = "" }) {
-  return <div className={cn("animate-pulse rounded-full bg-[var(--color-surface)]", className)} />;
+function cx(...xs) {
+  return xs.filter(Boolean).join(" ");
 }
 
-function Pill({ children, tone = "neutral" }) {
-  const cls = {
-    success: "bg-[#7cfcc6] text-[#0b3b2e]",
-    warning: "bg-[#ff9f43] text-[#402100]",
-    danger: "bg-[rgba(219,80,74,0.14)] text-[var(--color-danger)]",
-    neutral: "bg-[var(--color-surface)] text-[var(--color-text-muted)]",
-    info: "bg-[var(--color-primary-soft)] text-[var(--color-primary)]",
-  }[tone] || "bg-[var(--color-surface)] text-[var(--color-text-muted)]";
+function strongText() {
+  return "text-[var(--color-text)]";
+}
 
+function mutedText() {
+  return "text-[var(--color-text-muted)]";
+}
+
+function softText() {
+  return "text-[var(--color-text-muted)]";
+}
+
+function pageCard() {
+  return "rounded-[28px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]";
+}
+
+function softPanel() {
+  return "rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)]";
+}
+
+function inputClass() {
+  return "app-input";
+}
+
+function primaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-black text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function secondaryBtn() {
+  return "inline-flex h-11 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-5 text-sm font-black text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function dangerBtn() {
+  return "inline-flex h-10 items-center justify-center rounded-2xl bg-[var(--color-danger)] px-4 text-sm font-black text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function successBtn() {
+  return "inline-flex h-10 items-center justify-center rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60";
+}
+
+function badgeClass(tone = "neutral") {
+  if (tone === "primary") {
+    return "bg-[var(--color-primary-soft)] text-[var(--color-primary)]";
+  }
+
+  if (tone === "success") {
+    return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300";
+  }
+
+  if (tone === "warning") {
+    return "bg-amber-500/10 text-amber-600 dark:text-amber-300";
+  }
+
+  if (tone === "danger") {
+    return "bg-red-500/10 text-red-600 dark:text-red-300";
+  }
+
+  if (tone === "info") {
+    return "bg-sky-500/10 text-sky-600 dark:text-sky-300";
+  }
+
+  return "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]";
+}
+
+function Badge({ children, tone = "neutral", className = "" }) {
   return (
-    <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold", cls)}>
+    <span
+      className={cx(
+        "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-black",
+        badgeClass(tone),
+        className,
+      )}
+    >
       {children}
     </span>
   );
 }
 
-function idTypeLabel(t) {
-  if (t === "NATIONAL_ID") return "National ID";
-  if (t === "PASSPORT") return "Passport";
-  return t || "—";
+function cleanString(value) {
+  return String(value || "").trim();
 }
 
-function sourceTypeLabel(v) {
-  const map = {
-    BOUGHT: "Bought",
-    GIFT: "Gift",
-    TRADE_IN: "Trade-in",
-    CONSIGNMENT: "Consignment",
-    OTHER: "Other",
-  };
-  return map[String(v || "").toUpperCase()] || "—";
+function formatDate(value) {
+  if (!value) return "—";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
-function EmptyState({ query }) {
+function prettyEnum(value) {
+  const s = cleanString(value).replaceAll("_", " ").toLowerCase();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "—";
+}
+
+function sourceTone(sourceType) {
+  const key = cleanString(sourceType).toUpperCase();
+
+  if (key === "BOUGHT") return "success";
+  if (key === "CONSIGNMENT") return "warning";
+  if (key === "TRADE_IN") return "info";
+  if (key === "GIFT") return "primary";
+
+  return "neutral";
+}
+
+function SectionHeading({ eyebrow, title, subtitle }) {
   return (
-    <div className="px-5 py-12 text-center">
-      <div className={cn("text-sm font-semibold", strong())}>No suppliers found</div>
-      <div className={cn("mt-1 text-xs leading-5", muted())}>
-        {query
-          ? `No results for "${query}". Try different search terms.`
-          : "Add your first supplier to get started."}
+    <div>
+      {eyebrow ? (
+        <div className={cx("text-[11px] font-black uppercase tracking-[0.18em]", softText())}>
+          {eyebrow}
+        </div>
+      ) : null}
+
+      <h2
+        className={cx(
+          "mt-3 text-[1.55rem] font-black tracking-[-0.04em] sm:text-[1.9rem]",
+          strongText(),
+        )}
+      >
+        {title}
+      </h2>
+
+      {subtitle ? (
+        <p className={cx("mt-3 max-w-3xl text-sm font-semibold leading-6", mutedText())}>
+          {subtitle}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, note, tone = "neutral" }) {
+  const accentClass =
+    tone === "success"
+      ? "bg-emerald-500"
+      : tone === "warning"
+        ? "bg-amber-500"
+        : tone === "danger"
+          ? "bg-[var(--color-danger)]"
+          : tone === "info"
+            ? "bg-sky-500"
+            : "bg-[var(--color-primary)]";
+
+  return (
+    <article className={cx(pageCard(), "relative min-h-[132px] overflow-hidden p-5")}>
+      <div className={cx("absolute left-0 top-0 h-full w-1.5", accentClass)} />
+
+      <div className="pl-2">
+        <div className={cx("text-[10px] font-black uppercase tracking-[0.18em]", softText())}>
+          {label}
+        </div>
+
+        <div className={cx("mt-2 truncate text-[1.45rem] font-black tracking-[-0.04em]", strongText())}>
+          {value}
+        </div>
+
+        {note ? (
+          <div className={cx("mt-2 text-xs font-semibold leading-5", mutedText())}>
+            {note}
+          </div>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function FilterChip({ active, children, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "inline-flex h-10 items-center justify-center rounded-2xl px-4 text-xs font-black uppercase tracking-[0.08em] transition",
+        active
+          ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)]"
+          : "border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] hover:border-[var(--color-primary)]",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function InfoStat({ label, value, sub }) {
+  return (
+    <div className={cx(softPanel(), "p-4")}>
+      <div className={cx("text-[10px] font-black uppercase tracking-[0.18em]", softText())}>
+        {label}
+      </div>
+
+      <div className={cx("mt-2 text-sm font-black leading-6", strongText())}>
+        {value || "—"}
+      </div>
+
+      {sub ? (
+        <div className={cx("mt-1 text-xs font-semibold leading-5", mutedText())}>
+          {sub}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SkeletonBlock({ className = "" }) {
+  return (
+    <div
+      className={cx("animate-pulse rounded-[20px] bg-[var(--color-surface-2)]", className)}
+    />
+  );
+}
+
+function SuppliersSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className={cx(pageCard(), "p-5")}>
+            <SkeletonBlock className="h-3 w-24" />
+            <SkeletonBlock className="mt-3 h-8 w-16" />
+            <SkeletonBlock className="mt-3 h-4 w-32" />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className={cx(pageCard(), "p-5")}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="flex gap-2">
+                  <SkeletonBlock className="h-7 w-28 rounded-full" />
+                  <SkeletonBlock className="h-7 w-24 rounded-full" />
+                </div>
+
+                <SkeletonBlock className="mt-4 h-6 w-56" />
+                <SkeletonBlock className="mt-2 h-4 w-72" />
+
+                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <SkeletonBlock className="h-20" />
+                  <SkeletonBlock className="h-20" />
+                  <SkeletonBlock className="h-20" />
+                </div>
+              </div>
+
+              <SkeletonBlock className="h-12 w-36" />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function ConfirmModal({ title, message, confirmLabel, onConfirm, onClose, busy, isDanger = false }) {
+function EmptyState({ title, text, onCreate }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className={cn(card(), "relative z-10 w-full max-w-sm p-6 space-y-4")}>
-        <div className={cn("text-base font-black tracking-tight", strong())}>{title}</div>
-        <div className={cn("text-sm leading-6", muted())}>{message}</div>
-        <div className="flex gap-2">
-          <AsyncButton
-            loading={busy}
-            loadingText="Working..."
-            onClick={onConfirm}
-            variant={isDanger ? "secondary" : "primary"}
-            className={cn("flex-1", isDanger && "!bg-[var(--color-danger)] text-white hover:opacity-95")}
-          >
-            {confirmLabel}
-          </AsyncButton>
-          <AsyncButton variant="secondary" onClick={onClose} disabled={busy} className="flex-1">
-            Cancel
-          </AsyncButton>
-        </div>
+    <div className={cx(pageCard(), "px-5 py-12 text-center")}>
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text)]">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M4 7h16M6 7v12h12V7M9 11h6M9 15h4M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </div>
+
+      <div className={cx("mt-4 text-lg font-black tracking-tight", strongText())}>
+        {title}
+      </div>
+
+      <p className={cx("mx-auto mt-3 max-w-md text-sm font-semibold leading-6", mutedText())}>
+        {text}
+      </p>
+
+      {onCreate ? (
+        <button type="button" onClick={onCreate} className={cx(primaryBtn(), "mt-5")}>
+          Add supplier
+        </button>
+      ) : null}
     </div>
   );
 }
 
-function SuppliersPageSkeleton() {
+function SupplierCard({ supplier, busyId, onOpen, onEdit, onActivate, onDeactivate }) {
+  const active = supplier.isActive !== false;
+  const busy = busyId === supplier.id;
+
   return (
-    <div className="space-y-6">
-      <div className={cn(card(), "overflow-hidden")}>
-        <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 flex-1">
-              <PulseBar className="h-3 w-24" />
-              <PulseBar className="mt-4 h-8 w-48" />
-              <PulseBar className="mt-3 h-4 w-full max-w-[560px]" />
-              <PulseBar className="mt-2 h-4 w-full max-w-[460px]" />
+    <article
+      className={cx(
+        pageCard(),
+        "overflow-hidden p-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] sm:p-5",
+      )}
+    >
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={active ? "success" : "warning"}>
+              {active ? "Active supplier" : "Inactive supplier"}
+            </Badge>
+
+            <Badge tone={sourceTone(supplier.sourceType)}>
+              {prettyEnum(supplier.sourceType)}
+            </Badge>
+
+            {supplier.verifiedAt ? <Badge tone="primary">Verified</Badge> : null}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <h3 className={cx("truncate text-lg font-black tracking-[-0.03em]", strongText())}>
+                {supplier.name || "Unnamed supplier"}
+              </h3>
+
+              <div className={cx("mt-1 text-sm font-semibold leading-6", mutedText())}>
+                {supplier.companyName ? supplier.companyName : "Individual supplier"}
+              </div>
             </div>
-            <div className="flex shrink-0 gap-2">
-              <div className="h-11 w-28 animate-pulse rounded-2xl bg-[var(--color-surface)]" />
-              <div className="h-11 w-36 animate-pulse rounded-2xl bg-[var(--color-surface)]" />
+
+            <div className="shrink-0 lg:text-right">
+              <div className={cx("text-[10px] font-black uppercase tracking-[0.18em]", softText())}>
+                Added
+              </div>
+              <div className={cx("mt-1 text-sm font-black", strongText())}>
+                {formatDate(supplier.createdAt)}
+              </div>
             </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <InfoStat
+              label="Phone"
+              value={supplier.phone || "—"}
+              sub="Primary supplier contact"
+            />
+
+            <InfoStat
+              label="Identity"
+              value={supplier.idNumber || "—"}
+              sub={supplier.idType ? prettyEnum(supplier.idType) : "No ID type"}
+            />
+
+            <InfoStat
+              label="Company"
+              value={supplier.companyName || "—"}
+              sub="Business name if available"
+            />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 px-5 py-5 sm:grid-cols-3 sm:px-6">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className={cn(panel(), "p-3")}>
-              <PulseBar className="h-3 w-16" />
-              <PulseBar className="mt-3 h-7 w-24" />
+        <aside className={cx(softPanel(), "p-4")}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className={cx("text-sm font-black", strongText())}>Supplier actions</div>
+              <div className={cx("mt-1 text-xs font-semibold leading-5", mutedText())}>
+                Review, edit, or change supplier access state.
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      <div className={cn(card(), "overflow-hidden")}>
-        <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="h-11 w-full max-w-sm animate-pulse rounded-2xl bg-[var(--color-surface)]" />
-            <div className="h-11 w-28 animate-pulse rounded-2xl bg-[var(--color-surface)]" />
+            <span
+              className={cx(
+                "mt-1 h-2.5 w-2.5 rounded-full",
+                active ? "bg-emerald-500" : "bg-amber-500",
+              )}
+            />
           </div>
-        </div>
 
-        <div className="hidden lg:block">
-          <TableSkeleton rows={8} cols={6} />
-        </div>
+          <div className="mt-4 grid grid-cols-1 gap-2">
+            <button type="button" onClick={() => onOpen(supplier.id)} className={primaryBtn()}>
+              Open supplier
+            </button>
 
-        <div className="space-y-3 p-4 lg:hidden">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className={cn(panel(), "p-4 space-y-2")}>
-              <PulseBar className="h-4 w-40" />
-              <PulseBar className="h-3 w-24" />
-              <PulseBar className="h-3 w-32" />
-            </div>
-          ))}
-        </div>
+            <button type="button" onClick={() => onEdit(supplier.id)} className={secondaryBtn()}>
+              Edit details
+            </button>
+
+            {active ? (
+              <AsyncButton
+                type="button"
+                loading={busy}
+                onClick={() => onDeactivate(supplier.id)}
+                className={dangerBtn()}
+              >
+                Deactivate
+              </AsyncButton>
+            ) : (
+              <AsyncButton
+                type="button"
+                loading={busy}
+                onClick={() => onActivate(supplier.id)}
+                className={successBtn()}
+              >
+                Reactivate
+              </AsyncButton>
+            )}
+          </div>
+        </aside>
       </div>
-    </div>
+    </article>
   );
 }
 
 export default function SuppliersList() {
-  const nav = useNavigate();
+  const navigate = useNavigate();
 
-  const [q, setQ] = useState("");
-  const [active, setActive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [rows, setRows] = useState([]);
-  const [busyId, setBusyId] = useState(null);
-  const [confirm, setConfirm] = useState(null);
-  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [busyId, setBusyId] = useState("");
 
-  const abortRef = useRef(null);
-  const mountedRef = useRef(true);
+  const [suppliers, setSuppliers] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      abortRef.current?.abort();
-    };
-  }, []);
+  const [filters, setFilters] = useState({
+    q: "",
+    active: "true",
+    sourceType: "ALL",
+  });
 
-  const query = useMemo(() => q.trim(), [q]);
-
-  async function load({ silent = false } = {}) {
-    abortRef.current?.abort();
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
-
-    if (!silent) setLoading(true);
-    else setRefreshing(true);
-
+  async function loadSuppliers({ initial = false } = {}) {
     try {
-      const data = await listSuppliers({ q: query || undefined, active });
-      if (!mountedRef.current || ctrl.signal.aborted) return;
-      setRows(Array.isArray(data?.suppliers) ? data.suppliers : []);
-    } catch (e) {
-      if (ctrl.signal.aborted) return;
-      toast.error(e?.message || "Failed to load suppliers");
-      setRows([]);
+      if (initial) setLoading(true);
+      else setRefreshing(true);
+
+      const data = await listSuppliers({
+        q: filters.q,
+        active: filters.active,
+      });
+
+      const rows = Array.isArray(data?.suppliers)
+        ? data.suppliers
+        : Array.isArray(data)
+          ? data
+          : [];
+
+      setSuppliers(rows);
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to load suppliers");
+      setSuppliers([]);
     } finally {
-      if (!mountedRef.current || ctrl.signal.aborted) return;
-      setLoading(false);
+      if (initial) setLoading(false);
       setRefreshing(false);
     }
   }
 
   useEffect(() => {
-    const t = setTimeout(() => void load(), 250);
-    return () => clearTimeout(t);
-  }, [query, active]); // eslint-disable-line react-hooks/exhaustive-deps
+    loadSuppliers({ initial: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  async function handleToggle() {
-    if (!confirm?.supplier) return;
+  function updateFilter(key, value) {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  }
 
-    setConfirmBusy(true);
-    setBusyId(confirm.supplier.id);
+  function applyFilters() {
+    setVisibleCount(PAGE_SIZE);
+    loadSuppliers();
+  }
+
+  function clearFilters() {
+    setFilters({
+      q: "",
+      active: "true",
+      sourceType: "ALL",
+    });
+
+    setVisibleCount(PAGE_SIZE);
+
+    setTimeout(() => {
+      loadSuppliers();
+    }, 0);
+  }
+
+  const filteredSuppliers = useMemo(() => {
+    let rows = Array.isArray(suppliers) ? [...suppliers] : [];
+
+    if (filters.sourceType !== "ALL") {
+      rows = rows.filter(
+        (supplier) => cleanString(supplier.sourceType).toUpperCase() === filters.sourceType,
+      );
+    }
+
+    return rows;
+  }, [suppliers, filters.sourceType]);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [filters.sourceType, suppliers.length]);
+
+  const visibleSuppliers = useMemo(
+    () => filteredSuppliers.slice(0, visibleCount),
+    [filteredSuppliers, visibleCount],
+  );
+
+  const hasMore = visibleSuppliers.length < filteredSuppliers.length;
+
+  const summary = useMemo(() => {
+    const rows = Array.isArray(suppliers) ? suppliers : [];
+
+    return {
+      total: rows.length,
+      active: rows.filter((supplier) => supplier.isActive !== false).length,
+      inactive: rows.filter((supplier) => supplier.isActive === false).length,
+      verified: rows.filter((supplier) => Boolean(supplier.verifiedAt)).length,
+      companies: rows.filter((supplier) => Boolean(cleanString(supplier.companyName))).length,
+    };
+  }, [suppliers]);
+
+  async function runSupplierStatusAction(id, fn, successMessage) {
+    if (!id) return;
 
     try {
-      if (confirm.action === "deactivate") {
-        await deactivateSupplier(confirm.supplier.id);
-        toast.success("Supplier hidden");
-      } else {
-        await activateSupplier(confirm.supplier.id);
-        toast.success("Supplier shown");
-      }
-
-      setConfirm(null);
-      await load({ silent: true });
-    } catch (e) {
-      toast.error(e?.message || "Failed");
+      setBusyId(id);
+      await fn(id);
+      toast.success(successMessage);
+      await loadSuppliers();
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to update supplier");
     } finally {
-      if (mountedRef.current) {
-        setConfirmBusy(false);
-        setBusyId(null);
-      }
+      setBusyId("");
     }
   }
 
-  const stats = useMemo(
-    () => ({
-      total: rows.length,
-      verified: rows.filter((s) => s.verifiedAt).length,
-    }),
-    [rows]
-  );
-
-  if (loading && rows.length === 0) {
-    return <SuppliersPageSkeleton />;
+  if (loading) {
+    return <SuppliersSkeleton />;
   }
 
   return (
     <div className="space-y-6">
-      <div className={cn(card(), "overflow-hidden")}>
+      <section className={cx(pageCard(), "overflow-hidden")}>
         <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className={cn("text-[11px] font-semibold uppercase tracking-[0.18em]", muted())}>
-                Procurement
-              </div>
-              <h1 className={cn("mt-3 text-[1.6rem] font-black tracking-tight sm:text-[1.9rem]", strong())}>
-                Suppliers
-              </h1>
-              <p className={cn("mt-2 text-sm leading-6", muted())}>
-                Track every source you buy from. Always keep the supplier ID — it protects you from receiving stolen goods.
-              </p>
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <SectionHeading
+                eyebrow="Suppliers"
+                title="Supplier control"
+                subtitle="Manage supplier identity, contact details, source type, supply history, and stock intake records from one operational screen."
+              />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <AsyncButton loading={refreshing} loadingText="" variant="secondary" onClick={() => load({ silent: true })}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className={refreshing ? "animate-spin" : ""}>
-                  <path
-                    d="M20 12a8 8 0 10-2.34 5.66M20 12V6m0 6h-6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <AsyncButton
+                type="button"
+                loading={refreshing}
+                onClick={() => loadSuppliers()}
+                className={secondaryBtn()}
+              >
                 Refresh
               </AsyncButton>
 
-              <AsyncButton loading={false} variant="primary" onClick={() => nav("/app/suppliers/new")}>
-                + Add supplier
-              </AsyncButton>
+              <Link to="/app/suppliers/new" className={primaryBtn()}>
+                Add supplier
+              </Link>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 px-5 py-5 sm:grid-cols-3 sm:px-6">
-          <div className={cn(panel(), "p-3")}>
-            <div className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", muted())}>Showing</div>
-            <div className={cn("mt-2 text-2xl font-black", strong())}>{stats.total}</div>
+        <div className="grid grid-cols-1 gap-3 px-5 py-5 md:grid-cols-2 xl:grid-cols-5">
+          <SummaryCard label="Visible suppliers" value={summary.total} note="Loaded from current filters" />
+          <SummaryCard label="Active" value={summary.active} note="Available for supply records" tone="success" />
+          <SummaryCard
+            label="Inactive"
+            value={summary.inactive}
+            note="Blocked from normal usage"
+            tone={summary.inactive > 0 ? "warning" : "neutral"}
+          />
+          <SummaryCard label="Verified" value={summary.verified} note="Suppliers with verified date" tone="info" />
+          <SummaryCard label="Companies" value={summary.companies} note="Business suppliers" tone="primary" />
+        </div>
+      </section>
+
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-end">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <div className="lg:col-span-5">
+              <label className={cx("text-sm font-black", strongText())}>Search</label>
+              <input
+                className={cx(inputClass(), "mt-2")}
+                placeholder="Search name, phone, ID number, or company..."
+                value={filters.q}
+                onChange={(event) => updateFilter("q", event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") applyFilters();
+                }}
+              />
+            </div>
+
+            <div className="lg:col-span-3">
+              <label className={cx("text-sm font-black", strongText())}>Status</label>
+              <select
+                className={cx(inputClass(), "mt-2")}
+                value={filters.active}
+                onChange={(event) => updateFilter("active", event.target.value)}
+              >
+                <option value="true">Active suppliers</option>
+                <option value="false">Inactive suppliers</option>
+              </select>
+            </div>
+
+            <div className="lg:col-span-4">
+              <label className={cx("text-sm font-black", strongText())}>Source type</label>
+              <select
+                className={cx(inputClass(), "mt-2")}
+                value={filters.sourceType}
+                onChange={(event) => updateFilter("sourceType", event.target.value)}
+              >
+                <option value="ALL">All source types</option>
+                <option value="BOUGHT">Bought</option>
+                <option value="GIFT">Gift</option>
+                <option value="TRADE_IN">Trade in</option>
+                <option value="CONSIGNMENT">Consignment</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
           </div>
 
-          <div className={cn(panel(), "p-3")}>
-            <div className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", muted())}>Verified</div>
-            <div className="mt-2 text-2xl font-black text-[var(--color-primary)]">{stats.verified}</div>
-          </div>
+          <div className={cx(softPanel(), "p-4")}>
+            <div className={cx("text-sm font-black", strongText())}>Matching suppliers</div>
 
-          <div className={cn(panel(), "p-3 col-span-2 sm:col-span-1")}>
-            <div className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", muted())}>Mode</div>
-            <div className={cn("mt-2 text-base font-bold", strong())}>
-              {active ? "Active suppliers" : "Hidden suppliers"}
+            <div className={cx("mt-2 text-2xl font-black tracking-tight", strongText())}>
+              {filteredSuppliers.length}
+            </div>
+
+            <div className={cx("mt-1 text-sm font-semibold leading-6", mutedText())}>
+              Suppliers ready for review.
             </div>
           </div>
         </div>
-      </div>
 
-      <div className={cn(card(), "overflow-hidden")}>
-        <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <input
-              className="app-input max-w-sm"
-              placeholder="Search name · phone · company · ID number..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
+        <div className="mt-5 flex flex-wrap gap-2">
+          <FilterChip active={filters.sourceType === "ALL"} onClick={() => updateFilter("sourceType", "ALL")}>
+            All
+          </FilterChip>
 
-            <button
-              type="button"
-              onClick={() => setActive((v) => !v)}
-              className={cn(
-                "inline-flex h-11 items-center gap-2 rounded-2xl border px-4 text-sm font-semibold transition",
-                active
-                  ? "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text)] hover:opacity-90"
-                  : "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
-              )}
-            >
-              <span className={cn("h-2 w-2 rounded-full", active ? "bg-emerald-500" : "bg-amber-500")} />
-              {active ? "Active" : "Hidden"}
-            </button>
-          </div>
+          <FilterChip active={filters.sourceType === "BOUGHT"} onClick={() => updateFilter("sourceType", "BOUGHT")}>
+            Bought
+          </FilterChip>
+
+          <FilterChip active={filters.sourceType === "CONSIGNMENT"} onClick={() => updateFilter("sourceType", "CONSIGNMENT")}>
+            Consignment
+          </FilterChip>
+
+          <FilterChip active={filters.sourceType === "TRADE_IN"} onClick={() => updateFilter("sourceType", "TRADE_IN")}>
+            Trade in
+          </FilterChip>
+
+          <FilterChip active={filters.sourceType === "OTHER"} onClick={() => updateFilter("sourceType", "OTHER")}>
+            Other
+          </FilterChip>
         </div>
 
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[var(--color-border)]">
-                {["Supplier", "ID / Company", "Phone", "Source", "Verified", ""].map((h) => (
-                  <th
-                    key={h}
-                    className={cn("px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.16em]", muted())}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <AsyncButton
+            type="button"
+            loading={refreshing}
+            onClick={applyFilters}
+            className={primaryBtn()}
+          >
+            Apply filters
+          </AsyncButton>
 
-            <tbody>
-              {loading ? (
-                <TableSkeleton rows={8} cols={6} />
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>
-                    <EmptyState query={query} />
-                  </td>
-                </tr>
+          <button type="button" onClick={clearFilters} className={secondaryBtn()}>
+            Clear filters
+          </button>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        {filteredSuppliers.length === 0 ? (
+          <EmptyState
+            title="No suppliers found"
+            text="No supplier records match your current filters."
+            onCreate={() => navigate("/app/suppliers/new")}
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-3">
+              {visibleSuppliers.map((supplier) => (
+                <SupplierCard
+                  key={supplier.id}
+                  supplier={supplier}
+                  busyId={busyId}
+                  onOpen={(id) => navigate(`/app/suppliers/${id}`)}
+                  onEdit={(id) => navigate(`/app/suppliers/${id}/edit`)}
+                  onActivate={(id) =>
+                    runSupplierStatusAction(id, activateSupplier, "Supplier reactivated")
+                  }
+                  onDeactivate={(id) =>
+                    runSupplierStatusAction(id, deactivateSupplier, "Supplier deactivated")
+                  }
+                />
+              ))}
+            </div>
+
+            <div className="flex flex-col items-center gap-2 pt-1">
+              {hasMore ? (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                  className={secondaryBtn()}
+                >
+                  Load {PAGE_SIZE} more
+                </button>
               ) : (
-                rows.map((s) => (
-                  <tr
-                    key={s.id}
-                    className="border-b border-[var(--color-border)] transition hover:bg-[var(--color-surface-2)]"
-                  >
-                    <td className="px-5 py-3">
-                      <div className={cn("text-sm font-bold", strong())}>{s.name}</div>
-                      {s.companyName ? <div className={cn("text-xs", muted())}>{s.companyName}</div> : null}
-                    </td>
-
-                    <td className="px-5 py-3">
-                      <div className={cn("text-xs", muted())}>{idTypeLabel(s.idType)}</div>
-                      <div className={cn("text-sm font-semibold", strong())}>{s.idNumber || "—"}</div>
-                    </td>
-
-                    <td className={cn("px-5 py-3 text-sm", muted())}>{s.phone || "—"}</td>
-
-                    <td className="px-5 py-3">
-                      <Pill tone="neutral">{sourceTypeLabel(s.sourceType)}</Pill>
-                    </td>
-
-                    <td className="px-5 py-3">
-                      <Pill tone={s.verifiedAt ? "success" : "neutral"}>
-                        {s.verifiedAt ? "Verified" : "Unverified"}
-                      </Pill>
-                    </td>
-
-                    <td className="px-5 py-3">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Link
-                          to={`/app/suppliers/${s.id}`}
-                          className={cn(
-                            "rounded-xl px-3 py-1.5 text-xs font-semibold bg-[var(--color-surface-2)] transition hover:opacity-90",
-                            strong()
-                          )}
-                        >
-                          View
-                        </Link>
-
-                        <Link
-                          to={`/app/suppliers/${s.id}/edit`}
-                          className={cn(
-                            "rounded-xl px-3 py-1.5 text-xs font-semibold bg-[var(--color-surface-2)] transition hover:opacity-90",
-                            strong()
-                          )}
-                        >
-                          Edit
-                        </Link>
-
-                        <button
-                          type="button"
-                          disabled={busyId === s.id}
-                          onClick={() => setConfirm({ supplier: s, action: active ? "deactivate" : "activate" })}
-                          className={cn(
-                            "rounded-xl px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60",
-                            active ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"
-                          )}
-                        >
-                          {busyId === s.id ? "..." : active ? "Hide" : "Show"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                <div className={cx("text-sm font-semibold", mutedText())}>
+                  All matching suppliers loaded
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="lg:hidden p-4 space-y-3">
-          {loading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className={cn(panel(), "p-4 space-y-2 animate-pulse")}>
-                <div className="h-4 w-40 rounded-full bg-[var(--color-surface)]" />
-                <div className="h-3 w-24 rounded-full bg-[var(--color-surface)]" />
-                <div className="h-3 w-32 rounded-full bg-[var(--color-surface)]" />
-              </div>
-            ))
-          ) : rows.length === 0 ? (
-            <EmptyState query={query} />
-          ) : (
-            rows.map((s) => (
-              <div key={s.id} className={cn(panel(), "p-4")}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className={cn("font-bold text-sm truncate", strong())}>{s.name}</div>
-                    {s.companyName ? <div className={cn("text-xs", muted())}>{s.companyName}</div> : null}
-                    <div className={cn("mt-1 text-xs", muted())}>
-                      {idTypeLabel(s.idType)}: {s.idNumber || "—"}
-                      {s.phone ? ` · ${s.phone}` : ""}
-                    </div>
-                  </div>
-
-                  <Pill tone={s.verifiedAt ? "success" : "neutral"}>
-                    {s.verifiedAt ? "Verified" : "—"}
-                  </Pill>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Link
-                    to={`/app/suppliers/${s.id}`}
-                    className={cn("rounded-2xl px-3 py-1.5 text-xs font-semibold bg-[var(--color-surface)]", strong())}
-                  >
-                    View
-                  </Link>
-
-                  <Link
-                    to={`/app/suppliers/${s.id}/edit`}
-                    className={cn("rounded-2xl px-3 py-1.5 text-xs font-semibold bg-[var(--color-surface)]", strong())}
-                  >
-                    Edit
-                  </Link>
-
-                  <button
-                    type="button"
-                    disabled={busyId === s.id}
-                    onClick={() => setConfirm({ supplier: s, action: active ? "deactivate" : "activate" })}
-                    className={cn(
-                      "rounded-2xl px-3 py-1.5 text-xs font-semibold disabled:opacity-60",
-                      active ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"
-                    )}
-                  >
-                    {busyId === s.id ? "..." : active ? "Hide" : "Show"}
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {!loading ? (
-          <div className={cn("border-t border-[var(--color-border)] px-5 py-3 text-xs", muted())}>
-            {rows.length} supplier(s) · Tip: Always verify supplier ID to avoid receiving stolen goods.
-          </div>
-        ) : null}
-      </div>
-
-      {confirm ? (
-        <ConfirmModal
-          title={confirm.action === "deactivate" ? "Hide supplier?" : "Show supplier?"}
-          message={
-            confirm.action === "deactivate"
-              ? `${confirm.supplier.name} will be hidden from the active list. Their history is preserved.`
-              : `${confirm.supplier.name} will be restored to the active list.`
-          }
-          confirmLabel={confirm.action === "deactivate" ? "Hide" : "Show"}
-          onConfirm={handleToggle}
-          onClose={() => setConfirm(null)}
-          busy={confirmBusy}
-          isDanger={confirm.action === "deactivate"}
-        />
-      ) : null}
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }

@@ -218,13 +218,7 @@ function Icon({ type }) {
         </svg>
       );
 
-    case "audit":
-      return (
-        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.9">
-          <path d="M7 3h10a2 2 0 0 1 2 2v16l-4-2-3 2-3-2-4 2V5a2 2 0 0 1 2-2Z" />
-          <path d="M8 8h8M8 12h8M8 16h5" strokeLinecap="round" />
-        </svg>
-      );
+ 
 
     case "employees":
       return (
@@ -382,18 +376,8 @@ const NAV_ITEMS = [
         icon: "employees",
         roles: ["OWNER", "MANAGER"],
       },
-      {
-        to: "/app/billing",
-        label: "Billing",
-        icon: "billing",
-        roles: ["OWNER"],
-      },
-      {
-        to: "/app/audit",
-        label: "Audit logs",
-        icon: "audit",
-        roles: ["OWNER", "MANAGER"],
-      },
+ 
+   
       {
         to: "/app/settings",
         label: "Settings",

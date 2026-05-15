@@ -1,6 +1,5 @@
-// src/services/warrantiesApi.js
 import { apiFetch } from "./apiClient";
-import { buildDocumentPrintUrl } from "./documentPrint";
+import { buildDocumentPrintUrl, openDocumentPrint } from "./documentPrint";
 
 function cleanString(value) {
   const s = String(value || "").trim();
@@ -19,9 +18,7 @@ function normalizeQueryInput(query) {
     return Object.entries(query).reduce((acc, [key, value]) => {
       if (value === undefined || value === null) return acc;
 
-      const cleaned =
-        typeof value === "string" ? value.trim() : value;
-
+      const cleaned = typeof value === "string" ? value.trim() : value;
       if (cleaned === "") return acc;
 
       acc[key] = cleaned;
@@ -39,18 +36,9 @@ function normalizeId(id) {
     throw new Error("Warranty was not selected");
   }
 
-  return encodeURIComponent(cleaned);
+  return cleaned;
 }
 
-/**
- * GET /api/warranties
- *
- * Supported examples:
- * listWarranties()
- * listWarranties("iphone")
- * listWarranties({ q: "iphone", branchId })
- * listWarranties({ allBranches: true })
- */
 export function listWarranties(query = "", options = {}) {
   const params = normalizeQueryInput(query);
 
@@ -61,19 +49,13 @@ export function listWarranties(query = "", options = {}) {
   });
 }
 
-/**
- * GET /api/warranties/:id
- */
 export function getWarranty(id, options = {}) {
-  return apiFetch(`/warranties/${normalizeId(id)}`, {
+  return apiFetch(`/warranties/${encodeURIComponent(normalizeId(id))}`, {
     method: "GET",
     ...(options || {}),
   });
 }
 
-/**
- * Backward-compatible aliases used by older pages.
- */
 export function getWarrantyById(id, options = {}) {
   return getWarranty(id, options);
 }
@@ -82,9 +64,6 @@ export function getWarrantyDetail(id, options = {}) {
   return getWarranty(id, options);
 }
 
-/**
- * POST /api/warranties
- */
 export function createWarranty(payload, options = {}) {
   return apiFetch("/warranties", {
     method: "POST",
@@ -93,42 +72,31 @@ export function createWarranty(payload, options = {}) {
   });
 }
 
-/**
- * PATCH /api/warranties/:id
- */
 export function updateWarranty(id, payload, options = {}) {
-  return apiFetch(`/warranties/${normalizeId(id)}`, {
+  return apiFetch(`/warranties/${encodeURIComponent(normalizeId(id))}`, {
     method: "PATCH",
     body: payload || {},
     ...(options || {}),
   });
 }
 
-/**
- * DELETE /api/warranties/:id
- */
 export function deleteWarranty(id, options = {}) {
-  return apiFetch(`/warranties/${normalizeId(id)}`, {
+  return apiFetch(`/warranties/${encodeURIComponent(normalizeId(id))}`, {
     method: "DELETE",
     ...(options || {}),
   });
 }
 
-/**
- * GET /api/warranties/:id/print
- *
- * This returns a printable URL, not fetched JSON.
- * The backend route accepts Authorization header or ?token=.
- */
 export function getWarrantyPrintUrl(id, token) {
   return buildDocumentPrintUrl("warranties", normalizeId(id), token);
 }
 
-/**
- * Small helper for pages that want the exact printable route path.
- */
 export function getWarrantyPrintPath(id) {
-  return `/warranties/${normalizeId(id)}/print`;
+  return `/warranties/${encodeURIComponent(normalizeId(id))}/print`;
+}
+
+export function openWarrantyPrint(id, token) {
+  return openDocumentPrint("warranties", normalizeId(id), token);
 }
 
 export default {
@@ -141,4 +109,5 @@ export default {
   deleteWarranty,
   getWarrantyPrintUrl,
   getWarrantyPrintPath,
+  openWarrantyPrint,
 };

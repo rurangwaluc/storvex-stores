@@ -1,62 +1,126 @@
+// frontend-stores/src/services/suppliersApi.js
 import { apiFetch } from "./apiClient";
 
-export function listSuppliers(params = {}) {
+function cleanString(value) {
+  return String(value || "").trim();
+}
+
+function toQuery(params = {}) {
   const qs = new URLSearchParams();
 
-  Object.entries(params).forEach(([k, v]) => {
-    if (v == null || v === "") return;
-    qs.set(k, String(v));
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+
+    const cleanValue = cleanString(value);
+    if (!cleanValue) return;
+
+    qs.set(key, cleanValue);
   });
 
-  const s = qs.toString();
-  return apiFetch(`/suppliers${s ? `?${s}` : ""}`);
+  const query = qs.toString();
+  return query ? `?${query}` : "";
+}
+
+function normalizeSupplierPayload(data = {}) {
+  return {
+    name: cleanString(data.name),
+    idType: cleanString(data.idType),
+    idNumber: cleanString(data.idNumber),
+    phone: cleanString(data.phone) || null,
+    email: cleanString(data.email) || null,
+    address: cleanString(data.address) || null,
+    notes: cleanString(data.notes) || null,
+    companyName: cleanString(data.companyName) || null,
+    taxId: cleanString(data.taxId) || null,
+    sourceType: cleanString(data.sourceType) || "OTHER",
+    sourceDetails: cleanString(data.sourceDetails) || null,
+  };
+}
+
+function normalizeSupplyPayload(data = {}) {
+  const items = Array.isArray(data.items) ? data.items : [];
+
+  return {
+    sourceType: cleanString(data.sourceType) || "OTHER",
+    sourceDetails: cleanString(data.sourceDetails) || null,
+    documentRef: cleanString(data.documentRef) || null,
+    notes: cleanString(data.notes) || null,
+    alsoUpdateStock: data.alsoUpdateStock !== false,
+    items: items.map((item) => ({
+      productId: cleanString(item.productId) || null,
+      productName: cleanString(item.productName),
+      category: cleanString(item.category) || null,
+      subcategory: cleanString(item.subcategory) || null,
+      subcategoryOther: cleanString(item.subcategoryOther) || null,
+      brand: cleanString(item.brand) || null,
+      serial: cleanString(item.serial) || null,
+      quantity: Number(item.quantity || 1),
+      buyPrice: Number(item.buyPrice || 0),
+      sellPrice: Number(item.sellPrice || 0),
+      notes: cleanString(item.notes) || null,
+    })),
+  };
+}
+
+export function listSuppliers(params = {}) {
+  return apiFetch(`/suppliers${toQuery(params)}`);
 }
 
 export function createSupplier(data) {
   return apiFetch("/suppliers", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: normalizeSupplierPayload(data),
   });
 }
 
 export function getSupplierById(id) {
-  return apiFetch(`/suppliers/${encodeURIComponent(String(id))}`);
+  const supplierId = cleanString(id);
+  if (!supplierId) throw new Error("Missing supplier id");
+
+  return apiFetch(`/suppliers/${encodeURIComponent(supplierId)}`);
 }
 
 export function updateSupplier(id, data) {
-  return apiFetch(`/suppliers/${encodeURIComponent(String(id))}`, {
+  const supplierId = cleanString(id);
+  if (!supplierId) throw new Error("Missing supplier id");
+
+  return apiFetch(`/suppliers/${encodeURIComponent(supplierId)}`, {
     method: "PUT",
-    body: JSON.stringify(data),
+    body: normalizeSupplierPayload(data),
   });
 }
 
 export function activateSupplier(id) {
-  return apiFetch(`/suppliers/${encodeURIComponent(String(id))}/activate`, {
+  const supplierId = cleanString(id);
+  if (!supplierId) throw new Error("Missing supplier id");
+
+  return apiFetch(`/suppliers/${encodeURIComponent(supplierId)}/activate`, {
     method: "PATCH",
   });
 }
 
 export function deactivateSupplier(id) {
-  return apiFetch(`/suppliers/${encodeURIComponent(String(id))}/deactivate`, {
+  const supplierId = cleanString(id);
+  if (!supplierId) throw new Error("Missing supplier id");
+
+  return apiFetch(`/suppliers/${encodeURIComponent(supplierId)}/deactivate`, {
     method: "PATCH",
   });
 }
 
 export function listSupplierSupplies(id, params = {}) {
-  const qs = new URLSearchParams();
+  const supplierId = cleanString(id);
+  if (!supplierId) throw new Error("Missing supplier id");
 
-  Object.entries(params).forEach(([k, v]) => {
-    if (v == null || v === "") return;
-    qs.set(k, String(v));
-  });
-
-  const s = qs.toString();
-  return apiFetch(`/suppliers/${encodeURIComponent(String(id))}/supplies${s ? `?${s}` : ""}`);
+  return apiFetch(`/suppliers/${encodeURIComponent(supplierId)}/supplies${toQuery(params)}`);
 }
 
 export function createSupplierSupply(id, data) {
-  return apiFetch(`/suppliers/${encodeURIComponent(String(id))}/supplies`, {
+  const supplierId = cleanString(id);
+  if (!supplierId) throw new Error("Missing supplier id");
+
+  return apiFetch(`/suppliers/${encodeURIComponent(supplierId)}/supplies`, {
     method: "POST",
-    body: JSON.stringify(data),
+    body: normalizeSupplyPayload(data),
   });
 }

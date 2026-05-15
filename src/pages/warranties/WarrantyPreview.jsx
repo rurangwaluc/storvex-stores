@@ -11,60 +11,60 @@ function cx(...xs) {
 }
 
 function cleanString(value) {
-  const s = String(value || "").trim();
-  return s || "";
+  const text = String(value || "").trim();
+  return text || "";
 }
 
 function formatMoney(value) {
-  const n = Number(value || 0);
-  const safe = Number.isFinite(n) ? n : 0;
+  const amount = Number(value || 0);
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
 
-  return `Rwf ${new Intl.NumberFormat("en-US", {
+  return `RWF ${new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
-  }).format(safe)}`;
+  }).format(safeAmount)}`;
 }
 
 function formatNumber(value) {
-  const n = Number(value || 0);
+  const amount = Number(value || 0);
 
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
-  }).format(Number.isFinite(n) ? n : 0);
+  }).format(Number.isFinite(amount) ? amount : 0);
 }
 
 function safeDate(value) {
-  const d = value ? new Date(value) : null;
-  if (!d || Number.isNaN(d.getTime())) return null;
-  return d;
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return null;
+  return date;
 }
 
 function formatDate(value) {
-  const d = safeDate(value);
-  if (!d) return "—";
+  const date = safeDate(value);
+  if (!date) return "—";
 
-  return d.toLocaleDateString("en-RW", {
+  return date.toLocaleDateString("en-RW", {
     dateStyle: "medium",
   });
 }
 
 function formatDateTime(value) {
-  const d = safeDate(value);
-  if (!d) return "—";
+  const date = safeDate(value);
+  if (!date) return "—";
 
-  return d.toLocaleString("en-RW", {
+  return date.toLocaleString("en-RW", {
     dateStyle: "medium",
     timeStyle: "short",
   });
 }
 
 function daysUntil(value) {
-  const d = safeDate(value);
-  if (!d) return null;
+  const date = safeDate(value);
+  if (!date) return null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const end = new Date(d);
+  const end = new Date(date);
   end.setHours(0, 0, 0, 0);
 
   return Math.round((end.getTime() - today.getTime()) / 86400000);
@@ -84,7 +84,7 @@ function initialsFromName(value) {
     .toUpperCase();
 }
 
-function activeBranchNameFromStorage() {
+function activeStoreLocationFromStorage() {
   const name = cleanString(localStorage.getItem("activeBranchName"));
   const code = cleanString(localStorage.getItem("activeBranchCode"));
 
@@ -92,7 +92,7 @@ function activeBranchNameFromStorage() {
   if (name) return name;
   if (code) return code;
 
-  return "this branch";
+  return "current store location";
 }
 
 function pageCard() {
@@ -110,21 +110,21 @@ function buttonBase() {
 function primaryBtn() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
 function secondaryBtn() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
 function successBtn() {
   return cx(
     buttonBase(),
-    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
   );
 }
 
@@ -176,21 +176,21 @@ function customerEmail(warranty) {
   );
 }
 
-function branchLabel(warranty) {
-  const branch = warranty?.branch || warranty?.sale?.branch || {};
-  const code = cleanString(branch?.code);
-  const name = cleanString(branch?.name);
+function storeLocationLabel(warranty) {
+  const location = warranty?.branch || warranty?.sale?.branch || {};
+  const code = cleanString(location?.code);
+  const name = cleanString(location?.name);
 
   if (code && name) return `${code} • ${name}`;
   if (name) return name;
   if (code) return code;
 
-  return activeBranchNameFromStorage();
+  return activeStoreLocationFromStorage();
 }
 
-function branchName(warranty) {
-  const branch = warranty?.branch || warranty?.sale?.branch || {};
-  return cleanString(branch?.name) || activeBranchNameFromStorage();
+function storeLocationName(warranty) {
+  const location = warranty?.branch || warranty?.sale?.branch || {};
+  return cleanString(location?.name) || activeStoreLocationFromStorage();
 }
 
 function storeName(warranty) {
@@ -199,7 +199,7 @@ function storeName(warranty) {
     cleanString(warranty?.business?.name) ||
     cleanString(warranty?.tenant?.name) ||
     cleanString(warranty?.sale?.store?.name) ||
-    branchName(warranty) ||
+    storeLocationName(warranty) ||
     "Store"
   );
 }
@@ -290,9 +290,9 @@ function saleTotal(warranty) {
 }
 
 function warrantyStatus(warranty) {
-  const raw = String(warranty?.status || "").toUpperCase();
+  const rawStatus = String(warranty?.status || "").toUpperCase();
 
-  if (raw === "CANCELLED" || raw === "VOID") {
+  if (rawStatus === "CANCELLED" || rawStatus === "VOID") {
     return {
       label: "Cancelled",
       tone: "danger",
@@ -300,8 +300,8 @@ function warrantyStatus(warranty) {
     };
   }
 
-  const end = warranty?.endsAt || warranty?.endDate;
-  const days = daysUntil(end);
+  const endDate = warranty?.endsAt || warranty?.endDate;
+  const days = daysUntil(endDate);
 
   if (days === null) {
     return {
@@ -371,7 +371,7 @@ function StatusBadge({ tone = "neutral", children }) {
     <span
       className={cx(
         "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]",
-        cls,
+        cls
       )}
     >
       {children}
@@ -384,7 +384,7 @@ function SkeletonBlock({ className = "" }) {
     <div
       className={cx(
         "animate-pulse rounded-[22px] bg-[var(--color-surface-2)]",
-        className,
+        className
       )}
     />
   );
@@ -413,6 +413,7 @@ function PreviewSkeleton() {
         <SkeletonBlock className="h-16 w-16" />
         <SkeletonBlock className="mt-6 h-10 w-80 max-w-full" />
         <SkeletonBlock className="mt-4 h-4 w-full max-w-xl" />
+
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           {[1, 2, 3, 4].map((item) => (
             <SkeletonBlock key={item} className="h-24 w-full" />
@@ -425,19 +426,17 @@ function PreviewSkeleton() {
 
 function PrintIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <path d="M7 8V3h10v5" />
       <path d="M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" />
       <path d="M7 14h10v7H7z" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-3Z" />
-      <path d="m9 12 2 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -516,6 +515,7 @@ function InfoTile({ label, value, tone = "neutral" }) {
       <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
         {label}
       </p>
+
       <p className={cx("mt-2 break-words text-sm font-black leading-6", valueClass)}>
         {value || "—"}
       </p>
@@ -545,13 +545,14 @@ function CoveredUnitCard({ unit, index }) {
           <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
             Serial
           </p>
+
           <p className="mt-1 text-sm font-black text-[var(--color-text)]">
             {unitSerial(unit)}
           </p>
         </div>
       </div>
 
-      {(unitImei1(unit) || unitImei2(unit)) ? (
+      {unitImei1(unit) || unitImei2(unit) ? (
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {unitImei1(unit) ? <InfoTile label="IMEI 1" value={unitImei1(unit)} /> : null}
           {unitImei2(unit) ? <InfoTile label="IMEI 2" value={unitImei2(unit)} /> : null}
@@ -565,6 +566,7 @@ function EmptyState({ title, text }) {
   return (
     <div className="rounded-[28px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)] p-8 text-center">
       <h3 className="text-base font-black text-[var(--color-text)]">{title}</h3>
+
       <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-[var(--color-text-muted)]">
         {text}
       </p>
@@ -647,7 +649,7 @@ export default function WarrantyPreview() {
           </h1>
 
           <p className="mx-auto mt-2 max-w-xl text-sm font-medium leading-6 text-[var(--color-text-muted)]">
-            This warranty was not found or cannot be opened from this branch.
+            This warranty was not found or cannot be opened from the current store location.
           </p>
 
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
@@ -684,7 +686,7 @@ export default function WarrantyPreview() {
             </div>
 
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[var(--color-text-muted)]">
-              {warrantyReference(warranty)} • {branchLabel(warranty)} • {status.note}
+              {warrantyReference(warranty)} • {storeLocationLabel(warranty)} • {status.note}
             </p>
           </div>
 
@@ -744,7 +746,12 @@ export default function WarrantyPreview() {
         />
       </section>
 
-      <section className={cx(pageCard(), "overflow-hidden print:rounded-none print:border-0 print:bg-white print:shadow-none")}>
+      <section
+        className={cx(
+          pageCard(),
+          "overflow-hidden print:rounded-none print:border-0 print:bg-white print:shadow-none"
+        )}
+      >
         <div className="border-b border-[var(--color-border)] p-5 sm:p-8 print:border-slate-200 print:p-0 print:pb-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
@@ -752,7 +759,7 @@ export default function WarrantyPreview() {
 
               <div className="min-w-0">
                 <h2 className="text-xl font-black tracking-[-0.03em] text-[var(--color-text)] print:text-slate-950">
-                  {branchName(warranty)}
+                  {storeLocationName(warranty)}
                 </h2>
 
                 <p className="mt-1 text-sm font-bold text-[var(--color-text-muted)] print:text-slate-600">
@@ -810,9 +817,11 @@ export default function WarrantyPreview() {
                 <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)] print:text-slate-500">
                   Valid period
                 </p>
+
                 <p className="mt-2 text-lg font-black text-[var(--color-text)] print:text-slate-950">
                   {formatDate(warranty.startsAt)} → {formatDate(warranty.endsAt)}
                 </p>
+
                 <p className="mt-1 text-xs font-bold text-[var(--color-text-muted)] print:text-slate-600">
                   {status.note}
                 </p>
@@ -824,7 +833,7 @@ export default function WarrantyPreview() {
             <InfoTile label="Customer" value={`${customerName(warranty)} • ${customerPhone(warranty)}`} />
             <InfoTile label="Email" value={customerEmail(warranty) || "Not shown"} />
             <InfoTile label="Sale" value={saleReference(warranty)} />
-            <InfoTile label="Branch" value={branchLabel(warranty)} />
+            <InfoTile label="Store location" value={storeLocationLabel(warranty)} />
             <InfoTile label="Starts" value={formatDate(warranty.startsAt)} />
             <InfoTile label="Ends" value={formatDate(warranty.endsAt)} tone={status.tone} />
           </div>
@@ -835,6 +844,7 @@ export default function WarrantyPreview() {
                 <h2 className="text-lg font-black tracking-[-0.02em] text-[var(--color-text)] print:text-slate-950">
                   Covered products
                 </h2>
+
                 <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)] print:text-slate-600">
                   These products are included on this warranty certificate.
                 </p>
@@ -855,7 +865,11 @@ export default function WarrantyPreview() {
             ) : (
               <div className="mt-5 grid gap-3">
                 {units.map((unit, index) => (
-                  <CoveredUnitCard key={unit.id || `${unitName(unit)}-${index}`} unit={unit} index={index} />
+                  <CoveredUnitCard
+                    key={unit.id || `${unitName(unit)}-${index}`}
+                    unit={unit}
+                    index={index}
+                  />
                 ))}
               </div>
             )}
@@ -884,6 +898,7 @@ export default function WarrantyPreview() {
               <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)] print:text-slate-500">
                 Customer signature
               </p>
+
               <div className="mt-10 border-t border-[var(--color-border)] pt-3 text-sm font-semibold text-[var(--color-text-muted)] print:border-slate-300 print:text-slate-600">
                 Name and signature
               </div>
@@ -893,6 +908,7 @@ export default function WarrantyPreview() {
               <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)] print:text-slate-500">
                 Store confirmation
               </p>
+
               <div className="mt-10 border-t border-[var(--color-border)] pt-3 text-sm font-semibold text-[var(--color-text-muted)] print:border-slate-300 print:text-slate-600">
                 Stamp or authorized signature
               </div>
