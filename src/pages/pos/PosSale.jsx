@@ -14,6 +14,7 @@ import {
 import { searchProducts } from "../../services/inventoryApi";
 import { listCustomers } from "../../services/customersApi";
 import { getCashDrawerStatus } from "../../services/cashDrawerApi";
+import { getDocumentSettings } from "../../services/storeApi";
 import { handleSubscriptionBlockedError } from "../../utils/subscriptionError";
 
 const PAGE_SIZE = 10;
@@ -42,6 +43,93 @@ function normalizeDigits(value) {
 function cleanString(value) {
   const s = String(value || "").trim();
   return s || "";
+}
+
+function normalizeTaxMode(value) {
+  const mode = String(value || "NONE").trim().toUpperCase();
+
+  if (
+    mode === "NONE" ||
+    mode === "VAT_18" ||
+    mode === "TURNOVER_3_INTERNAL" ||
+    mode === "VAT_18_PLUS_TURNOVER_3" ||
+    mode === "CUSTOM"
+  ) {
+    return mode;
+  }
+
+  return "NONE";
+}
+
+function normalizeTaxDisplayMode(value) {
+  const mode = String(value || "HIDDEN").trim().toUpperCase();
+
+  if (mode === "HIDDEN" || mode === "CUSTOMER_FACING" || mode === "INTERNAL_ONLY") {
+    return mode;
+  }
+
+  return "HIDDEN";
+}
+
+function defaultTaxRateBps(mode, fallback = 0) {
+  if (mode === "VAT_18") return 1800;
+  if (mode === "TURNOVER_3_INTERNAL") return 300;
+  if (mode === "VAT_18_PLUS_TURNOVER_3") return 2100;
+
+  const n = Number(fallback || 0);
+  return Number.isFinite(n) ? Math.max(0, Math.min(10000, Math.floor(n))) : 0;
+}
+
+function defaultTaxName(mode, fallback = "") {
+  const clean = cleanString(fallback);
+  if (clean) return clean;
+
+  if (mode === "VAT_18") return "VAT 18% included";
+  if (mode === "TURNOVER_3_INTERNAL") return "Turnover tax estimate 3% included";
+  if (mode === "VAT_18_PLUS_TURNOVER_3") return "Tax 21% included";
+  if (mode === "CUSTOM") return "Tax included";
+
+  return "Tax";
+}
+
+function computeTaxPreview(subtotal, settings) {
+  const safeSubtotal = Math.max(0, Number(subtotal || 0));
+  const taxMode = normalizeTaxMode(settings?.taxMode);
+  const taxDisplayMode = normalizeTaxDisplayMode(settings?.taxDisplayMode);
+  const taxRateBps = defaultTaxRateBps(taxMode, settings?.taxRateBps);
+  const showTaxOnCustomerDocuments = Boolean(settings?.showTaxOnCustomerDocuments);
+
+  const pricesIncludeTax = taxMode !== "NONE" && taxRateBps > 0;
+
+  const showTaxLine =
+    taxMode !== "NONE" &&
+    taxDisplayMode === "CUSTOMER_FACING" &&
+    showTaxOnCustomerDocuments &&
+    taxRateBps > 0;
+
+  let taxableSubtotal = safeSubtotal;
+  let taxAmount = 0;
+  let total = safeSubtotal;
+
+  if (showTaxLine) {
+    taxAmount = Math.round((safeSubtotal * taxRateBps) / (10000 + taxRateBps));
+    taxableSubtotal = Math.max(0, safeSubtotal - taxAmount);
+    total = safeSubtotal;
+  }
+
+  return {
+    subtotal: safeSubtotal,
+    taxableSubtotal,
+    taxAmount,
+    total,
+    taxName: defaultTaxName(taxMode, settings?.taxName),
+    taxMode,
+    taxDisplayMode,
+    taxRateBps,
+    pricesIncludeTax,
+    showTaxLine,
+    customerFacing: showTaxLine,
+  };
 }
 
 function cx(...xs) {
@@ -90,35 +178,28 @@ function buttonBase() {
 function secondaryButton() {
   return cx(
     buttonBase(),
-    "border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-3)]"
+    "border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-3)]",
   );
 }
 
 function primaryButton() {
   return cx(
     buttonBase(),
-    "border border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5 hover:opacity-95"
-  );
-}
-
-function successButton() {
-  return cx(
-    buttonBase(),
-    "bg-emerald-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
+    "border border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5 hover:opacity-95",
   );
 }
 
 function warningButton() {
   return cx(
     buttonBase(),
-    "bg-amber-500 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
+    "bg-amber-500 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
   );
 }
 
 function dangerButton() {
   return cx(
     buttonBase(),
-    "bg-red-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
+    "bg-red-600 text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
   );
 }
 
@@ -136,7 +217,7 @@ function StatusBadge({ tone = "neutral", children }) {
     <span
       className={cx(
         "inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]",
-        classes
+        classes,
       )}
     >
       {children}
@@ -253,7 +334,7 @@ function MiniStep({ number, title, active }) {
         "flex items-center gap-2 rounded-full px-3 py-2 text-xs font-black transition",
         active
           ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)]"
-          : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]",
       )}
     >
       <span
@@ -261,7 +342,7 @@ function MiniStep({ number, title, active }) {
           "flex h-5 w-5 items-center justify-center rounded-full text-[10px]",
           active
             ? "bg-[var(--color-primary-contrast)]/15 text-[var(--color-primary-contrast)]"
-            : "bg-[var(--color-card)] text-[var(--color-text)]"
+            : "bg-[var(--color-card)] text-[var(--color-text)]",
         )}
       >
         {number}
@@ -272,10 +353,7 @@ function MiniStep({ number, title, active }) {
 }
 
 function SaleModeButton({ active, tone, title, text, onClick }) {
-  const activeClass =
-    tone === "success"
-      ? "bg-emerald-600 text-white"
-      : "bg-amber-500 text-white";
+  const activeClass = tone === "success" ? "bg-emerald-600 text-white" : "bg-amber-500 text-white";
 
   return (
     <button
@@ -285,14 +363,14 @@ function SaleModeButton({ active, tone, title, text, onClick }) {
         "rounded-[24px] p-4 text-left transition hover:-translate-y-0.5",
         active
           ? cx(activeClass, "shadow-[var(--shadow-soft)]")
-          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:shadow-[var(--shadow-soft)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:shadow-[var(--shadow-soft)]",
       )}
     >
       <span className="block text-sm font-black">{title}</span>
       <span
         className={cx(
           "mt-2 block text-xs font-semibold leading-5",
-          active ? "text-white/85" : "text-[var(--color-text-muted)]"
+          active ? "text-white/85" : "text-[var(--color-text-muted)]",
         )}
       >
         {text}
@@ -321,7 +399,7 @@ function PaymentMethodCard({ option, active, onClick }) {
         "rounded-[22px] p-4 text-left transition hover:-translate-y-0.5",
         active
           ? "border border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)]"
-          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:shadow-[var(--shadow-soft)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:shadow-[var(--shadow-soft)]",
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -332,7 +410,7 @@ function PaymentMethodCard({ option, active, onClick }) {
               "mt-2 text-xs font-semibold leading-5",
               active
                 ? "text-[var(--color-primary-contrast)] opacity-80"
-                : "text-[var(--color-text-muted)]"
+                : "text-[var(--color-text-muted)]",
             )}
           >
             {simpleDescription}
@@ -357,7 +435,7 @@ function ProductRow({ product, onAdd }) {
     <article
       className={cx(
         "rounded-[24px] bg-[var(--color-surface-2)] p-4 transition",
-        disabled ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]"
+        disabled ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]",
       )}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -393,7 +471,7 @@ function ProductRow({ product, onAdd }) {
               "inline-flex h-10 items-center justify-center rounded-full px-4 text-xs font-black transition disabled:cursor-not-allowed",
               disabled
                 ? "bg-[var(--color-card)] text-[var(--color-text-muted)]"
-                : "bg-emerald-500/10 text-emerald-600 hover:-translate-y-0.5"
+                : "bg-emerald-500/10 text-emerald-600 hover:-translate-y-0.5",
             )}
           >
             {disabled ? "Unavailable" : "Add"}
@@ -413,7 +491,7 @@ function CustomerCard({ customer, active, onClick }) {
         "rounded-[24px] p-4 text-left transition",
         active
           ? "border border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-soft)]"
-          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]"
+          : "bg-[var(--color-surface-2)] text-[var(--color-text)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]",
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -424,7 +502,7 @@ function CustomerCard({ customer, active, onClick }) {
               "mt-1 text-xs font-semibold",
               active
                 ? "text-[var(--color-primary-contrast)] opacity-80"
-                : "text-[var(--color-text-muted)]"
+                : "text-[var(--color-text-muted)]",
             )}
           >
             {customer.phone || "No phone saved"}
@@ -436,7 +514,7 @@ function CustomerCard({ customer, active, onClick }) {
                 "mt-1 truncate text-xs font-semibold",
                 active
                   ? "text-[var(--color-primary-contrast)] opacity-80"
-                  : "text-[var(--color-text-muted)]"
+                  : "text-[var(--color-text-muted)]",
               )}
             >
               {customer.email}
@@ -559,6 +637,9 @@ export default function PosSale() {
   const [drawerStatus, setDrawerStatus] = useState(null);
   const [drawerRefreshBusy, setDrawerRefreshBusy] = useState(false);
 
+  const [documentSettings, setDocumentSettings] = useState(null);
+  const [documentSettingsLoading, setDocumentSettingsLoading] = useState(true);
+
   const searchTimer = useRef(null);
   const mountedRef = useRef(true);
   const productReqIdRef = useRef(0);
@@ -592,6 +673,26 @@ export default function PosSale() {
 
       setDrawerLoading(false);
       setDrawerRefreshBusy(false);
+    }
+  }
+
+  async function loadDocumentSettings() {
+    setDocumentSettingsLoading(true);
+
+    try {
+      const data = await getDocumentSettings();
+      if (!mountedRef.current) return;
+
+      setDocumentSettings(data?.documentSettings || null);
+    } catch (error) {
+      if (!mountedRef.current) return;
+
+      if (!handleSubscriptionBlockedError(error, { toastId: "document-settings-load-blocked" })) {
+        setDocumentSettings(null);
+      }
+    } finally {
+      if (!mountedRef.current) return;
+      setDocumentSettingsLoading(false);
     }
   }
 
@@ -660,6 +761,7 @@ export default function PosSale() {
           loadQuickPicks(),
           loadCustomers(),
           loadDrawerStatus({ silent: true }),
+          loadDocumentSettings(),
         ]);
       } finally {
         if (!cancelled && mountedRef.current) setBootLoading(false);
@@ -681,6 +783,7 @@ export default function PosSale() {
       setProductQuery("");
       loadQuickPicks();
       loadDrawerStatus({ silent: true });
+      loadDocumentSettings();
     }
 
     window.addEventListener("storvex:branch-changed", onBranchChanged);
@@ -788,9 +891,15 @@ export default function PosSale() {
     return customers.find((customer) => customer.id === selectedCustomerId) || null;
   }, [customers, selectedCustomerId]);
 
-  const total = useMemo(() => {
+  const subtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
   }, [cart]);
+
+  const taxPreview = useMemo(() => {
+    return computeTaxPreview(subtotal, documentSettings);
+  }, [subtotal, documentSettings]);
+
+  const total = taxPreview.total;
 
   const cartItemsCount = useMemo(() => {
     return cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
@@ -804,11 +913,29 @@ export default function PosSale() {
   const blockCashSales = Boolean(drawerStatus?.settings?.blockCashSales ?? true);
   const selectedMethodTouchesDrawer = paymentMethodTouchesCashDrawer(paymentMethod);
 
+  const cashAmountTakenNow = selectedMethodTouchesDrawer
+    ? saleType === "CASH"
+      ? total
+      : Number(amountPaid || 0)
+    : 0;
+
   const hasCashDrawerRisk =
     selectedMethodTouchesDrawer &&
     blockCashSales &&
     !drawerOpen &&
-    (saleType === "CASH" || Number(amountPaid || 0) > 0);
+    cashAmountTakenNow > 0;
+
+  const drawerSummary = selectedMethodTouchesDrawer
+    ? {
+        value: drawerLoading ? "Checking..." : drawerOpen ? "Open" : "Closed",
+        note: blockCashSales ? "Needed for cash received now" : "Cash can be recorded",
+        tone: drawerOpen ? "success" : "danger",
+      }
+    : {
+        value: "Not needed",
+        note: "Selected method does not use the drawer",
+        tone: "neutral",
+      };
 
   const saleModeLabel = saleType === "CREDIT" ? "Pay later" : "Paid now";
 
@@ -866,9 +993,7 @@ export default function PosSale() {
         }
 
         return prev.map((item) =>
-          item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+          item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item,
         );
       }
 
@@ -896,17 +1021,15 @@ export default function PosSale() {
         }
 
         return { ...item, quantity: item.quantity + 1 };
-      })
+      }),
     );
   }
 
   function decreaseQty(productId) {
     setCart((prev) =>
       prev.map((item) =>
-        item.productId === productId
-          ? { ...item, quantity: Math.max(1, item.quantity - 1) }
-          : item
-      )
+        item.productId === productId ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item,
+      ),
     );
   }
 
@@ -1002,7 +1125,7 @@ export default function PosSale() {
     const paid = Number(amountPaid || 0);
 
     if (saleType === "CREDIT" && paid > total) {
-      toast.error("Deposit cannot be more than the sale total.");
+      toast.error("Deposit cannot be more than the final sale total.");
       return;
     }
 
@@ -1094,27 +1217,15 @@ export default function PosSale() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row xl:justify-end">
-            <button
-              type="button"
-              onClick={() => navigate("/app/pos/sales")}
-              className={secondaryButton()}
-            >
+            <button type="button" onClick={() => navigate("/app/pos/sales")} className={secondaryButton()}>
               Sales list
             </button>
 
-            <button
-              type="button"
-              onClick={() => navigate("/app/pos/credit")}
-              className={secondaryButton()}
-            >
+            <button type="button" onClick={() => navigate("/app/pos/credit")} className={secondaryButton()}>
               Pay later
             </button>
 
-            <button
-              type="button"
-              onClick={() => navigate("/app/pos/drawer")}
-              className={primaryButton()}
-            >
+            <button type="button" onClick={() => navigate("/app/pos/drawer")} className={primaryButton()}>
               Cash drawer
             </button>
           </div>
@@ -1129,18 +1240,20 @@ export default function PosSale() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          label="Products"
-          value={formatNumber(cartItemsCount)}
-          note="Units in this sale"
-          tone="neutral"
-        />
+        <SummaryCard label="Products" value={formatNumber(cartItemsCount)} note="Units in this sale" tone="neutral" />
 
         <SummaryCard
           label="Sale total"
           value={formatMoney(total)}
-          note={saleModeLabel}
+          note={
+            documentSettingsLoading
+              ? "Checking document rules"
+              : taxPreview.showTaxLine
+                ? taxPreview.taxName
+                : saleModeLabel
+          }
           tone={saleType === "CREDIT" ? "warning" : "success"}
+          loading={documentSettingsLoading}
         />
 
         <SummaryCard
@@ -1165,10 +1278,10 @@ export default function PosSale() {
 
         <SummaryCard
           label="Cash drawer"
-          value={drawerLoading ? "Checking..." : drawerOpen ? "Open" : "Closed"}
-          note={blockCashSales ? "Needed only for cash" : "Cash can be recorded"}
-          tone={drawerOpen ? "success" : "danger"}
-          loading={drawerLoading}
+          value={drawerSummary.value}
+          note={drawerSummary.note}
+          tone={drawerSummary.tone}
+          loading={drawerLoading && selectedMethodTouchesDrawer}
         />
       </section>
 
@@ -1189,7 +1302,7 @@ export default function PosSale() {
                 active={saleType === "CASH"}
                 tone="success"
                 title="Paid now"
-                text="Cash, MoMo, Card, Bank, or another payment received today."
+                text="Money is received today. Cash needs an open drawer. MoMo, Card, Bank, and Other do not."
                 onClick={() => setSaleType("CASH")}
               />
 
@@ -1203,12 +1316,10 @@ export default function PosSale() {
             </div>
 
             <div className="mt-5">
-              <h3 className="text-sm font-black text-[var(--color-text)]">
-                Payment method
-              </h3>
+              <h3 className="text-sm font-black text-[var(--color-text)]">Payment method</h3>
 
               <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
-                Only Cash needs an open cash drawer. MoMo, Card, and Bank do not.
+                Only physical cash affects the drawer. MoMo, Card, Bank, and Other payments do not touch cash drawer money.
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -1270,31 +1381,27 @@ export default function PosSale() {
 
             {hasCashDrawerRisk ? (
               <div className="mt-4 rounded-[24px] bg-red-500/10 px-4 py-3 text-sm font-bold leading-6 text-red-600">
-                Cash is selected, but the drawer is closed. Open the drawer before finishing this sale.
+                Cash is being received, but the drawer is closed. Open the drawer before finishing this sale.
               </div>
             ) : null}
 
             {selectedMethodTouchesDrawer ? (
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <AsyncButton
-                  loading={drawerRefreshBusy}
-                  onClick={() => loadDrawerStatus({ silent: false })}
-                  variant="secondary"
-                >
+                <AsyncButton loading={drawerRefreshBusy} onClick={() => loadDrawerStatus({ silent: false })} variant="secondary">
                   Check drawer
                 </AsyncButton>
 
                 {!drawerOpen ? (
-                  <button
-                    type="button"
-                    onClick={() => navigate("/app/pos/drawer")}
-                    className={dangerButton()}
-                  >
+                  <button type="button" onClick={() => navigate("/app/pos/drawer")} className={dangerButton()}>
                     Open drawer page
                   </button>
                 ) : null}
               </div>
-            ) : null}
+            ) : (
+              <div className="mt-4 rounded-[24px] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-bold leading-6 text-[var(--color-text-muted)]">
+                This payment method does not use the cash drawer.
+              </div>
+            )}
           </section>
 
           <section className={cx(pageCard(), "p-5 sm:p-6")}>
@@ -1351,9 +1458,7 @@ export default function PosSale() {
 
             {customerMode === "WALKIN" ? (
               <div className={cx(softPanel(), "mt-5 p-4")}>
-                <div className="text-sm font-black text-[var(--color-text)]">
-                  Walk-in customer selected
-                </div>
+                <div className="text-sm font-black text-[var(--color-text)]">Walk-in customer selected</div>
                 <div className="mt-2 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
                   Best for quick paid-now sales when customer details do not need to be saved.
                 </div>
@@ -1383,10 +1488,7 @@ export default function PosSale() {
                       ))}
                     </div>
                   ) : filteredCustomers.length === 0 ? (
-                    <EmptyState
-                      title="No customer found"
-                      text="Try another name, phone, or email."
-                    />
+                    <EmptyState title="No customer found" text="Try another name, phone, or email." />
                   ) : (
                     <>
                       <div className="grid gap-3 md:grid-cols-2">
@@ -1558,10 +1660,7 @@ export default function PosSale() {
               )
             ) : productResults.length === 0 && !searching ? (
               <div className="mt-5">
-                <EmptyState
-                  title="No products found"
-                  text="Try another product name, code, or serial."
-                />
+                <EmptyState title="No products found" text="Try another product name, code, or serial." />
               </div>
             ) : (
               <div className="mt-5 grid gap-3">
@@ -1597,10 +1696,7 @@ export default function PosSale() {
 
             {!cart.length ? (
               <div className="mt-5">
-                <EmptyState
-                  title="Cart is empty"
-                  text="Add products from the left side to start the sale."
-                />
+                <EmptyState title="Cart is empty" text="Add products from the left side to start the sale." />
               </div>
             ) : (
               <div className="mt-5 space-y-3">
@@ -1617,39 +1713,107 @@ export default function PosSale() {
             )}
 
             <div className="mt-5 border-t border-[var(--color-border)] pt-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-bold text-[var(--color-text-muted)]">
-                    Total
+              <div className="rounded-[26px] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                      Products subtotal
+                    </div>
+                    <div className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
+                      Customer selling price
+                    </div>
                   </div>
-                  <div className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
-                    {saleModeLabel} • {paymentMethod}
+
+                  <div className="text-right text-base font-black text-[var(--color-text)]">
+                    {formatMoney(taxPreview.subtotal)}
                   </div>
                 </div>
 
-                <div className="text-right text-[1.8rem] font-black tracking-[-0.04em] text-[var(--color-text)]">
-                  {formatMoney(total)}
+                {taxPreview.showTaxLine ? (
+                  <div className="mt-3 space-y-3 border-t border-[var(--color-border)] pt-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-black text-[var(--color-text)]">
+                          Subtotal before tax
+                        </div>
+                        <div className="mt-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                          Tax is already included in prices
+                        </div>
+                      </div>
+
+                      <div className="text-right text-sm font-black text-[var(--color-text)]">
+                        {formatMoney(taxPreview.taxableSubtotal)}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-black text-[var(--color-text)]">
+                          {taxPreview.taxName}
+                        </div>
+                        <div className="mt-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                          Shown as included tax
+                        </div>
+                      </div>
+
+                      <div className="text-right text-sm font-black text-amber-600">
+                        {formatMoney(taxPreview.taxAmount)}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-[20px] bg-[var(--color-card)] px-4 py-3 text-xs font-bold leading-5 text-[var(--color-text-muted)]">
+                    No customer-facing tax will be shown for this sale.
+                  </div>
+                )}
+
+                <div className="mt-4 flex items-end justify-between gap-3 border-t border-[var(--color-border)] pt-4">
+                  <div>
+                    <div className="text-sm font-bold text-[var(--color-text-muted)]">Final total</div>
+                    <div className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
+                      {saleModeLabel} — {paymentMethod}
+                    </div>
+                  </div>
+
+                  <div className="text-right text-[1.8rem] font-black tracking-[-0.04em] text-[var(--color-text)]">
+                    {formatMoney(total)}
+                  </div>
                 </div>
               </div>
+
+              {saleType === "CREDIT" ? (
+                <div className="mt-3 rounded-[22px] bg-[var(--color-surface-2)] px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-black text-[var(--color-text)]">Deposit paid now</div>
+                      <div className="mt-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                        Remaining balance after deposit
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-sm font-black text-[var(--color-text)]">
+                        {formatMoney(Number(amountPaid || 0))}
+                      </div>
+                      <div className="mt-1 text-xs font-black text-amber-600">
+                        {formatMoney(Math.max(0, total - Number(amountPaid || 0)))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               <AsyncButton
                 loading={savingSale}
                 onClick={completeSale}
                 disabled={!cart.length || hasCashDrawerRisk}
-                className={cx(
-                  "mt-5 w-full",
-                  saleType === "CREDIT" ? warningButton() : primaryButton()
-                )}
+                className={cx("mt-5 w-full", saleType === "CREDIT" ? warningButton() : primaryButton())}
               >
                 {saleType === "CREDIT" ? "Finish pay-later sale" : "Finish sale"}
               </AsyncButton>
 
               {hasCashDrawerRisk ? (
-                <button
-                  type="button"
-                  onClick={() => navigate("/app/pos/drawer")}
-                  className={cx(dangerButton(), "mt-3 w-full")}
-                >
+                <button type="button" onClick={() => navigate("/app/pos/drawer")} className={cx(dangerButton(), "mt-3 w-full")}>
                   Open cash drawer
                 </button>
               ) : null}

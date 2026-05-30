@@ -16,6 +16,19 @@ export const STORE_NAV_ITEMS = [
       { label: "Documents", to: "/app/documents", icon: "documents" },
       { label: "Inter-store", to: "/app/interstore", icon: "transfer" },
       { label: "WhatsApp", to: "/app/whatsapp/inbox", icon: "chat" },
+      {
+        label: "Support",
+        to: "/app/support",
+        icon: "support",
+        roles: [
+          "OWNER",
+          "MANAGER",
+          "CASHIER",
+          "SELLER",
+          "STOREKEEPER",
+          "TECHNICIAN",
+        ],
+      },
     ],
   },
   {

@@ -1,4 +1,3 @@
-// frontend-stores/src/App.jsx
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import AuditLogs from "./pages/audit/AuditLogs";
@@ -86,6 +85,9 @@ import WarrantyEdit from "./pages/warranties/WarrantyEdit";
 import { listDeliveryNotes } from "./services/deliveryNotesApi";
 import Expenses from "./pages/expenses/Expenses";
 
+import SupportTickets from "./pages/support/SupportTickets";
+import SupportTicketDetail from "./pages/support/SupportTicketDetail";
+
 function GuardedStoreLayout() {
   return (
     <SubscriptionGate>
@@ -162,14 +164,24 @@ export default function App() {
 
             <Route element={<RequireRole roles={["OWNER"]} />}>
               <Route path="audit" element={<AuditLogs />} />
-              <Route path="billing" element={<Navigate to="/app/settings/billing" replace />} />
+              <Route
+                path="billing"
+                element={<Navigate to="/app/settings/billing" replace />}
+              />
             </Route>
 
-            <Route element={<RequireRole roles={["OWNER", "MANAGER", "STOREKEEPER"]} />}>
+            <Route
+              element={
+                <RequireRole roles={["OWNER", "MANAGER", "STOREKEEPER"]} />
+              }
+            >
               <Route path="inventory" element={<InventoryList />} />
               <Route path="inventory/:id" element={<InventoryDetail />} />
               <Route path="inventory/reorder" element={<Reorder />} />
-              <Route path="inventory/stock-history" element={<StockAdjustments />} />
+              <Route
+                path="inventory/stock-history"
+                element={<StockAdjustments />}
+              />
 
               <Route path="suppliers" element={<SuppliersList />} />
               <Route path="suppliers/:id" element={<SupplierView />} />
@@ -181,14 +193,24 @@ export default function App() {
 
               <Route path="suppliers/new" element={<SupplierCreate />} />
               <Route path="suppliers/:id/edit" element={<SupplierEdit />} />
-              <Route path="suppliers/:id/supplies/new" element={<SupplierSupplyCreate />} />
+              <Route
+                path="suppliers/:id/supplies/new"
+                element={<SupplierSupplyCreate />}
+              />
             </Route>
 
-            <Route element={<RequireRole roles={["OWNER", "MANAGER", "CASHIER", "SELLER"]} />}>
+            <Route
+              element={
+                <RequireRole roles={["OWNER", "MANAGER", "CASHIER", "SELLER"]} />
+              }
+            >
               <Route path="pos" element={<PosSale />} />
               <Route path="pos/sales" element={<SalesList />} />
               <Route path="pos/sales/:id" element={<PosReceipt />} />
-              <Route path="pos/sales/:id/receipt" element={<Navigate to=".." replace />} />
+              <Route
+                path="pos/sales/:id/receipt"
+                element={<Navigate to=".." replace />}
+              />
               <Route path="pos/credit" element={<CreditDashboard />} />
               <Route path="pos/drawer" element={<CashDrawer />} />
 
@@ -275,27 +297,66 @@ export default function App() {
                 }
               />
 
-              <Route path="documents/:resource/:id/preview" element={<DocumentPreviewRoute />} />
+              <Route
+                path="documents/:resource/:id/preview"
+                element={<DocumentPreviewRoute />}
+              />
 
-              <Route path="receipts" element={<Navigate to="/app/documents/receipts" replace />} />
-              <Route path="invoices" element={<Navigate to="/app/documents/invoices" replace />} />
+              <Route
+                path="receipts"
+                element={<Navigate to="/app/documents/receipts" replace />}
+              />
+              <Route
+                path="invoices"
+                element={<Navigate to="/app/documents/invoices" replace />}
+              />
               <Route
                 path="delivery-notes"
-                element={<Navigate to="/app/documents/delivery-notes" replace />}
+                element={
+                  <Navigate to="/app/documents/delivery-notes" replace />
+                }
               />
-              <Route path="proformas" element={<Navigate to="/app/documents/proformas" replace />} />
-              <Route path="warranties" element={<Navigate to="/app/documents/warranties" replace />} />
+              <Route
+                path="proformas"
+                element={<Navigate to="/app/documents/proformas" replace />}
+              />
+              <Route
+                path="warranties"
+                element={<Navigate to="/app/documents/warranties" replace />}
+              />
             </Route>
 
-            <Route element={<RequireRole roles={["OWNER", "MANAGER", "CASHIER", "SELLER"]} />}>
-              <Route path="documents/proformas/create" element={<ProformaCreate />} />
-              <Route path="documents/proformas/:id/edit" element={<ProformaEdit />} />
+            <Route
+              element={
+                <RequireRole roles={["OWNER", "MANAGER", "CASHIER", "SELLER"]} />
+              }
+            >
+              <Route
+                path="documents/proformas/create"
+                element={<ProformaCreate />}
+              />
+              <Route
+                path="documents/proformas/:id/edit"
+                element={<ProformaEdit />}
+              />
 
-              <Route path="documents/delivery-notes/create" element={<DeliveryNoteCreate />} />
-              <Route path="documents/delivery-notes/:id/edit" element={<DeliveryNoteEdit />} />
+              <Route
+                path="documents/delivery-notes/create"
+                element={<DeliveryNoteCreate />}
+              />
+              <Route
+                path="documents/delivery-notes/:id/edit"
+                element={<DeliveryNoteEdit />}
+              />
 
-              <Route path="documents/warranties/create" element={<WarrantyCreate />} />
-              <Route path="documents/warranties/:id/edit" element={<WarrantyEdit />} />
+              <Route
+                path="documents/warranties/create"
+                element={<WarrantyCreate />}
+              />
+              <Route
+                path="documents/warranties/:id/edit"
+                element={<WarrantyEdit />}
+              />
             </Route>
 
             <Route
@@ -313,12 +374,29 @@ export default function App() {
               }
             >
               <Route path="whatsapp" element={<WhatsAppInbox />} />
+              <Route path="support" element={<SupportTickets />} />
+              <Route path="support/:id" element={<SupportTicketDetail />} />
 
-              <Route path="whatsapp/inbox" element={<Navigate to="/app/whatsapp" replace />} />
-              <Route path="whatsapp/drafts" element={<Navigate to="/app/whatsapp" replace />} />
-              <Route path="whatsapp/accounts" element={<Navigate to="/app/whatsapp" replace />} />
-              <Route path="whatsapp/activity" element={<Navigate to="/app/whatsapp" replace />} />
-              <Route path="whatsapp/broadcasts" element={<Navigate to="/app/whatsapp" replace />} />
+              <Route
+                path="whatsapp/inbox"
+                element={<Navigate to="/app/whatsapp" replace />}
+              />
+              <Route
+                path="whatsapp/drafts"
+                element={<Navigate to="/app/whatsapp" replace />}
+              />
+              <Route
+                path="whatsapp/accounts"
+                element={<Navigate to="/app/whatsapp" replace />}
+              />
+              <Route
+                path="whatsapp/activity"
+                element={<Navigate to="/app/whatsapp" replace />}
+              />
+              <Route
+                path="whatsapp/broadcasts"
+                element={<Navigate to="/app/whatsapp" replace />}
+              />
             </Route>
 
             <Route element={<RequireRole roles={["OWNER", "MANAGER", "CASHIER"]} />}>
@@ -329,16 +407,27 @@ export default function App() {
             <Route element={<RequireRole roles={["OWNER", "MANAGER"]} />}>
               <Route path="reports" element={<Reports />} />
               <Route path="reports/cash-flow" element={<CashFlowReport />} />
-              <Route path="reports/income-statement" element={<IncomeStatement />} />
+              <Route
+                path="reports/income-statement"
+                element={<IncomeStatement />}
+              />
               <Route path="reports/trial-balance" element={<TrialBalance />} />
               <Route path="reports/profit-table" element={<ProfitTable />} />
             </Route>
 
-            <Route element={<RequireRole roles={["OWNER", "CASHIER", "TECHNICIAN"]} />}>
+            <Route
+              element={<RequireRole roles={["OWNER", "CASHIER", "TECHNICIAN"]} />}
+            >
               <Route path="repairs" element={<Repairs />} />
             </Route>
 
-            <Route element={<RequireRole roles={["OWNER", "CASHIER", "MANAGER", "TECHNICIAN"]} />}>
+            <Route
+              element={
+                <RequireRole
+                  roles={["OWNER", "CASHIER", "MANAGER", "TECHNICIAN"]}
+                />
+              }
+            >
               <Route path="repairs/new" element={<RepairCreate />} />
               <Route path="/app/repairs/:id/edit" element={<RepairEdit />} />
             </Route>

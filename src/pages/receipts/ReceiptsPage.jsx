@@ -8,6 +8,11 @@ function cx(...xs) {
   return xs.filter(Boolean).join(" ");
 }
 
+function cleanString(value) {
+  const s = String(value || "").trim();
+  return s || "";
+}
+
 function formatMoney(value) {
   const amount = Number(value || 0);
   const safeAmount = Number.isFinite(amount) ? amount : 0;
@@ -75,14 +80,14 @@ function buttonBase() {
 function primaryBtn() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:opacity-95"
+    "bg-[var(--color-primary)] text-white shadow-[var(--shadow-soft)] hover:opacity-95",
   );
 }
 
 function secondaryBtn() {
   return cx(
     buttonBase(),
-    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:opacity-90"
+    "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-[var(--shadow-soft)] hover:opacity-90",
   );
 }
 
@@ -111,6 +116,185 @@ function saleTypeKind(type) {
   if (value === "CREDIT") return "warning";
 
   return "neutral";
+}
+
+function moneyNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function itemQuantity(item) {
+  return moneyNumber(item?.quantity, 0);
+}
+
+function itemPrice(item) {
+  return moneyNumber(item?.price ?? item?.unitPrice ?? item?.sellPrice, 0);
+}
+
+function itemSubtotal(item) {
+  return moneyNumber(
+    item?.subtotal ?? item?.total ?? itemQuantity(item) * itemPrice(item),
+    0,
+  );
+}
+
+function defaultTaxName(taxMode, fallback = "") {
+  const clean = cleanString(fallback);
+  if (clean) return clean;
+
+  if (taxMode === "VAT_18") return "VAT 18%";
+  if (taxMode === "TURNOVER_3_INTERNAL") return "Turnover tax estimate 3%";
+  if (taxMode === "VAT_18_PLUS_TURNOVER_3") return "Tax 21%";
+  if (taxMode === "CUSTOM") return "Tax";
+
+  return "Tax";
+}
+
+function normalizeItems(items) {
+  if (!Array.isArray(items)) return [];
+
+  return items.map((item) => {
+    const quantity = itemQuantity(item);
+    const price = itemPrice(item);
+
+    return {
+      ...item,
+      quantity,
+      price,
+      subtotal: itemSubtotal(item),
+      productName:
+        cleanString(item.productName) ||
+        cleanString(item.name) ||
+        cleanString(item.product?.name) ||
+        "Unnamed product",
+      sku: cleanString(item.sku || item.product?.sku),
+      barcode: cleanString(item.barcode || item.product?.barcode),
+      serial: cleanString(item.serial || item.product?.serial),
+    };
+  });
+}
+
+function receiptMoney(receipt) {
+  const items = normalizeItems(receipt?.items);
+  const itemSubtotal = items.reduce((sum, item) => sum + itemSubtotal(item), 0);
+
+  const taxMode = String(receipt?.taxMode || "NONE").trim().toUpperCase();
+  const taxDisplayMode = String(receipt?.taxDisplayMode || "HIDDEN").trim().toUpperCase();
+  const taxAmount = moneyNumber(receipt?.taxAmount, 0);
+  const taxRateBps = moneyNumber(receipt?.taxRateBps, 0);
+  const pricesIncludeTax = Boolean(receipt?.pricesIncludeTax);
+  const showTaxOnCustomerDocuments = Boolean(receipt?.showTaxOnCustomerDocuments);
+
+  const subtotal =
+    receipt?.subtotalAmount !== undefined && receipt?.subtotalAmount !== null
+      ? moneyNumber(receipt.subtotalAmount, itemSubtotal)
+      : receipt?.subtotal !== undefined && receipt?.subtotal !== null
+        ? moneyNumber(receipt.subtotal, itemSubtotal)
+        : itemSubtotal;
+
+  const taxableAmount =
+    receipt?.taxableAmount !== undefined && receipt?.taxableAmount !== null
+      ? moneyNumber(receipt.taxableAmount, subtotal)
+      : pricesIncludeTax
+        ? Math.max(0, subtotal - taxAmount)
+        : subtotal;
+
+  const total = moneyNumber(
+    receipt?.total,
+    pricesIncludeTax ? subtotal : subtotal + taxAmount,
+  );
+
+  const paid = moneyNumber(receipt?.amountPaid, 0);
+  const balance = moneyNumber(receipt?.balanceDue, Math.max(0, total - paid));
+  const refunded = moneyNumber(receipt?.refundedTotal, 0);
+
+  const showTaxLine =
+    taxMode !== "NONE" &&
+    taxDisplayMode === "CUSTOMER_FACING" &&
+    showTaxOnCustomerDocuments &&
+    taxAmount > 0;
+
+  return {
+    items,
+    itemSubtotal,
+    subtotal,
+    taxableAmount,
+    taxAmount,
+    taxRateBps,
+    taxMode,
+    taxDisplayMode,
+    taxName: defaultTaxName(taxMode, receipt?.taxName),
+    pricesIncludeTax,
+    showTaxOnCustomerDocuments,
+    showTaxLine,
+    total,
+    paid,
+    balance,
+    refunded,
+  };
+}
+
+function normalizeReceipt(row = {}) {
+  const receipt = row.receipt || row.sale || row;
+  const money = receiptMoney(receipt);
+
+  return {
+    ...receipt,
+    id: receipt.id || row.id || row.receiptId || "",
+    number:
+      receipt.number ||
+      receipt.receiptNumber ||
+      row.number ||
+      row.receiptNumber ||
+      receipt.id ||
+      row.id ||
+      "Receipt",
+    invoiceNumber: receipt.invoiceNumber || row.invoiceNumber || null,
+    date: receipt.date || receipt.createdAt || row.date || row.createdAt || null,
+    createdAt: receipt.createdAt || row.createdAt || null,
+    customerName:
+      receipt.customerName ||
+      row.customerName ||
+      receipt.customer?.name ||
+      row.customer?.name ||
+      "Walk-in Customer",
+    customerPhone:
+      receipt.customerPhone ||
+      row.customerPhone ||
+      receipt.customer?.phone ||
+      row.customer?.phone ||
+      "",
+    cashierName:
+      receipt.cashierName ||
+      row.cashierName ||
+      receipt.cashier?.name ||
+      row.cashier?.name ||
+      "—",
+    saleType: receipt.saleType || row.saleType || "CASH",
+    status: receipt.status || row.status || "PAID",
+    total: money.total,
+    subtotal: money.subtotal,
+    subtotalAmount: money.subtotal,
+    taxableAmount: money.taxableAmount,
+    taxName: money.taxName,
+    taxMode: money.taxMode,
+    taxDisplayMode: money.taxDisplayMode,
+    taxRateBps: money.taxRateBps,
+    taxAmount: money.taxAmount,
+    pricesIncludeTax: money.pricesIncludeTax,
+    showTaxOnCustomerDocuments: money.showTaxOnCustomerDocuments,
+    amountPaid: money.paid,
+    balanceDue: money.balance,
+    refundedTotal: money.refunded,
+    items: money.items,
+    customer: receipt.customer || row.customer || null,
+    payments: Array.isArray(receipt.payments)
+      ? receipt.payments
+      : Array.isArray(row.payments)
+        ? row.payments
+        : [],
+    store: receipt.store || row.store || {},
+  };
 }
 
 function SummaryCard({ label, value, note, tone = "neutral", loading = false }) {
@@ -145,6 +329,105 @@ function SummaryCard({ label, value, note, tone = "neutral", loading = false }) 
             {note ? <div className={cx("mt-1 text-sm leading-5", mutedText())}>{note}</div> : null}
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function MoneyLine({ label, value, note, tone = "neutral", large = false }) {
+  const valueTone =
+    tone === "success"
+      ? "text-emerald-600"
+      : tone === "warning"
+        ? "text-amber-600"
+        : tone === "danger"
+          ? "text-red-600"
+          : strongText();
+
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] py-3 last:border-b-0">
+      <div>
+        <div className={cx(large ? "text-base" : "text-sm", "font-black", strongText())}>
+          {label}
+        </div>
+        {note ? <div className={cx("mt-1 text-xs leading-5", mutedText())}>{note}</div> : null}
+      </div>
+
+      <div className={cx(large ? "text-xl" : "text-sm", "text-right font-black", valueTone)}>
+        {formatMoney(value)}
+      </div>
+    </div>
+  );
+}
+
+function ReceiptMoneyPanel({ receipt }) {
+  const money = receiptMoney(receipt);
+
+  return (
+    <div className={cx(panel(), "p-4")}>
+      <div className={cx("text-xs font-semibold uppercase tracking-[0.14em]", softText())}>
+        Sale breakdown
+      </div>
+
+      <div className="mt-3 overflow-hidden rounded-[20px] bg-[var(--color-card)] px-4">
+        {money.showTaxLine && money.pricesIncludeTax ? (
+          <>
+            <MoneyLine
+              label="Subtotal before tax"
+              note="Tax is already included in item prices"
+              value={money.taxableAmount}
+            />
+            <MoneyLine
+              label={money.taxName}
+              note="Included tax amount"
+              value={money.taxAmount}
+              tone="warning"
+            />
+            <MoneyLine
+              label="Products subtotal"
+              note="Total item price including tax"
+              value={money.subtotal}
+            />
+          </>
+        ) : (
+          <>
+            <MoneyLine
+              label="Products subtotal"
+              note="Before customer-facing tax"
+              value={money.subtotal}
+            />
+
+            {money.showTaxLine ? (
+              <MoneyLine
+                label={money.taxName}
+                note="Added to final total"
+                value={money.taxAmount}
+                tone="warning"
+              />
+            ) : null}
+          </>
+        )}
+
+        {!money.showTaxLine ? (
+          <div className="border-b border-[var(--color-border)] py-3">
+            <div className={cx("text-sm font-black", strongText())}>Customer-facing tax</div>
+            <div className={cx("mt-1 text-xs leading-5", mutedText())}>
+              No customer-facing tax is shown for this receipt.
+            </div>
+          </div>
+        ) : null}
+
+        <MoneyLine label="Final total" value={money.total} large />
+        <MoneyLine label="Paid" value={money.paid} tone="success" />
+        <MoneyLine
+          label="Balance"
+          value={money.balance}
+          tone={money.balance > 0 ? "warning" : "neutral"}
+        />
+
+        {money.refunded > 0 ? (
+          <MoneyLine label="Refunded" value={money.refunded} tone="danger" />
+        ) : null}
       </div>
     </div>
   );
@@ -202,7 +485,9 @@ function EmptyState({ title, note }) {
 function ReceiptDetailDrawer({ open, onClose, receipt, loading }) {
   if (!open) return null;
 
-  const printUrl = receipt?.id ? getReceiptPrintUrl(receipt.id) : "#";
+  const normalizedReceipt = receipt ? normalizeReceipt(receipt) : null;
+  const money = receiptMoney(normalizedReceipt);
+  const printUrl = normalizedReceipt?.id ? getReceiptPrintUrl(normalizedReceipt.id) : "#";
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/45 backdrop-blur-[2px]">
@@ -222,12 +507,12 @@ function ReceiptDetailDrawer({ open, onClose, receipt, loading }) {
               </div>
 
               <div className={cx("mt-1 text-xl font-black tracking-tight", strongText())}>
-                {receipt?.number || "Receipt"}
+                {normalizedReceipt?.number || "Receipt"}
               </div>
             </div>
 
             <div className="flex gap-2">
-              {receipt?.id ? (
+              {normalizedReceipt?.id ? (
                 <a href={printUrl} target="_blank" rel="noreferrer" className={primaryBtn()}>
                   Print
                 </a>
@@ -243,16 +528,16 @@ function ReceiptDetailDrawer({ open, onClose, receipt, loading }) {
         <div className="p-5">
           {loading ? (
             <CardSkeletonRows rows={4} />
-          ) : !receipt ? (
+          ) : !normalizedReceipt ? (
             <EmptyState title="Receipt not found" note="Unable to load receipt details." />
           ) : (
             <div className="space-y-5">
               <section className={cx(shell(), "p-5")}>
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div className="flex items-start gap-3">
-                    {receipt.store?.logoUrl ? (
+                    {normalizedReceipt.store?.logoUrl ? (
                       <img
-                        src={receipt.store.logoUrl}
+                        src={normalizedReceipt.store.logoUrl}
                         alt="Store logo"
                         className="h-12 w-12 rounded-xl border border-[var(--color-border)] bg-white object-contain p-1.5"
                       />
@@ -264,12 +549,12 @@ function ReceiptDetailDrawer({ open, onClose, receipt, loading }) {
 
                     <div>
                       <div className={cx("text-lg font-black tracking-tight", strongText())}>
-                        {receipt.store?.name || "Store"}
+                        {normalizedReceipt.store?.name || "Store"}
                       </div>
 
                       <div className={cx("mt-1 text-xs leading-5", mutedText())}>
-                        {receipt.store?.phone ? <div>Tel: {receipt.store.phone}</div> : null}
-                        {receipt.store?.email ? <div>Email: {receipt.store.email}</div> : null}
+                        {normalizedReceipt.store?.phone ? <div>Tel: {normalizedReceipt.store.phone}</div> : null}
+                        {normalizedReceipt.store?.email ? <div>Email: {normalizedReceipt.store.email}</div> : null}
                       </div>
                     </div>
                   </div>
@@ -280,19 +565,23 @@ function ReceiptDetailDrawer({ open, onClose, receipt, loading }) {
                     </div>
 
                     <div className={cx("mt-1 text-xs leading-5", mutedText())}>
-                      <div>Receipt No: {receipt.number || "—"}</div>
-                      <div>Date: {formatDateTime(receipt.date || receipt.createdAt)}</div>
-                      <div>Staff: {receipt.cashierName || "—"}</div>
+                      <div>Receipt No: {normalizedReceipt.number || "—"}</div>
+                      <div>Date: {formatDateTime(normalizedReceipt.date || normalizedReceipt.createdAt)}</div>
+                      <div>Staff: {normalizedReceipt.cashierName || "—"}</div>
                     </div>
 
                     <div className="mt-2 flex flex-wrap items-center gap-2 md:justify-end">
-                      <span className={badgeClass(statusKind(receipt.status))}>
-                        {String(receipt.status || "UNKNOWN").toUpperCase()}
+                      <span className={badgeClass(statusKind(normalizedReceipt.status))}>
+                        {String(normalizedReceipt.status || "UNKNOWN").toUpperCase()}
                       </span>
 
-                      <span className={badgeClass(saleTypeKind(receipt.saleType))}>
-                        {String(receipt.saleType || "—").toUpperCase()}
+                      <span className={badgeClass(saleTypeKind(normalizedReceipt.saleType))}>
+                        {String(normalizedReceipt.saleType || "—").toUpperCase()}
                       </span>
+
+                      {money.showTaxLine ? (
+                        <span className={badgeClass("warning")}>TAX SHOWN</span>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -304,41 +593,15 @@ function ReceiptDetailDrawer({ open, onClose, receipt, loading }) {
                     </div>
 
                     <div className={cx("mt-2 text-sm font-bold", strongText())}>
-                      {receipt.customer?.name || "Walk-in Customer"}
+                      {normalizedReceipt.customer?.name || normalizedReceipt.customerName || "Walk-in Customer"}
                     </div>
 
                     <div className={cx("mt-1 text-sm", mutedText())}>
-                      {receipt.customer?.phone || "—"}
+                      {normalizedReceipt.customer?.phone || normalizedReceipt.customerPhone || "—"}
                     </div>
                   </div>
 
-                  <div className={cx(panel(), "p-4")}>
-                    <div className={cx("text-xs font-semibold uppercase tracking-[0.14em]", softText())}>
-                      Totals
-                    </div>
-
-                    <div className="mt-2 space-y-1 text-sm">
-                      <div className="flex items-center justify-between gap-4">
-                        <span className={mutedText()}>Subtotal</span>
-                        <span className={strongText()}>{formatMoney(receipt.subtotal)}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-4">
-                        <span className={mutedText()}>Total</span>
-                        <span className={strongText()}>{formatMoney(receipt.total)}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-4">
-                        <span className={mutedText()}>Paid</span>
-                        <span className={strongText()}>{formatMoney(receipt.amountPaid)}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-4">
-                        <span className={mutedText()}>Balance</span>
-                        <span className={strongText()}>{formatMoney(receipt.balanceDue)}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <ReceiptMoneyPanel receipt={normalizedReceipt} />
                 </div>
               </section>
 
@@ -360,8 +623,8 @@ function ReceiptDetailDrawer({ open, onClose, receipt, loading }) {
                     </thead>
 
                     <tbody className="divide-y divide-[var(--color-border)]">
-                      {(receipt.items || []).map((item, index) => (
-                        <tr key={item.saleItemId || index}>
+                      {(normalizedReceipt.items || []).map((item, index) => (
+                        <tr key={item.saleItemId || item.id || index}>
                           <td className="px-5 py-4">
                             <div className={cx("font-bold", strongText())}>
                               {item.productName || "Unnamed product"}
@@ -369,10 +632,18 @@ function ReceiptDetailDrawer({ open, onClose, receipt, loading }) {
                           </td>
 
                           <td className={cx("px-5 py-4 text-xs", mutedText())}>
-                            {item.sku ? `SKU: ${item.sku}` : item.barcode ? `Barcode: ${item.barcode}` : "—"}
+                            {item.sku
+                              ? `SKU: ${item.sku}`
+                              : item.barcode
+                                ? `Barcode: ${item.barcode}`
+                                : item.serial
+                                  ? `Serial: ${item.serial}`
+                                  : "—"}
                           </td>
 
-                          <td className={cx("px-5 py-4 text-right", mutedText())}>{item.quantity}</td>
+                          <td className={cx("px-5 py-4 text-right", mutedText())}>
+                            {item.quantity}
+                          </td>
                           <td className={cx("px-5 py-4 text-right", mutedText())}>
                             {formatMoney(item.price)}
                           </td>
@@ -387,17 +658,21 @@ function ReceiptDetailDrawer({ open, onClose, receipt, loading }) {
                 </div>
               </section>
 
-              {(receipt.payments || []).length ? (
+              {(normalizedReceipt.payments || []).length ? (
                 <section className={cx(shell(), "p-5")}>
                   <div className={cx("text-lg font-black tracking-tight", strongText())}>Payments</div>
 
                   <div className="mt-4 space-y-3">
-                    {receipt.payments.map((payment, index) => (
+                    {normalizedReceipt.payments.map((payment, index) => (
                       <div key={payment.id || index} className={cx(panel(), "p-4")}>
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className={cx("text-sm font-bold", strongText())}>
-                              {formatMoney(payment.amount)} • {payment.method || "—"}
+                              {formatMoney(payment.amount)}
+                            </div>
+
+                            <div className={cx("mt-1 text-xs", mutedText())}>
+                              Method: {payment.method || "—"}
                             </div>
 
                             <div className={cx("mt-1 text-xs", mutedText())}>
@@ -425,7 +700,9 @@ function ReceiptDetailDrawer({ open, onClose, receipt, loading }) {
 }
 
 function ReceiptCard({ row, onView }) {
-  const printUrl = getReceiptPrintUrl(row.id);
+  const receipt = normalizeReceipt(row);
+  const money = receiptMoney(receipt);
+  const printUrl = getReceiptPrintUrl(receipt.id);
 
   return (
     <article className={cx(shell(), "overflow-hidden p-4 transition hover:ring-1 hover:ring-[var(--color-primary-ring)] sm:p-5")}>
@@ -433,55 +710,81 @@ function ReceiptCard({ row, onView }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className={cx("text-base font-black tracking-tight", strongText())}>
-              {row.number || "Receipt"}
+              {receipt.number || "Receipt"}
             </h3>
 
-            <span className={badgeClass(statusKind(row.status))}>
-              {String(row.status || "UNKNOWN").toUpperCase()}
+            <span className={badgeClass(statusKind(receipt.status))}>
+              {String(receipt.status || "UNKNOWN").toUpperCase()}
             </span>
 
-            <span className={badgeClass(saleTypeKind(row.saleType))}>
-              {String(row.saleType || "—").toUpperCase()}
+            <span className={badgeClass(saleTypeKind(receipt.saleType))}>
+              {String(receipt.saleType || "—").toUpperCase()}
             </span>
+
+            {money.showTaxLine ? (
+              <span className={badgeClass("warning")}>
+                {money.taxName}
+              </span>
+            ) : null}
           </div>
 
-          {row.invoiceNumber ? (
+          {receipt.invoiceNumber ? (
             <div className={cx("mt-1 text-xs font-medium", mutedText())}>
-              Invoice: {row.invoiceNumber}
+              Invoice: {receipt.invoiceNumber}
             </div>
           ) : null}
 
           <div className={cx("mt-3 grid gap-1 text-sm sm:grid-cols-2", mutedText())}>
             <div>
               <span className="font-semibold text-[var(--color-text)]">Customer:</span>{" "}
-              {row.customerName || "Walk-in Customer"}
+              {receipt.customerName || "Walk-in Customer"}
             </div>
 
             <div>
               <span className="font-semibold text-[var(--color-text)]">Phone:</span>{" "}
-              {row.customerPhone || "—"}
+              {receipt.customerPhone || "—"}
             </div>
 
             <div>
               <span className="font-semibold text-[var(--color-text)]">Staff:</span>{" "}
-              {row.cashierName || "—"}
+              {receipt.cashierName || "—"}
             </div>
 
             <div>
               <span className="font-semibold text-[var(--color-text)]">Date:</span>{" "}
-              {formatDate(row.date || row.createdAt)}
+              {formatDate(receipt.date || receipt.createdAt)}
             </div>
           </div>
         </div>
 
-        <div className="shrink-0 xl:min-w-[280px]">
-          <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
+        <div className="shrink-0 xl:min-w-[320px]">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
             <div className={cx(panel(), "px-3 py-2")}>
               <div className={cx("text-[10px] font-black uppercase tracking-[0.14em]", softText())}>
-                Total
+                Subtotal
               </div>
               <div className={cx("mt-1 text-sm font-black", strongText())}>
-                {formatMoney(row.total)}
+                {formatMoney(money.subtotal)}
+              </div>
+            </div>
+
+            {money.showTaxLine ? (
+              <div className={cx(panel(), "px-3 py-2")}>
+                <div className={cx("text-[10px] font-black uppercase tracking-[0.14em]", softText())}>
+                  {money.taxName}
+                </div>
+                <div className="mt-1 text-sm font-black text-amber-600">
+                  {formatMoney(money.taxAmount)}
+                </div>
+              </div>
+            ) : null}
+
+            <div className={cx(panel(), "px-3 py-2")}>
+              <div className={cx("text-[10px] font-black uppercase tracking-[0.14em]", softText())}>
+                Final total
+              </div>
+              <div className={cx("mt-1 text-sm font-black", strongText())}>
+                {formatMoney(money.total)}
               </div>
             </div>
 
@@ -489,8 +792,8 @@ function ReceiptCard({ row, onView }) {
               <div className={cx("text-[10px] font-black uppercase tracking-[0.14em]", softText())}>
                 Paid
               </div>
-              <div className={cx("mt-1 text-sm font-black", strongText())}>
-                {formatMoney(row.amountPaid)}
+              <div className="mt-1 text-sm font-black text-emerald-600">
+                {formatMoney(money.paid)}
               </div>
             </div>
 
@@ -498,14 +801,19 @@ function ReceiptCard({ row, onView }) {
               <div className={cx("text-[10px] font-black uppercase tracking-[0.14em]", softText())}>
                 Balance
               </div>
-              <div className={cx("mt-1 text-sm font-black", strongText())}>
-                {formatMoney(row.balanceDue)}
+              <div
+                className={cx(
+                  "mt-1 text-sm font-black",
+                  money.balance > 0 ? "text-amber-600" : strongText(),
+                )}
+              >
+                {formatMoney(money.balance)}
               </div>
             </div>
           </div>
 
           <div className="mt-3 flex flex-wrap justify-start gap-2 xl:justify-end">
-            <button type="button" onClick={() => onView(row.id)} className={secondaryBtn()}>
+            <button type="button" onClick={() => onView(receipt.id)} className={secondaryBtn()}>
               View
             </button>
 
@@ -541,7 +849,9 @@ export default function ReceiptsPage() {
 
     try {
       const response = await listReceipts(search);
-      setRows(Array.isArray(response?.receipts) ? response.receipts : []);
+      const receipts = Array.isArray(response?.receipts) ? response.receipts : [];
+
+      setRows(receipts.map(normalizeReceipt));
     } catch (error) {
       console.error(error);
       toast.error(error?.message || "Failed to load receipts");
@@ -559,7 +869,7 @@ export default function ReceiptsPage() {
 
     try {
       const response = await getReceiptDetail(id);
-      setDetailReceipt(response?.receipt || null);
+      setDetailReceipt(response?.receipt ? normalizeReceipt(response.receipt) : null);
     } catch (error) {
       console.error(error);
       toast.error(error?.message || "Failed to load receipt detail");
@@ -574,12 +884,28 @@ export default function ReceiptsPage() {
   }, [submittedQuery]);
 
   const summary = useMemo(() => {
-    return {
-      count: rows.length,
-      total: rows.reduce((sum, row) => sum + Number(row.total || 0), 0),
-      paid: rows.reduce((sum, row) => sum + Number(row.amountPaid || 0), 0),
-      balance: rows.reduce((sum, row) => sum + Number(row.balanceDue || 0), 0),
-    };
+    return rows.reduce(
+      (acc, row) => {
+        const money = receiptMoney(row);
+
+        acc.count += 1;
+        acc.subtotal += money.subtotal;
+        acc.tax += money.showTaxLine ? money.taxAmount : 0;
+        acc.total += money.total;
+        acc.paid += money.paid;
+        acc.balance += money.balance;
+
+        return acc;
+      },
+      {
+        count: 0,
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+        paid: 0,
+        balance: 0,
+      },
+    );
   }, [rows]);
 
   function submitSearch(event) {
@@ -638,23 +964,23 @@ export default function ReceiptsPage() {
             <SummaryCard
               label="Total value"
               value={formatMoney(summary.total)}
-              note="Combined receipt total"
+              note={`Subtotal ${formatMoney(summary.subtotal)}`}
               tone="success"
               loading={loading}
             />
 
             <SummaryCard
-              label="Paid"
-              value={formatMoney(summary.paid)}
-              note="Amount already collected"
-              tone="success"
+              label="Tax shown"
+              value={formatMoney(summary.tax)}
+              note="Customer-facing tax in loaded receipts"
+              tone={summary.tax > 0 ? "warning" : "neutral"}
               loading={loading}
             />
 
             <SummaryCard
               label="Balance"
               value={formatMoney(summary.balance)}
-              note="Outstanding across loaded receipts"
+              note={`Paid ${formatMoney(summary.paid)}`}
               tone={summary.balance > 0 ? "warning" : "neutral"}
               loading={loading}
             />

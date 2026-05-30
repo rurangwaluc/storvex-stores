@@ -276,6 +276,55 @@ function normalizeReceiptResponse(data) {
 
     total: sale.total || data.total || 0,
 
+    subtotalAmount:
+      sale.subtotalAmount ??
+      data.subtotalAmount ??
+      sale.subtotal ??
+      data.subtotal ??
+      null,
+
+    taxableAmount:
+      sale.taxableAmount ??
+      data.taxableAmount ??
+      null,
+
+    taxName:
+      sale.taxName ??
+      data.taxName ??
+      null,
+
+    taxMode:
+      sale.taxMode ??
+      data.taxMode ??
+      "NONE",
+
+    taxDisplayMode:
+      sale.taxDisplayMode ??
+      data.taxDisplayMode ??
+      "HIDDEN",
+
+    taxRateBps:
+      sale.taxRateBps ??
+      data.taxRateBps ??
+      0,
+
+    taxAmount:
+      sale.taxAmount ??
+      data.taxAmount ??
+      0,
+
+    pricesIncludeTax: Boolean(
+      sale.pricesIncludeTax ??
+        data.pricesIncludeTax ??
+        false,
+    ),
+
+    showTaxOnCustomerDocuments: Boolean(
+      sale.showTaxOnCustomerDocuments ??
+        data.showTaxOnCustomerDocuments ??
+        false,
+    ),
+
     amountPaid:
       sale.amountPaid ??
       data.amountPaid ??
@@ -343,6 +392,239 @@ function normalizeReceiptResponse(data) {
     cashMovement: data.cashMovement || null,
     depositMovement: data.depositMovement || null,
   };
+}
+
+function toMoneyNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function taxSnapshotFromReceipt(receipt, items = []) {
+  const itemSubtotal = items.reduce((sum, item) => {
+    const quantity = Number(itemQuantity(item) || 0);
+    const unitPrice = Number(itemPrice(item) || 0);
+    const lineTotal = Number(item?.total ?? item?.subtotal ?? quantity * unitPrice);
+
+    return sum + (Number.isFinite(lineTotal) ? lineTotal : 0);
+  }, 0);
+
+  const taxMode = String(receipt?.taxMode || "NONE").trim().toUpperCase();
+  const taxDisplayMode = String(receipt?.taxDisplayMode || "HIDDEN").trim().toUpperCase();
+  const taxAmount = toMoneyNumber(receipt?.taxAmount, 0);
+  const taxRateBps = toMoneyNumber(receipt?.taxRateBps, 0);
+  const pricesIncludeTax = Boolean(receipt?.pricesIncludeTax);
+  const showTaxOnCustomerDocuments = Boolean(receipt?.showTaxOnCustomerDocuments);
+
+  const subtotalAmount =
+    receipt?.subtotalAmount !== undefined && receipt?.subtotalAmount !== null
+      ? toMoneyNumber(receipt.subtotalAmount, itemSubtotal)
+      : receipt?.subtotal !== undefined && receipt?.subtotal !== null
+        ? toMoneyNumber(receipt.subtotal, itemSubtotal)
+        : itemSubtotal;
+
+  const taxableAmount =
+    receipt?.taxableAmount !== undefined && receipt?.taxableAmount !== null
+      ? toMoneyNumber(receipt.taxableAmount, subtotalAmount)
+      : pricesIncludeTax
+        ? Math.max(0, subtotalAmount - taxAmount)
+        : subtotalAmount;
+
+  const total = toMoneyNumber(
+    receipt?.total,
+    pricesIncludeTax ? subtotalAmount : subtotalAmount + taxAmount,
+  );
+
+  const paid = toMoneyNumber(receipt?.amountPaid, 0);
+  const balance = toMoneyNumber(receipt?.balanceDue, Math.max(0, total - paid));
+
+  const showTaxLine =
+    taxMode !== "NONE" &&
+    taxDisplayMode === "CUSTOMER_FACING" &&
+    showTaxOnCustomerDocuments &&
+    taxAmount > 0;
+
+  const taxName =
+    cleanString(receipt?.taxName) ||
+    (taxMode === "VAT_18"
+      ? "VAT 18%"
+      : taxMode === "TURNOVER_3_INTERNAL"
+        ? "Turnover tax estimate 3%"
+        : taxMode === "VAT_18_PLUS_TURNOVER_3"
+          ? "Tax 21%"
+          : taxMode === "CUSTOM"
+            ? "Tax"
+            : "Tax");
+
+  return {
+    subtotalAmount,
+    taxableAmount,
+    taxName,
+    taxMode,
+    taxDisplayMode,
+    taxRateBps,
+    taxAmount,
+    pricesIncludeTax,
+    showTaxOnCustomerDocuments,
+    showTaxLine,
+    total,
+    paid,
+    balance,
+  };
+}
+
+function MoneyBreakdownCard({ receipt, items }) {
+  const tax = taxSnapshotFromReceipt(receipt, items);
+
+  return (
+    <section className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6 print:shadow-none")}>
+      <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-[rgba(74,163,255,0.10)] blur-3xl print:hidden" />
+
+      <div className="relative">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+              Money summary
+            </p>
+            <h2 className="mt-2 text-xl font-black tracking-[-0.03em] text-[var(--color-text)]">
+              Sale breakdown
+            </h2>
+            <p className="mt-1 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+              Stored sale amounts from the saved receipt. These values should match the printed document.
+            </p>
+          </div>
+
+          {tax.showTaxLine ? (
+            <span className="inline-flex rounded-full bg-amber-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-amber-600">
+              Tax shown
+            </span>
+          ) : (
+            <span className="inline-flex rounded-full bg-[var(--color-surface-2)] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+              No customer tax
+            </span>
+          )}
+        </div>
+
+        <div className="mt-5 rounded-[26px] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+          {tax.showTaxLine && tax.pricesIncludeTax ? (
+            <>
+              <div className="flex items-center justify-between gap-4 py-2">
+                <div>
+                  <div className="text-sm font-black text-[var(--color-text)]">
+                    Subtotal before tax
+                  </div>
+                  <div className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
+                    Tax is already included in item prices
+                  </div>
+                </div>
+
+                <div className="text-right text-base font-black text-[var(--color-text)]">
+                  {formatMoney(tax.taxableAmount)}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 border-t border-[var(--color-border)] py-3">
+                <div>
+                  <div className="text-sm font-black text-[var(--color-text)]">
+                    {tax.taxName}
+                  </div>
+                  <div className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
+                    Included tax amount
+                  </div>
+                </div>
+
+                <div className="text-right text-base font-black text-amber-600">
+                  {formatMoney(tax.taxAmount)}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 border-t border-[var(--color-border)] py-3">
+                <div>
+                  <div className="text-sm font-black text-[var(--color-text)]">
+                    Products subtotal
+                  </div>
+                  <div className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
+                    Total item price including tax
+                  </div>
+                </div>
+
+                <div className="text-right text-base font-black text-[var(--color-text)]">
+                  {formatMoney(tax.subtotalAmount)}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-4 py-2">
+                <div>
+                  <div className="text-sm font-black text-[var(--color-text)]">
+                    Products subtotal
+                  </div>
+                  <div className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
+                    Before customer-facing tax
+                  </div>
+                </div>
+
+                <div className="text-right text-base font-black text-[var(--color-text)]">
+                  {formatMoney(tax.subtotalAmount)}
+                </div>
+              </div>
+
+              {tax.showTaxLine ? (
+                <div className="flex items-center justify-between gap-4 border-t border-[var(--color-border)] py-3">
+                  <div>
+                    <div className="text-sm font-black text-[var(--color-text)]">
+                      {tax.taxName}
+                    </div>
+                    <div className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
+                      Added to final total
+                    </div>
+                  </div>
+
+                  <div className="text-right text-base font-black text-amber-600">
+                    {formatMoney(tax.taxAmount)}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
+
+          <div className="mt-2 grid gap-3 border-t border-[var(--color-border)] pt-4 sm:grid-cols-3">
+            <div className="rounded-[22px] bg-[var(--color-card)] p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+                Final total
+              </p>
+              <p className="mt-2 text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
+                {formatMoney(tax.total)}
+              </p>
+            </div>
+
+            <div className="rounded-[22px] bg-[var(--color-card)] p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+                Paid
+              </p>
+              <p className="mt-2 text-lg font-black tracking-[-0.02em] text-emerald-600">
+                {formatMoney(tax.paid)}
+              </p>
+            </div>
+
+            <div className="rounded-[22px] bg-[var(--color-card)] p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+                Balance
+              </p>
+              <p
+                className={cx(
+                  "mt-2 text-lg font-black tracking-[-0.02em]",
+                  tax.balance > 0 ? "text-amber-600" : "text-[var(--color-text)]",
+                )}
+              >
+                {formatMoney(tax.balance)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function StatusBadge({ tone = "neutral", children }) {
@@ -1052,15 +1334,15 @@ export default function PosReceipt() {
   const items = Array.isArray(receipt?.items) ? receipt.items : [];
   const payments = Array.isArray(receipt?.payments) ? receipt.payments : [];
 
-  const subtotal = useMemo(() => {
-    if (!items.length) return Number(receipt?.subtotal || 0);
-    return items.reduce((sum, item) => sum + itemSubtotal(item), 0);
-  }, [items, receipt]);
+  const moneyBreakdown = useMemo(() => {
+    return taxSnapshotFromReceipt(receipt, items);
+  }, [receipt, items]);
 
-  const paid = Number(receipt?.amountPaid || 0);
-  const balance = Number(receipt?.balanceDue || 0);
+  const subtotal = moneyBreakdown.subtotalAmount;
+  const paid = moneyBreakdown.paid;
+  const balance = moneyBreakdown.balance;
   const refundedTotal = Number(receipt?.refundedTotal || 0);
-  const total = Number(receipt?.total || subtotal || 0);
+  const total = moneyBreakdown.total;
 
   const itemCount = items.reduce((sum, item) => sum + itemQuantity(item), 0);
   const paymentCount = payments.length;
@@ -1268,7 +1550,7 @@ export default function PosReceipt() {
     }
   }
 
-  const printUrl = getReceiptPrintUrl(receipt?.id);
+  const printUrl = receipt?.id ? getReceiptPrintUrl(receipt.id) : "#";
   const previewRoute = receipt?.id
     ? `/app/documents/receipts/${encodeURIComponent(receipt.id)}/preview`
     : "/app/documents/receipts";
@@ -1402,6 +1684,8 @@ export default function PosReceipt() {
         />
       </section>
 
+      <MoneyBreakdownCard receipt={receipt} items={items} />
+
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-5">
           <section className={cx(pageCard(), "overflow-hidden print:shadow-none")}>
@@ -1501,10 +1785,14 @@ export default function PosReceipt() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/75">
-                      Receipt total
+                      Final total
                     </p>
                     <p className="mt-1 text-xs font-semibold text-white/75">
-                      {status.note}
+                      {moneyBreakdown.showTaxLine
+                        ? `${moneyBreakdown.taxName} ${
+                            moneyBreakdown.pricesIncludeTax ? "included" : "added"
+                          }`
+                        : status.note}
                     </p>
                   </div>
 

@@ -6,6 +6,7 @@ import AsyncButton from "../../components/ui/AsyncButton";
 import {
   closeCashDrawer,
   getCashDrawerMovements,
+  getCashDrawerSessions,
   getCashDrawerStatus,
   openCashDrawer,
   recordCashDrawerMovement,
@@ -13,6 +14,9 @@ import {
 import { handleSubscriptionBlockedError } from "../../utils/subscriptionError";
 
 const PAGE_SIZE = 10;
+const RECENT_SESSION_INITIAL_COUNT = 5;
+const RECENT_SESSION_INCREMENT = 5;
+const RECENT_SESSION_MAX_COUNT = 15;
 
 const MOVEMENT_TYPES = [
   {
@@ -41,6 +45,100 @@ const MOVEMENT_REASONS = [
     label: "Other reason",
   },
 ];
+
+const OPENING_REASONS = [
+  {
+    value: "NORMAL_FLOAT",
+    label: "Normal starting cash",
+  },
+  {
+    value: "OWNER_ADDED_STARTING_CASH",
+    label: "Owner added starting cash",
+  },
+  {
+    value: "CASH_LEFT_FROM_PREVIOUS_DAY",
+    label: "Cash left from previous day",
+  },
+  {
+    value: "CHANGE_MONEY_PREPARED",
+    label: "Change money prepared",
+  },
+  {
+    value: "CORRECTION_FROM_PREVIOUS_DRAWER",
+    label: "Correction from previous drawer",
+  },
+  {
+    value: "OTHER_OPENING_REASON",
+    label: "Other opening reason",
+  },
+];
+
+const SHORT_CASH_REASONS = [
+  {
+    value: "CUSTOMER_PAID_LESS_CASH",
+    label: "Customer paid less cash",
+  },
+  {
+    value: "CHANGE_SHORTAGE",
+    label: "Change shortage",
+  },
+  {
+    value: "CASH_REMOVED_NOT_RECORDED",
+    label: "Cash removed but not recorded",
+  },
+  {
+    value: "EXPENSE_PAID_NOT_RECORDED",
+    label: "Expense paid but not recorded",
+  },
+  {
+    value: "COUNTING_MISTAKE",
+    label: "Counting mistake",
+  },
+  {
+    value: "OTHER_SHORT_CASH_REASON",
+    label: "Other short cash reason",
+  },
+];
+
+const OVER_CASH_REASONS = [
+  {
+    value: "CUSTOMER_PAID_EXTRA_CASH",
+    label: "Customer paid extra cash",
+  },
+  {
+    value: "CASH_SALE_NOT_RECORDED",
+    label: "Cash sale not recorded",
+  },
+  {
+    value: "CASH_ADDED_NOT_RECORDED",
+    label: "Cash added but not recorded",
+  },
+  {
+    value: "CHANGE_NOT_GIVEN",
+    label: "Change not given",
+  },
+  {
+    value: "COUNTING_MISTAKE",
+    label: "Counting mistake",
+  },
+  {
+    value: "OTHER_OVER_CASH_REASON",
+    label: "Other over cash reason",
+  },
+];
+
+function closingReasonOptionsForDifference(difference) {
+  const n = Number(difference || 0);
+
+  if (n < 0) return SHORT_CASH_REASONS;
+  if (n > 0) return OVER_CASH_REASONS;
+
+  return [];
+}
+
+function defaultClosingReasonForDifference(difference) {
+  return closingReasonOptionsForDifference(difference)[0]?.value || "";
+}
 
 function cx(...xs) {
   return xs.filter(Boolean).join(" ");
@@ -88,7 +186,6 @@ function activeBranchNameFromStorage() {
   const name = cleanString(localStorage.getItem("activeBranchName"));
   const code = cleanString(localStorage.getItem("activeBranchCode"));
 
-  if (code && name) return `${code} • ${name}`;
   if (name) return name;
   if (code) return code;
 
@@ -162,7 +259,6 @@ function branchLabelFromStatus(status) {
   const code = cleanString(branch.code);
   const name = cleanString(branch.name);
 
-  if (code && name) return `${code} • ${name}`;
   if (name) return name;
   if (code) return code;
 
@@ -201,6 +297,131 @@ function movementType(movement) {
 function movementReasonLabel(value) {
   const v = String(value || "").toUpperCase();
   return MOVEMENT_REASONS.find((item) => item.value === v)?.label || cleanString(value) || "Other";
+}
+
+function optionLabel(options, value, fallback = "Other") {
+  const v = String(value || "").toUpperCase();
+  return options.find((item) => item.value === v)?.label || cleanString(value) || fallback;
+}
+
+function signedMoney(value) {
+  const n = Number(value || 0);
+
+  if (!Number.isFinite(n) || n === 0) return formatMoney(0);
+
+  return `${n > 0 ? "+" : "−"}${formatMoney(Math.abs(n))}`;
+}
+
+function varianceLabel(value) {
+  const n = Number(value || 0);
+
+  if (!Number.isFinite(n) || n === 0) return "Exact";
+  if (n > 0) return "Cash over";
+  return "Cash short";
+}
+
+function varianceTone(value) {
+  const n = Number(value || 0);
+
+  if (!Number.isFinite(n) || n === 0) return "success";
+  return "warning";
+}
+
+function sessionStatus(session) {
+  return session?.closedAt || session?.closed_at ? "Closed" : "Open";
+}
+
+function sessionStatusTone(session) {
+  return sessionStatus(session) === "Open" ? "success" : "neutral";
+}
+
+function sessionExpectedCash(session) {
+  return Number(
+    session?.expectedCash ??
+      session?.expected_cash ??
+      session?.expectedCashAtClose ??
+      session?.expected_cash_at_close ??
+      sessionOpeningCash(session),
+  );
+}
+
+function sessionCountedCash(session) {
+  const value = session?.countedCash ?? session?.counted_cash;
+
+  if (value === undefined || value === null || value === "") return null;
+
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function sessionCashDifference(session) {
+  const value = session?.cashDifference ?? session?.cash_difference;
+
+  if (value !== undefined && value !== null && value !== "") {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+
+  const counted = sessionCountedCash(session);
+  if (counted === null) return 0;
+
+  return counted - sessionExpectedCash(session);
+}
+
+function sessionOpeningReasonLabel(session) {
+  return optionLabel(
+    OPENING_REASONS,
+    session?.openingReason ?? session?.opening_reason,
+    "Not recorded",
+  );
+}
+
+function sessionClosingReasonLabel(session) {
+  const difference = sessionCashDifference(session);
+  const options = closingReasonOptionsForDifference(difference);
+
+  return optionLabel(
+    options,
+    session?.closingReason ?? session?.closing_reason,
+    difference === 0 ? "Not needed" : "Not recorded",
+  );
+}
+
+function sessionOpeningNote(session) {
+  return cleanString(session?.openingNote ?? session?.opening_note);
+}
+
+function sessionClosingExplanation(session) {
+  return cleanString(
+    session?.closingExplanation ??
+      session?.closing_explanation ??
+      session?.closeNote ??
+      session?.close_note,
+  );
+}
+
+function sessionTotalIn(session) {
+  return Number(session?.totalIn ?? session?.total_in ?? 0);
+}
+
+function sessionTotalOut(session) {
+  return Number(session?.totalOut ?? session?.total_out ?? 0);
+}
+
+function buildStructuredNote({ title, rows, note }) {
+  const lines = [title];
+
+  rows.forEach(([key, value]) => {
+    const safeKey = cleanString(key);
+    const safeValue = cleanString(value);
+
+    if (safeKey && safeValue) lines.push(`${safeKey}: ${safeValue}`);
+  });
+
+  const cleanNote = cleanString(note);
+  if (cleanNote) lines.push(`Note: ${cleanNote}`);
+
+  return lines.join("\n");
 }
 
 function movementTone(movement) {
@@ -272,10 +493,19 @@ function CashDrawerSkeleton() {
           ))}
         </div>
       </section>
+
+      <section className={cx(pageCard(), "p-5")}>
+        <SkeletonBlock className="h-4 w-40" />
+        <SkeletonBlock className="mt-4 h-8 w-64 max-w-full rounded-[18px]" />
+        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+          {[1, 2].map((item) => (
+            <SkeletonBlock key={item} className="h-44 w-full rounded-[28px]" />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
-
 function SummaryCard({ label, value, note, tone = "neutral" }) {
   const dot =
     tone === "danger"
@@ -417,9 +647,10 @@ function MovementCard({ movement }) {
               </StatusBadge>
             </div>
 
-            <p className="mt-2 text-sm font-semibold text-[var(--color-text-muted)]">
-              {movementReasonLabel(movement?.reason)} • {formatDateTime(movement?.createdAt || movement?.created_at)}
-            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <InfoTile label="Reason" value={movementReasonLabel(movement?.reason)} />
+              <InfoTile label="Recorded" value={formatDateTime(movement?.createdAt || movement?.created_at)} />
+            </div>
 
             {note ? (
               <p className="mt-2 text-sm font-medium leading-6 text-[var(--color-text-muted)]">
@@ -455,10 +686,90 @@ function MovementCard({ movement }) {
   );
 }
 
+function RecentSessionCard({ session }) {
+  const status = sessionStatus(session);
+  const difference = sessionCashDifference(session);
+  const counted = sessionCountedCash(session);
+  const closingExplanation = sessionClosingExplanation(session);
+  const openingNote = sessionOpeningNote(session);
+
+  return (
+    <article className={cx(pageCard(), "overflow-hidden p-4 sm:p-5")}>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-black tracking-[-0.03em] text-[var(--color-text)]">
+              {formatDateTime(session?.openedAt || session?.opened_at)}
+            </h3>
+
+            <StatusBadge tone={sessionStatusTone(session)}>{status}</StatusBadge>
+
+            {difference !== 0 ? (
+              <StatusBadge tone="warning">{varianceLabel(difference)}</StatusBadge>
+            ) : status === "Closed" ? (
+              <StatusBadge tone="success">Exact</StatusBadge>
+            ) : null}
+          </div>
+
+          <p className="mt-2 text-sm font-semibold leading-6 text-[var(--color-text-muted)]">
+            Opening reason:{" "}
+            <span className="font-black text-[var(--color-text)]">
+              {sessionOpeningReasonLabel(session)}
+            </span>
+          </p>
+
+          {openingNote ? (
+            <p className="mt-1 whitespace-pre-wrap text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+              {openingNote}
+            </p>
+          ) : null}
+
+          {status === "Closed" && difference !== 0 ? (
+            <div className="mt-3 rounded-[22px] bg-amber-500/10 px-4 py-3">
+              <p className="text-sm font-black text-amber-700">
+                {sessionClosingReasonLabel(session)}
+              </p>
+
+              {closingExplanation ? (
+                <p className="mt-1 whitespace-pre-wrap text-sm font-semibold leading-6 text-amber-700/90">
+                  {closingExplanation}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="grid min-w-full gap-3 sm:grid-cols-2 xl:min-w-[440px]">
+          <InfoTile label="Starting cash" value={formatMoney(sessionOpeningCash(session))} />
+          <InfoTile label="Expected cash" value={formatMoney(sessionExpectedCash(session))} />
+          <InfoTile
+            label="Counted cash"
+            value={counted === null ? "—" : formatMoney(counted)}
+            tone={counted === null ? "neutral" : "success"}
+          />
+          <InfoTile
+            label={varianceLabel(difference)}
+            value={signedMoney(difference)}
+            tone={varianceTone(difference)}
+          />
+          <InfoTile label="Money in" value={formatMoney(sessionTotalIn(session))} tone="success" />
+          <InfoTile
+            label="Money out"
+            value={formatMoney(sessionTotalOut(session))}
+            tone={sessionTotalOut(session) > 0 ? "danger" : "neutral"}
+          />
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function OpenDrawerModal({
   open,
   amount,
   setAmount,
+  reason,
+  setReason,
   note,
   setNote,
   saving,
@@ -512,13 +823,31 @@ function OpenDrawerModal({
 
           <label className="block">
             <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
-              Note
+              Opening reason
+            </span>
+            <select
+              className={inputClass()}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              disabled={saving}
+            >
+              {OPENING_REASONS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+              Opening note
             </span>
             <textarea
               className={textareaClass()}
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Optional opening note"
+              placeholder="Example: money left for customer change"
               disabled={saving}
             />
           </label>
@@ -543,6 +872,8 @@ function CloseDrawerModal({
   expectedCash,
   countedCash,
   setCountedCash,
+  varianceReason,
+  setVarianceReason,
   note,
   setNote,
   saving,
@@ -554,6 +885,7 @@ function CloseDrawerModal({
   const counted = Number(countedCash || 0);
   const expected = Number(expectedCash || 0);
   const difference = counted - expected;
+  const hasVariance = difference !== 0;
 
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-950/55 px-3 pb-3 pt-10 backdrop-blur-sm sm:items-center sm:p-6">
@@ -587,9 +919,9 @@ function CloseDrawerModal({
           <InfoTile label="Expected cash" value={formatMoney(expected)} />
           <InfoTile label="Counted cash" value={formatMoney(counted)} />
           <InfoTile
-            label="Difference"
-            value={formatMoney(Math.abs(difference))}
-            tone={difference === 0 ? "success" : "warning"}
+            label={varianceLabel(difference)}
+            value={signedMoney(difference)}
+            tone={varianceTone(difference)}
           />
         </div>
 
@@ -608,15 +940,49 @@ function CloseDrawerModal({
             />
           </label>
 
+          {hasVariance ? (
+            <div className="rounded-[24px] bg-amber-500/10 px-4 py-3 text-sm font-bold leading-6 text-amber-700">
+              Counted cash does not match expected cash. Choose a reason and write a short explanation before closing.
+            </div>
+          ) : (
+            <div className="rounded-[24px] bg-emerald-500/10 px-4 py-3 text-sm font-bold leading-6 text-emerald-700">
+              Counted cash matches expected cash. No variance explanation is required.
+            </div>
+          )}
+
+          {hasVariance ? (
+            <label className="block">
+              <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                {difference < 0 ? "Short cash reason" : "Over cash reason"}
+              </span>
+              <select
+                className={inputClass()}
+                value={varianceReason || defaultClosingReasonForDifference(difference)}
+                onChange={(event) => setVarianceReason(event.target.value)}
+                disabled={saving}
+              >
+                {closingReasonOptionsForDifference(difference).map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
           <label className="block">
             <span className="mb-1.5 block text-[12px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
-              Closing note
+              {hasVariance ? "Required explanation" : "Closing note"}
             </span>
             <textarea
               className={textareaClass()}
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Optional closing note"
+              placeholder={
+                hasVariance
+                  ? "Explain why cash is short or over"
+                  : "Optional closing note"
+              }
               disabled={saving}
             />
           </label>
@@ -780,6 +1146,8 @@ export default function CashDrawer() {
 
   const [status, setStatus] = useState(null);
   const [movements, setMovements] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [visibleSessionCount, setVisibleSessionCount] = useState(RECENT_SESSION_INITIAL_COUNT);
 
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
@@ -787,11 +1155,13 @@ export default function CashDrawer() {
 
   const [openModal, setOpenModal] = useState(false);
   const [openAmount, setOpenAmount] = useState("");
+  const [openReason, setOpenReason] = useState("NORMAL_FLOAT");
   const [openNote, setOpenNote] = useState("");
   const [openSaving, setOpenSaving] = useState(false);
 
   const [closeModal, setCloseModal] = useState(false);
   const [countedCash, setCountedCash] = useState("");
+  const [closeVarianceReason, setCloseVarianceReason] = useState("");
   const [closeNote, setCloseNote] = useState("");
   const [closeSaving, setCloseSaving] = useState(false);
 
@@ -822,9 +1192,10 @@ export default function CashDrawer() {
     }
 
     try {
-      const [statusData, movementData] = await Promise.all([
+      const [statusData, movementData, sessionData] = await Promise.all([
         getCashDrawerStatus(),
         getCashDrawerMovements({ limit: 100 }),
+        getCashDrawerSessions({ limit: RECENT_SESSION_MAX_COUNT }),
       ]);
 
       if (!mountedRef.current) return;
@@ -837,9 +1208,19 @@ export default function CashDrawer() {
             ? movementData.items
             : [];
 
+      const sessionList = Array.isArray(sessionData)
+        ? sessionData
+        : Array.isArray(sessionData?.sessions)
+          ? sessionData.sessions
+          : Array.isArray(sessionData?.items)
+            ? sessionData.items
+            : [];
+
       setStatus(statusData || null);
       setMovements(movementList);
+      setSessions(sessionList);
       setVisibleCount(PAGE_SIZE);
+      setVisibleSessionCount(RECENT_SESSION_INITIAL_COUNT);
       setActiveBranchLabel(branchLabelFromStatus(statusData));
     } catch (error) {
       if (!mountedRef.current) return;
@@ -852,6 +1233,7 @@ export default function CashDrawer() {
 
       setStatus(null);
       setMovements([]);
+      setSessions([]);
     } finally {
       if (!mountedRef.current) return;
 
@@ -931,14 +1313,19 @@ export default function CashDrawer() {
 
   const visibleMovements = filteredMovements.slice(0, visibleCount);
   const hasMore = visibleCount < filteredMovements.length;
+  const visibleSessions = sessions.slice(0, visibleSessionCount);
+  const hasMoreSessions =
+    visibleSessionCount < sessions.length && visibleSessionCount < RECENT_SESSION_MAX_COUNT;
 
   function resetOpenForm() {
     setOpenAmount("");
+    setOpenReason("NORMAL_FLOAT");
     setOpenNote("");
   }
 
   function resetCloseForm() {
     setCountedCash("");
+    setCloseVarianceReason("");
     setCloseNote("");
   }
 
@@ -956,6 +1343,7 @@ export default function CashDrawer() {
 
   function openCloseDrawerModal() {
     setCountedCash(String(Math.max(0, Math.round(expectedCash))));
+    setCloseVarianceReason("");
     setCloseNote("");
     setCloseModal(true);
   }
@@ -977,10 +1365,21 @@ export default function CashDrawer() {
     setOpenSaving(true);
 
     try {
+      const note = buildStructuredNote({
+        title: "Drawer opened",
+        rows: [
+          ["Starting cash", formatMoney(amount)],
+          ["Opening reason", optionLabel(OPENING_REASONS, openReason)],
+        ],
+        note: openNote,
+      });
+
       await openCashDrawer({
         openingCash: amount,
         openingAmount: amount,
-        note: cleanString(openNote) || null,
+        openingReason: openReason,
+        openingNote: openNote,
+        note,
       });
 
       toast.success("Cash drawer opened");
@@ -1006,14 +1405,52 @@ export default function CashDrawer() {
       return;
     }
 
+    const difference = amount - Number(expectedCash || 0);
+
+    const effectiveClosingReason =
+      difference === 0 ? "" : cleanString(closeVarianceReason) || defaultClosingReasonForDifference(difference);
+
+    if (difference !== 0 && !effectiveClosingReason) {
+      toast.error(
+        difference < 0
+          ? "Choose why counted cash is below expected cash."
+          : "Choose why counted cash is above expected cash.",
+      );
+      return;
+    }
+
+    if (difference !== 0 && !cleanString(closeNote)) {
+      toast.error("Explain why counted cash is different from expected cash.");
+      return;
+    }
+
     setCloseSaving(true);
 
     try {
+      const note = buildStructuredNote({
+        title: difference === 0 ? "Drawer closed exactly" : "Drawer closed with cash difference",
+        rows: [
+          ["Expected cash", formatMoney(expectedCash)],
+          ["Counted cash", formatMoney(amount)],
+          ["Difference", signedMoney(difference)],
+          ["Difference type", varianceLabel(difference)],
+          ...(difference !== 0
+            ? [["Difference reason", optionLabel(closingReasonOptionsForDifference(difference), effectiveClosingReason)]]
+            : []),
+        ],
+        note: closeNote,
+      });
+
       await closeCashDrawer({
         countedCash: amount,
         countedAmount: amount,
-        closeNote: cleanString(closeNote) || null,
-        note: cleanString(closeNote) || null,
+        expectedCash,
+        closingReason: effectiveClosingReason,
+        differenceReason: effectiveClosingReason,
+        closingExplanation: closeNote,
+        differenceExplanation: closeNote,
+        closeNote: note,
+        note,
       });
 
       toast.success("Cash drawer closed");
@@ -1074,6 +1511,12 @@ export default function CashDrawer() {
     setVisibleCount((prev) => prev + PAGE_SIZE);
   }
 
+  function loadMoreSessions() {
+    setVisibleSessionCount((prev) =>
+      Math.min(prev + RECENT_SESSION_INCREMENT, RECENT_SESSION_MAX_COUNT, sessions.length),
+    );
+  }
+
   if (loading) {
     return <CashDrawerSkeleton />;
   }
@@ -1084,6 +1527,8 @@ export default function CashDrawer() {
         open={openModal}
         amount={openAmount}
         setAmount={setOpenAmount}
+        reason={openReason}
+        setReason={setOpenReason}
         note={openNote}
         setNote={setOpenNote}
         saving={openSaving}
@@ -1098,6 +1543,8 @@ export default function CashDrawer() {
         expectedCash={expectedCash}
         countedCash={countedCash}
         setCountedCash={setCountedCash}
+        varianceReason={closeVarianceReason}
+        setVarianceReason={setCloseVarianceReason}
         note={closeNote}
         setNote={setCloseNote}
         saving={closeSaving}
@@ -1177,7 +1624,7 @@ export default function CashDrawer() {
         <SummaryCard
           label="Expected cash"
           value={formatMoney(expectedCash)}
-          note={drawerOpen ? "Starting cash plus drawer movements" : "No active drawer"}
+          note={drawerOpen ? "Starting cash plus cash in minus cash out" : "No active drawer"}
           tone={drawerOpen ? "success" : "neutral"}
         />
 
@@ -1333,6 +1780,68 @@ export default function CashDrawer() {
               </>
             )}
           </div>
+        </div>
+      </section>
+
+      <section className={cx(pageCard(), "overflow-hidden")}>
+        <div className="border-b border-[var(--color-border)] p-5 sm:p-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-primary)]">
+                Recent drawer sessions
+              </p>
+
+              <h2 className="mt-2 text-lg font-black tracking-[-0.02em] text-[var(--color-text)]">
+                Previous cash drawer days
+              </h2>
+
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[var(--color-text-muted)]">
+                Review how each drawer started, how it ended, and why cash was short or over.
+              </p>
+            </div>
+
+            {status?.canReopenSameDay === false ? (
+              <StatusBadge tone="warning">Owner reopens same day</StatusBadge>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-5">
+          {sessions.length === 0 ? (
+            <EmptyState
+              title="No previous drawer sessions"
+              text="After you close a drawer, it will appear here with opening cash, expected cash, counted cash, and any cash difference explanation."
+            />
+          ) : (
+            <>
+              <div className="grid gap-3">
+                {visibleSessions.map((session, index) => (
+                  <RecentSessionCard key={session.id || index} session={session} />
+                ))}
+              </div>
+
+              <div className="mt-6 flex flex-col items-center justify-between gap-3 rounded-[26px] bg-[var(--color-surface-2)] px-4 py-4 sm:flex-row">
+                <p className="text-center text-sm font-bold text-[var(--color-text-muted)] sm:text-left">
+                  Showing {formatNumber(visibleSessions.length)} of {formatNumber(sessions.length)} recent drawer session
+                  {sessions.length === 1 ? "" : "s"}.
+                </p>
+
+                {hasMoreSessions ? (
+                  <button
+                    type="button"
+                    onClick={loadMoreSessions}
+                    className="inline-flex h-11 w-full items-center justify-center rounded-2xl bg-[var(--color-card)] px-5 text-sm font-black text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 sm:w-auto"
+                  >
+                    View 5 more
+                  </button>
+                ) : (
+                  <span className="rounded-full bg-[var(--color-card)] px-3 py-2 text-xs font-black text-[var(--color-text-muted)] shadow-[var(--shadow-soft)]">
+                    End of recent sessions
+                  </span>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </section>
     </div>

@@ -1,4 +1,3 @@
-// frontend-stores/src/components/layout/AppHeader.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
@@ -141,26 +140,26 @@ function CheckIcon() {
 function routeLabel(pathname) {
   const path = String(pathname || "");
 
-  if (path === "/app") return "Dashboard";
+  if (path === "/app") return "Business dashboard";
 
-  if (path === "/app/reports") return "Reports";
-  if (path.startsWith("/app/reports/cash-flow")) return "Cash flow report";
+  if (path === "/app/reports") return "Business reports";
+  if (path.startsWith("/app/reports/cash-flow")) return "Cash flow";
   if (path.startsWith("/app/reports/income-statement")) return "Income statement";
   if (path.startsWith("/app/reports/trial-balance")) return "Trial balance";
-  if (path.startsWith("/app/reports/profit-table")) return "Profit table";
+  if (path.startsWith("/app/reports/profit-table")) return "Profit view";
 
-  if (path.startsWith("/app/whatsapp")) return "WhatsApp";
+  if (path.startsWith("/app/whatsapp")) return "WhatsApp sales";
 
   if (path.startsWith("/app/pos/drawer")) return "Cash drawer";
-  if (path.startsWith("/app/pos/credit")) return "Customer credit";
-  if (path.startsWith("/app/pos/sales")) return "Sales";
-  if (path.startsWith("/app/pos")) return "Point of sale";
+  if (path.startsWith("/app/pos/credit")) return "Customer balances";
+  if (path.startsWith("/app/pos/sales")) return "Sales records";
+  if (path.startsWith("/app/pos")) return "Sales desk";
 
-  if (path.startsWith("/app/interstore")) return "Inter-store deals";
+  if (path.startsWith("/app/interstore")) return "Store transfers";
 
-  if (path.startsWith("/app/inventory/reorder")) return "Reorder list";
-  if (path.startsWith("/app/inventory/stock-history")) return "Stock history";
-  if (path.startsWith("/app/inventory")) return "Inventory";
+  if (path.startsWith("/app/inventory/reorder")) return "Restock list";
+  if (path.startsWith("/app/inventory/stock-history")) return "Stock activity";
+  if (path.startsWith("/app/inventory")) return "Stock control";
 
   if (path.startsWith("/app/suppliers")) return "Suppliers";
   if (path.startsWith("/app/customers")) return "Customers";
@@ -172,14 +171,14 @@ function routeLabel(pathname) {
   if (path.startsWith("/app/documents/delivery-notes")) return "Delivery notes";
   if (path.startsWith("/app/documents")) return "Document center";
 
-  if (path.startsWith("/app/repairs")) return "Repairs";
-  if (path.startsWith("/app/settings")) return "Settings";
-  if (path.startsWith("/app/billing")) return "Billing";
-  if (path.startsWith("/app/audit")) return "Audit logs";
-  if (path.startsWith("/app/employees")) return "Employees";
-  if (path.startsWith("/app/expenses")) return "Expenses";
+  if (path.startsWith("/app/repairs")) return "Repair jobs";
+  if (path.startsWith("/app/settings")) return "Business settings";
+  if (path.startsWith("/app/billing")) return "Plan and payments";
+  if (path.startsWith("/app/audit")) return "Activity history";
+  if (path.startsWith("/app/employees")) return "Team";
+  if (path.startsWith("/app/expenses")) return "Business expenses";
 
-  return "Dashboard";
+  return "Business dashboard";
 }
 
 function safeReadJsonFromStorage(key) {
@@ -215,7 +214,7 @@ function normalizeCompare(value) {
   return String(value || "")
     .trim()
     .toLowerCase()
-    .replace(/[#•|,]/g, " ")
+    .replace(/[#,|,]/g, " ")
     .replace(/\s+/g, " ");
 }
 
@@ -245,7 +244,7 @@ function formatBranchLocation(branch, fallbackLocation = "") {
   const parts = uniqueLocationParts(branch?.sector, branch?.district, branch?.address);
 
   if (parts.length > 0) {
-    return parts.join(" • ");
+    return parts.join(", ");
   }
 
   return cleanLocationPart(fallbackLocation);
@@ -265,25 +264,12 @@ function isRepeatedBranchText(value, branch) {
 }
 
 function formatBranchDisplay(branch, fallbackLocation = "") {
-  const branchName = cleanLocationPart(branch?.name) || "Active branch";
-  const branchCode = cleanLocationPart(branch?.code);
+  const branchName = cleanLocationPart(branch?.name) || "Current selling location";
   const branchLocation = formatBranchLocation(branch, fallbackLocation);
-
-  const metaParts = [];
-
-  if (branchCode && !isRepeatedBranchText(branchCode, { name: branchName })) {
-    metaParts.push(branchCode);
-  } else if (branchCode && normalizeCompare(branchCode) !== normalizeCompare(branchName)) {
-    metaParts.push(branchCode);
-  }
-
-  if (branchLocation && !isRepeatedBranchText(branchLocation, branch)) {
-    metaParts.push(branchLocation);
-  }
 
   return {
     nameLine: branchName,
-    metaLine: uniqueLocationParts(...metaParts).join(" • "),
+    metaLine: branchLocation && !isRepeatedBranchText(branchLocation, branch) ? branchLocation : "",
   };
 }
 
@@ -469,7 +455,7 @@ function getSessionSnapshot() {
     tenant?.sector,
     tenant?.district,
     tenant?.address
-  ).join(" • ");
+  ).join(", ");
 
   const storedWorkspaceLocation = localStorage.getItem("workspaceLocation");
 
@@ -515,16 +501,9 @@ function initials(text) {
 }
 
 function branchLabel(branch) {
-  if (!branch) return "No branch";
+  if (!branch) return "No selling location";
 
-  const name = cleanLocationPart(branch.name) || "Active branch";
-  const code = cleanLocationPart(branch.code);
-
-  if (!code || normalizeCompare(name).includes(normalizeCompare(code))) {
-    return name;
-  }
-
-  return `${name} #${code}`;
+  return cleanLocationPart(branch.name) || "Current selling location";
 }
 
 function persistSelectedBranch(branch) {
@@ -669,14 +648,6 @@ export default function AppHeader({
           <MenuIcon />
         </button>
 
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          className="hidden h-10 w-10 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] md:inline-flex"
-          aria-label="Toggle sidebar"
-        >
-          {collapsed ? <CollapseRightIcon /> : <CollapseLeftIcon />}
-        </button>
 
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
@@ -715,7 +686,7 @@ export default function AppHeader({
                   ? "hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-card)]"
                   : "cursor-default",
               ].join(" ")}
-              aria-label={canSwitchBranches ? "Switch branch" : "Active branch"}
+              aria-label={canSwitchBranches ? "Switch selling location" : "Current selling location"}
               title={branchLabel(activeBranch)}
             >
               <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text)]">
@@ -725,7 +696,7 @@ export default function AppHeader({
               <span className="relative min-w-0">
                 <span className="flex items-center gap-2">
                   <span className="block truncate text-[10px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-                    Active branch
+                    Current selling location
                   </span>
 
                   {activeBranch?.isMain ? <StatusPill tone="success">Main</StatusPill> : null}
@@ -757,10 +728,10 @@ export default function AppHeader({
               <div className="absolute right-0 mt-2 w-[380px] overflow-hidden rounded-[28px] border border-[var(--color-border)] bg-[var(--color-card)] p-2 shadow-[var(--shadow-card)]">
                 <div className="px-3 pb-2 pt-2">
                   <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
-                    Switch branch
+                    Switch selling location
                   </div>
                   <div className="mt-1 text-[12px] font-semibold leading-5 text-[var(--color-text-muted)]">
-                    Choose where sales, drawer, and inventory actions should operate.
+                    Choose the selling location used for sales, cash drawer, and stock activity.
                   </div>
                 </div>
 
@@ -802,7 +773,7 @@ export default function AppHeader({
                           </span>
 
                           <span className="mt-0.5 block truncate text-[12px] font-semibold text-[var(--color-text-muted)]">
-                            {branchDisplay.metaLine || "Branch workspace"}
+                            {branchDisplay.metaLine || "Selling location"}
                           </span>
                         </span>
 
@@ -859,3 +830,4 @@ export default function AppHeader({
     </header>
   );
 }
+

@@ -65,10 +65,6 @@ function readOnlyInputState(disabled) {
   return disabled ? "cursor-not-allowed opacity-75" : "";
 }
 
-function neutralButton() {
-  return "inline-flex h-11 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-5 text-sm font-black text-[var(--color-text)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:bg-[var(--color-surface-3)] disabled:cursor-not-allowed disabled:opacity-60";
-}
-
 const STORE_CATEGORY_OPTIONS = [
   { value: "", label: "Select store category" },
   { value: "ELECTRONICS_RETAIL", label: "Electronics Retail" },
@@ -77,6 +73,93 @@ const STORE_CATEGORY_OPTIONS = [
   { value: "ACCESSORIES_SHOP", label: "Accessories Shop" },
   { value: "REPAIR_SHOP", label: "Repair Shop" },
   { value: "MIXED_ELECTRONICS", label: "Mixed Electronics Store" },
+];
+
+const HEADER_OPTIONS = [
+  {
+    value: "LOGO_AND_NAME",
+    title: "Logo and business name",
+    text: "Best default for most stores. Shows the logo beside the business name.",
+  },
+  {
+    value: "LOGO_ONLY",
+    title: "Logo only",
+    text: "Best when the logo already contains the business name.",
+  },
+  {
+    value: "NAME_ONLY",
+    title: "Business name only",
+    text: "Best when the business has no clean logo yet.",
+  },
+];
+
+const SIZE_OPTIONS = [
+  {
+    value: "AUTO",
+    title: "Auto",
+    text: "Compact for small documents, standard for longer documents.",
+  },
+  {
+    value: "COMPACT",
+    title: "Compact",
+    text: "Tighter print spacing for simple one-page receipts.",
+  },
+  {
+    value: "STANDARD",
+    title: "Standard",
+    text: "Balanced spacing for formal documents and longer item lists.",
+  },
+];
+
+const TAX_MODE_OPTIONS = [
+  {
+    value: "NONE",
+    title: "No tax",
+    text: "No tax line is shown on customer documents.",
+    rate: 0,
+  },
+  {
+    value: "VAT_18",
+    title: "VAT 18%",
+    text: "Use only when the business is registered and allowed to show VAT.",
+    rate: 1800,
+  },
+  {
+    value: "TURNOVER_3_INTERNAL",
+    title: "Internal 3% estimate",
+    text: "For owner reporting only. Not shown to customers by default.",
+    rate: 300,
+  },
+  {
+    value: "VAT_18_PLUS_TURNOVER_3",
+    title: "21% combined tax",
+    text: "Use only when legally applicable to the business.",
+    rate: 2100,
+  },
+  {
+    value: "CUSTOM",
+    title: "Custom tax",
+    text: "Use a custom name and rate for special cases.",
+    rate: null,
+  },
+];
+
+const TAX_DISPLAY_OPTIONS = [
+  {
+    value: "HIDDEN",
+    title: "Hidden",
+    text: "Tax settings stay saved but do not appear on customer documents.",
+  },
+  {
+    value: "CUSTOMER_FACING",
+    title: "Show to customer",
+    text: "Tax appears on receipts, invoices, and other printable documents.",
+  },
+  {
+    value: "INTERNAL_ONLY",
+    title: "Internal only",
+    text: "Used for owner reporting without printing it for customers.",
+  },
 ];
 
 function initialsFromName(name) {
@@ -108,62 +191,62 @@ function normalizeHex(value, fallback) {
   return fallback;
 }
 
+function toPercentFromBps(value) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return "0";
+  return String(n / 100);
+}
+
+function toBpsFromPercent(value) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(10000, Math.round(n * 100)));
+}
+
+function taxNameForMode(mode) {
+  if (mode === "VAT_18") return "VAT 18%";
+  if (mode === "TURNOVER_3_INTERNAL") return "Turnover tax estimate 3%";
+  if (mode === "VAT_18_PLUS_TURNOVER_3") return "Tax 21%";
+  if (mode === "CUSTOM") return "Tax";
+  return "";
+}
+
+function taxRateForMode(mode, current = 0) {
+  const option = TAX_MODE_OPTIONS.find((x) => x.value === mode);
+  if (!option) return 0;
+  if (option.rate === null) return Number(current || 0);
+  return option.rate;
+}
+
 function statusMeta(status) {
   const map = {
-    READY: {
-      label: "Ready",
-      chip: "bg-[var(--color-primary-soft)] text-[var(--color-primary)]",
-      dot: "bg-[var(--color-primary)]",
-    },
     DONE: {
       label: "Done",
       chip: "bg-[var(--color-primary-soft)] text-[var(--color-primary)]",
-      dot: "bg-[var(--color-primary)]",
+    },
+    READY: {
+      label: "Ready",
+      chip: "bg-[var(--color-primary-soft)] text-[var(--color-primary)]",
     },
     ACTIVE: {
       label: "Active",
       chip: "bg-[var(--color-primary-soft)] text-[var(--color-primary)]",
-      dot: "bg-[var(--color-primary)]",
-    },
-    COMPLETE: {
-      label: "Complete",
-      chip: "bg-[var(--color-primary-soft)] text-[var(--color-primary)]",
-      dot: "bg-[var(--color-primary)]",
-    },
-    INFO: {
-      label: "Info",
-      chip: "bg-[var(--color-surface-2)] text-[var(--color-text)]",
-      dot: "bg-[var(--color-text-muted)]",
     },
     REQUIRED: {
       label: "Required",
       chip: "bg-amber-500/10 text-amber-600",
-      dot: "bg-amber-500",
-    },
-    PENDING: {
-      label: "Pending",
-      chip: "bg-amber-500/10 text-amber-600",
-      dot: "bg-amber-500",
-    },
-    PROCESS: {
-      label: "Process",
-      chip: "bg-amber-500/10 text-amber-600",
-      dot: "bg-amber-500",
     },
     OPTIONAL: {
       label: "Optional",
       chip: "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]",
-      dot: "bg-[var(--color-text-muted)]",
-    },
-    NEUTRAL: {
-      label: "Neutral",
-      chip: "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]",
-      dot: "bg-[var(--color-text-muted)]",
     },
     DANGER: {
       label: "Needs attention",
       chip: "bg-red-500/10 text-red-600",
-      dot: "bg-red-500",
+    },
+    NEUTRAL: {
+      label: "Neutral",
+      chip: "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]",
     },
   };
 
@@ -198,12 +281,13 @@ function Badge({ children, tone = "neutral" }) {
     danger: "bg-red-500/10 text-red-600",
     neutral: "bg-[var(--color-surface-2)] text-[var(--color-text-muted)]",
     strong: "bg-[var(--color-surface-2)] text-[var(--color-text)]",
+    success: "bg-emerald-500/10 text-emerald-600",
   };
 
   return (
     <span
       className={cx(
-        "inline-flex h-8 items-center justify-center rounded-full px-3 text-xs font-black",
+        "inline-flex min-h-8 items-center justify-center rounded-full px-3 py-1 text-xs font-black",
         styles[tone] || styles.neutral,
       )}
     >
@@ -218,14 +302,18 @@ function SummaryCard({ label, value, note, tone = "neutral" }) {
       ? "text-amber-600"
       : tone === "danger"
         ? "text-[var(--color-danger)]"
-        : "text-[var(--color-text)]";
+        : tone === "success"
+          ? "text-emerald-600"
+          : "text-[var(--color-text)]";
 
   const accentClass =
     tone === "warning"
       ? "bg-amber-500"
       : tone === "danger"
         ? "bg-[var(--color-danger)]"
-        : "bg-[var(--color-primary)]";
+        : tone === "success"
+          ? "bg-emerald-500"
+          : "bg-[var(--color-primary)]";
 
   return (
     <article className={cx(pageCard(), "relative overflow-hidden p-5 sm:p-6")}>
@@ -312,7 +400,7 @@ function ReadOnlyBanner() {
           <div className="text-sm font-black text-[var(--color-text)]">Read-only access</div>
 
           <p className="mt-1 text-sm font-semibold leading-6 text-[var(--color-text-muted)]">
-            Managers can review store identity, document numbering, and print branding, but only the owner can save changes.
+            Managers can review store identity, document branding, and tax behavior, but only the owner can save changes.
           </p>
         </div>
 
@@ -349,73 +437,7 @@ function TextareaField({
   );
 }
 
-function PreviewDocument({
-  title,
-  prefix,
-  padding,
-  preview,
-  terms,
-  primaryColor,
-  accentColor,
-  previewLabel = "Number preview",
-  previewFallback = "Not available",
-}) {
-  return (
-    <div className={cx(softPanel(), "p-4")}>
-      <div className="overflow-hidden rounded-[22px] bg-[var(--color-surface)] ring-1 ring-[var(--color-border)]">
-        <div
-          className="relative h-24 px-4 py-4"
-          style={{
-            backgroundColor: primaryColor,
-          }}
-        >
-          <div className="relative z-10 flex items-start justify-between gap-3">
-            <div className="text-sm font-black uppercase tracking-[0.18em] text-white">
-              {title}
-            </div>
-
-            <div className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white">
-              Brand
-            </div>
-          </div>
-
-          <div
-            className="absolute -bottom-8 left-[-8%] right-[-8%] h-16 rounded-[999px]"
-            style={{ backgroundColor: "rgba(255,255,255,0.97)" }}
-          />
-
-          <div
-            className="absolute -bottom-11 left-[-10%] right-[-10%] h-20 rounded-[999px] blur-md"
-            style={{ backgroundColor: `${accentColor}66` }}
-          />
-        </div>
-
-        <div className="px-4 py-4">
-          <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-            {previewLabel}
-          </div>
-
-          <div className="mt-2 break-all text-sm font-black leading-6 text-[var(--color-text)]">
-            {preview || previewFallback}
-          </div>
-
-          {(prefix || padding) ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {prefix ? <Badge tone="strong">{prefix}</Badge> : null}
-              {padding ? <Badge tone="strong">{padding} digits</Badge> : null}
-            </div>
-          ) : null}
-
-          <p className="mt-3 line-clamp-3 text-xs font-semibold leading-6 text-[var(--color-text-muted)]">
-            {terms?.trim() || "No terms added yet."}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NumberField({ label, value, onChange, disabled = false, min = 4, max = 10 }) {
+function NumberField({ label, value, onChange, disabled = false, min = 4, max = 12 }) {
   return (
     <div>
       <label className={fieldLabel()}>{label}</label>
@@ -453,6 +475,159 @@ function ColorField({ label, value, onChange, disabled = false }) {
           disabled={disabled}
           onChange={(e) => onChange(normalizeHex(e.target.value, value))}
         />
+      </div>
+    </div>
+  );
+}
+
+function ChoiceCard({ title, text, active, disabled, onClick, badge = null }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cx(
+        "group min-h-[132px] rounded-[26px] border p-4 text-left transition",
+        active
+          ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] shadow-[var(--shadow-soft)]"
+          : "border-[var(--color-border)] bg-[var(--color-surface-2)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-3)]",
+        disabled ? "cursor-not-allowed opacity-70 hover:translate-y-0" : "",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div
+          className={cx(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-sm font-black",
+            active
+              ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+              : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)]",
+          )}
+        >
+          {active ? "✓" : ""}
+        </div>
+
+        {badge ? <Badge tone={active ? "primary" : "neutral"}>{badge}</Badge> : null}
+      </div>
+
+      <div className="mt-4 text-sm font-black text-[var(--color-text)]">{title}</div>
+      <div className="mt-2 text-xs font-semibold leading-5 text-[var(--color-text-muted)]">
+        {text}
+      </div>
+    </button>
+  );
+}
+
+function SwitchRow({ title, text, checked, disabled, onChange, tone = "neutral" }) {
+  return (
+    <label
+      className={cx(
+        "flex cursor-pointer items-start gap-4 rounded-[24px] border p-4",
+        "border-[var(--color-border)] bg-[var(--color-surface-2)]",
+        disabled ? "cursor-not-allowed opacity-70" : "",
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={Boolean(checked)}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-1 h-5 w-5 rounded border-[var(--color-border)] accent-[var(--color-primary)]"
+      />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="text-sm font-black text-[var(--color-text)]">{title}</div>
+          {tone === "warning" ? <Badge tone="warning">Use carefully</Badge> : null}
+        </div>
+
+        <div className="mt-1 text-xs font-semibold leading-5 text-[var(--color-text-muted)]">
+          {text}
+        </div>
+      </div>
+    </label>
+  );
+}
+
+function PreviewDocument({
+  title,
+  prefix,
+  padding,
+  preview,
+  terms,
+  primaryColor,
+  accentColor,
+  headerMode,
+  sizeMode,
+  taxLabel,
+  previewLabel = "Number preview",
+  previewFallback = "Not available",
+}) {
+  const showLogo = headerMode !== "NAME_ONLY";
+  const showName = headerMode !== "LOGO_ONLY";
+
+  return (
+    <div className={cx(softPanel(), "p-4")}>
+      <div className="overflow-hidden rounded-[22px] bg-[var(--color-surface)] ring-1 ring-[var(--color-border)]">
+        <div
+          className="relative px-4 py-4"
+          style={{
+            minHeight: sizeMode === "COMPACT" ? 88 : 104,
+            backgroundColor: primaryColor,
+          }}
+        >
+          <div className="relative z-10 flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-3">
+              {showLogo ? (
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/95 p-1 text-xs font-black text-slate-900">
+                  LOGO
+                </div>
+              ) : null}
+
+              <div className="min-w-0">
+                {showName ? (
+                  <div className="truncate text-sm font-black text-white">Business name</div>
+                ) : null}
+                <div className="mt-1 text-[11px] font-black uppercase tracking-[0.18em] text-white/80">
+                  {title}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white">
+              {sizeMode}
+            </div>
+          </div>
+
+          <div
+            className="absolute -bottom-8 left-[-8%] right-[-8%] h-16 rounded-[999px]"
+            style={{ backgroundColor: "rgba(255,255,255,0.97)" }}
+          />
+
+          <div
+            className="absolute -bottom-11 left-[-10%] right-[-10%] h-20 rounded-[999px] blur-md"
+            style={{ backgroundColor: `${accentColor}66` }}
+          />
+        </div>
+
+        <div className="px-4 py-4">
+          <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+            {previewLabel}
+          </div>
+
+          <div className="mt-2 break-all text-sm font-black leading-6 text-[var(--color-text)]">
+            {preview || previewFallback}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {prefix ? <Badge tone="strong">{prefix}</Badge> : null}
+            {padding ? <Badge tone="strong">{padding} digits</Badge> : null}
+            {taxLabel ? <Badge tone="warning">{taxLabel}</Badge> : null}
+          </div>
+
+          <p className="mt-3 line-clamp-3 text-xs font-semibold leading-6 text-[var(--color-text-muted)]">
+            {terms?.trim() || "No terms added yet."}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -500,8 +675,16 @@ export default function SettingsGeneral() {
     warrantyTerms: "",
     proformaTerms: "",
     deliveryNoteTerms: "",
-    documentPrimaryColor: "#077DCB",
+    documentPrimaryColor: "#0F4C81",
     documentAccentColor: "#E8EEF5",
+    documentHeaderDisplay: "LOGO_AND_NAME",
+    documentSizeMode: "AUTO",
+    taxMode: "NONE",
+    taxDisplayMode: "HIDDEN",
+    taxName: "",
+    taxRateBps: 0,
+    pricesIncludeTax: false,
+    showTaxOnCustomerDocuments: false,
   });
 
   const [loading, setLoading] = useState(true);
@@ -509,6 +692,53 @@ export default function SettingsGeneral() {
   const [savingDocs, setSavingDocs] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [selectedLogoName, setSelectedLogoName] = useState("");
+
+  function profileSnapshot(value) {
+    return {
+      name: value?.name || "",
+      email: value?.email || "",
+      phone: value?.phone || "",
+      shopType: value?.shopType || "",
+      district: value?.district || "",
+      sector: value?.sector || "",
+      address: value?.address || "",
+      logoUrl: value?.logoUrl || "",
+      logoKey: value?.logoKey || "",
+      receiptHeader: value?.receiptHeader || "",
+      receiptFooter: value?.receiptFooter || "",
+      countryCode: value?.countryCode || "RW",
+      currencyCode: value?.currencyCode || "RWF",
+      timezone: value?.timezone || "Africa/Kigali",
+      cashDrawerBlockCashSales: Boolean(value?.cashDrawerBlockCashSales),
+    };
+  }
+
+  function documentSnapshot(value) {
+    return {
+      receiptPrefix: value?.receiptPrefix || "RCT",
+      invoicePrefix: value?.invoicePrefix || "INV",
+      warrantyPrefix: value?.warrantyPrefix || "WAR",
+      proformaPrefix: value?.proformaPrefix || "PRF",
+      receiptPadding: value?.receiptPadding || 6,
+      invoicePadding: value?.invoicePadding || 6,
+      warrantyPadding: value?.warrantyPadding || 6,
+      proformaPadding: value?.proformaPadding || 6,
+      invoiceTerms: value?.invoiceTerms || "",
+      warrantyTerms: value?.warrantyTerms || "",
+      proformaTerms: value?.proformaTerms || "",
+      deliveryNoteTerms: value?.deliveryNoteTerms || "",
+      documentPrimaryColor: value?.documentPrimaryColor || "#0F4C81",
+      documentAccentColor: value?.documentAccentColor || "#E8EEF5",
+      documentHeaderDisplay: value?.documentHeaderDisplay || "LOGO_AND_NAME",
+      documentSizeMode: value?.documentSizeMode || "AUTO",
+      taxMode: value?.taxMode || "NONE",
+      taxDisplayMode: value?.taxDisplayMode || "HIDDEN",
+      taxName: value?.taxName || "",
+      taxRateBps: Number(value?.taxRateBps || 0),
+      pricesIncludeTax: Boolean(value?.pricesIncludeTax),
+      showTaxOnCustomerDocuments: Boolean(value?.showTaxOnCustomerDocuments),
+    };
+  }
 
   useEffect(() => {
     let alive = true;
@@ -520,26 +750,7 @@ export default function SettingsGeneral() {
         if (profileRes.status === "fulfilled") {
           const nextProfile = profileRes.value?.profile || null;
           setProfile(nextProfile);
-
-          if (nextProfile) {
-            setForm({
-              name: nextProfile.name || "",
-              email: nextProfile.email || "",
-              phone: nextProfile.phone || "",
-              shopType: nextProfile.shopType || "",
-              district: nextProfile.district || "",
-              sector: nextProfile.sector || "",
-              address: nextProfile.address || "",
-              logoUrl: nextProfile.logoUrl || "",
-              logoKey: nextProfile.logoKey || "",
-              receiptHeader: nextProfile.receiptHeader || "",
-              receiptFooter: nextProfile.receiptFooter || "",
-              countryCode: nextProfile.countryCode || "RW",
-              currencyCode: nextProfile.currencyCode || "RWF",
-              timezone: nextProfile.timezone || "Africa/Kigali",
-              cashDrawerBlockCashSales: Boolean(nextProfile.cashDrawerBlockCashSales),
-            });
-          }
+          if (nextProfile) setForm(profileSnapshot(nextProfile));
         }
 
         if (checklistRes.status === "fulfilled") {
@@ -549,25 +760,7 @@ export default function SettingsGeneral() {
         if (docsRes.status === "fulfilled") {
           const ds = docsRes.value?.documentSettings || null;
           setDocumentSettings(ds);
-
-          if (ds) {
-            setDocForm({
-              receiptPrefix: ds.receiptPrefix || "RCT",
-              invoicePrefix: ds.invoicePrefix || "INV",
-              warrantyPrefix: ds.warrantyPrefix || "WAR",
-              proformaPrefix: ds.proformaPrefix || "PRF",
-              receiptPadding: ds.receiptPadding || 6,
-              invoicePadding: ds.invoicePadding || 6,
-              warrantyPadding: ds.warrantyPadding || 6,
-              proformaPadding: ds.proformaPadding || 6,
-              invoiceTerms: ds.invoiceTerms || "",
-              warrantyTerms: ds.warrantyTerms || "",
-              proformaTerms: ds.proformaTerms || "",
-              deliveryNoteTerms: ds.deliveryNoteTerms || "",
-              documentPrimaryColor: ds.documentPrimaryColor || "#077DCB",
-              documentAccentColor: ds.documentAccentColor || "#E8EEF5",
-            });
-          }
+          if (ds) setDocForm(documentSnapshot(ds));
         }
       })
       .finally(() => {
@@ -581,52 +774,24 @@ export default function SettingsGeneral() {
 
   const dirty = useMemo(() => {
     if (!profile) return false;
-
-    return (
-      JSON.stringify(form) !==
-      JSON.stringify({
-        name: profile.name || "",
-        email: profile.email || "",
-        phone: profile.phone || "",
-        shopType: profile.shopType || "",
-        district: profile.district || "",
-        sector: profile.sector || "",
-        address: profile.address || "",
-        logoUrl: profile.logoUrl || "",
-        logoKey: profile.logoKey || "",
-        receiptHeader: profile.receiptHeader || "",
-        receiptFooter: profile.receiptFooter || "",
-        countryCode: profile.countryCode || "RW",
-        currencyCode: profile.currencyCode || "RWF",
-        timezone: profile.timezone || "Africa/Kigali",
-        cashDrawerBlockCashSales: Boolean(profile.cashDrawerBlockCashSales),
-      })
-    );
+    return JSON.stringify(form) !== JSON.stringify(profileSnapshot(profile));
   }, [form, profile]);
 
   const docDirty = useMemo(() => {
     if (!documentSettings) return false;
-
-    return (
-      JSON.stringify(docForm) !==
-      JSON.stringify({
-        receiptPrefix: documentSettings.receiptPrefix || "RCT",
-        invoicePrefix: documentSettings.invoicePrefix || "INV",
-        warrantyPrefix: documentSettings.warrantyPrefix || "WAR",
-        proformaPrefix: documentSettings.proformaPrefix || "PRF",
-        receiptPadding: documentSettings.receiptPadding || 6,
-        invoicePadding: documentSettings.invoicePadding || 6,
-        warrantyPadding: documentSettings.warrantyPadding || 6,
-        proformaPadding: documentSettings.proformaPadding || 6,
-        invoiceTerms: documentSettings.invoiceTerms || "",
-        warrantyTerms: documentSettings.warrantyTerms || "",
-        proformaTerms: documentSettings.proformaTerms || "",
-        deliveryNoteTerms: documentSettings.deliveryNoteTerms || "",
-        documentPrimaryColor: documentSettings.documentPrimaryColor || "#077DCB",
-        documentAccentColor: documentSettings.documentAccentColor || "#E8EEF5",
-      })
-    );
+    return JSON.stringify(docForm) !== JSON.stringify(documentSnapshot(documentSettings));
   }, [docForm, documentSettings]);
+
+  const readinessPercent = checklist?.readinessPercent || 0;
+  const checks = checklist?.checks || [];
+  const isOperationallyReady = Boolean(checklist?.isOperationallyReady);
+
+  const taxOption = TAX_MODE_OPTIONS.find((x) => x.value === docForm.taxMode) || TAX_MODE_OPTIONS[0];
+  const taxSummary = documentSettings?.taxSummary || null;
+  const taxIsCustomerFacing =
+    docForm.taxMode !== "NONE" &&
+    docForm.taxDisplayMode === "CUSTOMER_FACING" &&
+    docForm.showTaxOnCustomerDocuments;
 
   async function refreshChecklist() {
     const data = await getStoreSetupChecklist();
@@ -656,23 +821,7 @@ export default function SettingsGeneral() {
       setProfile(nextProfile);
 
       if (nextProfile) {
-        setForm({
-          name: nextProfile.name || "",
-          email: nextProfile.email || "",
-          phone: nextProfile.phone || "",
-          shopType: nextProfile.shopType || "",
-          district: nextProfile.district || "",
-          sector: nextProfile.sector || "",
-          address: nextProfile.address || "",
-          logoUrl: nextProfile.logoUrl || "",
-          logoKey: nextProfile.logoKey || "",
-          receiptHeader: nextProfile.receiptHeader || "",
-          receiptFooter: nextProfile.receiptFooter || "",
-          countryCode: nextProfile.countryCode || "RW",
-          currencyCode: nextProfile.currencyCode || "RWF",
-          timezone: nextProfile.timezone || "Africa/Kigali",
-          cashDrawerBlockCashSales: Boolean(nextProfile.cashDrawerBlockCashSales),
-        });
+        setForm(profileSnapshot(nextProfile));
       }
 
       await refreshChecklist();
@@ -701,28 +850,15 @@ export default function SettingsGeneral() {
         invoicePadding: Number(docForm.invoicePadding),
         warrantyPadding: Number(docForm.warrantyPadding),
         proformaPadding: Number(docForm.proformaPadding),
+        taxRateBps: Number(docForm.taxRateBps),
+        taxName: docForm.taxName.trim() || null,
       });
 
       const next = data?.documentSettings || null;
       setDocumentSettings(next);
 
       if (next) {
-        setDocForm({
-          receiptPrefix: next.receiptPrefix || "RCT",
-          invoicePrefix: next.invoicePrefix || "INV",
-          warrantyPrefix: next.warrantyPrefix || "WAR",
-          proformaPrefix: next.proformaPrefix || "PRF",
-          receiptPadding: next.receiptPadding || 6,
-          invoicePadding: next.invoicePadding || 6,
-          warrantyPadding: next.warrantyPadding || 6,
-          proformaPadding: next.proformaPadding || 6,
-          invoiceTerms: next.invoiceTerms || "",
-          warrantyTerms: next.warrantyTerms || "",
-          proformaTerms: next.proformaTerms || "",
-          deliveryNoteTerms: next.deliveryNoteTerms || "",
-          documentPrimaryColor: next.documentPrimaryColor || "#077DCB",
-          documentAccentColor: next.documentAccentColor || "#E8EEF5",
-        });
+        setDocForm(documentSnapshot(next));
       }
 
       toast.success("Document settings updated");
@@ -797,6 +933,21 @@ export default function SettingsGeneral() {
     setDocForm((curr) => ({ ...curr, [key]: value }));
   }
 
+  function selectTaxMode(mode) {
+    const nextRate = taxRateForMode(mode, docForm.taxRateBps);
+    const nextName = mode === "NONE" ? "" : taxNameForMode(mode);
+
+    setDocForm((curr) => ({
+      ...curr,
+      taxMode: mode,
+      taxName: nextName,
+      taxRateBps: nextRate,
+      taxDisplayMode: mode === "NONE" ? "HIDDEN" : curr.taxDisplayMode,
+      showTaxOnCustomerDocuments:
+        mode === "NONE" ? false : curr.showTaxOnCustomerDocuments,
+    }));
+  }
+
   if (loading) {
     return <PageSkeleton titleWidth="w-44" lines={2} showTable={false} />;
   }
@@ -811,57 +962,50 @@ export default function SettingsGeneral() {
     );
   }
 
-  const readinessPercent = checklist?.readinessPercent || 0;
-  const checks = checklist?.checks || [];
-  const isOperationallyReady = Boolean(checklist?.isOperationallyReady);
-
   return (
     <div className="space-y-6">
       {isReadOnly ? <ReadOnlyBanner /> : null}
 
-      <section className="space-y-5">
-        <div className={cx(pageCard(), "overflow-hidden")}>
-          <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
-            <SectionHeader
-              eyebrow="Overview"
-              title="Store settings"
-              text="Control store identity, printed document defaults, and operational rules from one clean owner workspace."
-            />
+      <section className={cx(pageCard(), "overflow-hidden")}>
+        <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+          <SectionHeader
+            eyebrow="Overview"
+            title="Store settings"
+            text="Control store identity, document design, receipt behavior, tax display, and operating rules from one owner workspace."
+          />
+        </div>
+
+        <div className="px-5 py-5 sm:px-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={isOperationallyReady ? "primary" : "warning"}>
+              {isOperationallyReady ? "Operationally ready" : "Needs attention"}
+            </Badge>
+            <Badge>{readinessPercent}% complete</Badge>
+            <Badge tone="strong">{form.currencyCode}</Badge>
+            <Badge tone="strong">{form.timezone}</Badge>
           </div>
 
-          <div className="px-5 py-5 sm:px-6">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone={isOperationallyReady ? "primary" : "warning"}>
-                {isOperationallyReady ? "Operationally ready" : "Needs attention"}
-              </Badge>
-              <Badge>{readinessPercent}% complete</Badge>
-              <Badge tone="strong">
-                {form.currencyCode} • {form.timezone}
-              </Badge>
-            </div>
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <SummaryCard
+              label="Readiness"
+              value={`${readinessPercent}%`}
+              note={isOperationallyReady ? "Core setup completed" : "Important items still missing"}
+              tone={isOperationallyReady ? "success" : "warning"}
+            />
 
-            <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
-              <SummaryCard
-                label="Readiness"
-                value={`${readinessPercent}%`}
-                note={isOperationallyReady ? "Core setup completed" : "Important items still missing"}
-                tone={isOperationallyReady ? "neutral" : "warning"}
-              />
+            <SummaryCard
+              label="Document style"
+              value={docForm.documentHeaderDisplay === "LOGO_ONLY" ? "Logo only" : docForm.documentHeaderDisplay === "NAME_ONLY" ? "Name only" : "Logo and name"}
+              note={`Print mode: ${docForm.documentSizeMode}`}
+              tone="neutral"
+            />
 
-              <SummaryCard
-                label="Documents"
-                value={documentSettings ? "Ready" : "Pending"}
-                note="Receipts, invoices, delivery notes, proformas, warranties"
-                tone={documentSettings ? "neutral" : "warning"}
-              />
-
-              <SummaryCard
-                label="Cash rule"
-                value={form.cashDrawerBlockCashSales ? "Strict" : "Flexible"}
-                note="Cash sales when drawer is closed"
-                tone={form.cashDrawerBlockCashSales ? "warning" : "neutral"}
-              />
-            </div>
+            <SummaryCard
+              label="Tax display"
+              value={taxIsCustomerFacing ? "Visible" : "Hidden"}
+              note={taxSummary?.label || "No tax shown on customer documents"}
+              tone={taxIsCustomerFacing ? "warning" : "neutral"}
+            />
           </div>
         </div>
       </section>
@@ -916,7 +1060,7 @@ export default function SettingsGeneral() {
         <SectionHeader
           eyebrow="Identity"
           title="Store identity"
-          text="This information appears across the workspace and on printed documents."
+          text="This information appears inside the workspace and on customer documents."
           action={
             <AsyncButton
               type="button"
@@ -933,12 +1077,12 @@ export default function SettingsGeneral() {
           <div className="xl:col-span-4">
             <div className={cx(softPanel(), "p-5")}>
               <div className="flex items-start gap-4">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[24px] bg-[var(--color-surface)] text-lg font-black text-[var(--color-text)] ring-1 ring-[var(--color-border)]">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[26px] bg-[var(--color-surface)] p-2 text-lg font-black text-[var(--color-text)] ring-1 ring-[var(--color-border)]">
                   {form.logoUrl ? (
                     <img
                       src={form.logoUrl}
                       alt="Store logo"
-                      className="h-full w-full object-contain"
+                      className="max-h-full max-w-full object-contain"
                     />
                   ) : (
                     initialsFromName(form.name)
@@ -954,9 +1098,11 @@ export default function SettingsGeneral() {
                     {form.email || "store@example.com"}
                   </div>
 
-                  <div className="mt-2 text-xs font-semibold text-[var(--color-text-muted)]">
-                    {STORE_CATEGORY_OPTIONS.find((x) => x.value === form.shopType)?.label ||
-                      "Store category not set"}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge tone="strong">
+                      {STORE_CATEGORY_OPTIONS.find((x) => x.value === form.shopType)?.label ||
+                        "Category not set"}
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -994,7 +1140,7 @@ export default function SettingsGeneral() {
                 </div>
 
                 <p className={fieldHelp()}>
-                  The backend accepts only PNG, JPEG, and WEBP files up to 3MB.
+                  Logos with different shapes are fitted safely into the document header.
                 </p>
               </div>
 
@@ -1003,24 +1149,14 @@ export default function SettingsGeneral() {
                   Operating rule
                 </div>
 
-                <label className="mt-3 flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(form.cashDrawerBlockCashSales)}
-                    disabled={isReadOnly}
-                    onChange={(e) => updateField("cashDrawerBlockCashSales", e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-primary)]"
-                  />
-
-                  <div>
-                    <div className="text-sm font-black text-[var(--color-text)]">
-                      Block cash sales when drawer is closed
-                    </div>
-                    <div className="mt-1 text-xs font-semibold leading-5 text-[var(--color-text-muted)]">
-                      Recommended for stronger day-end cash discipline.
-                    </div>
-                  </div>
-                </label>
+                <SwitchRow
+                  title="Block cash sales when drawer is closed"
+                  text="Recommended for stronger day-end cash discipline."
+                  checked={form.cashDrawerBlockCashSales}
+                  disabled={isReadOnly}
+                  onChange={(value) => updateField("cashDrawerBlockCashSales", value)}
+                  tone="warning"
+                />
               </div>
             </div>
           </div>
@@ -1051,10 +1187,6 @@ export default function SettingsGeneral() {
                     </option>
                   ))}
                 </select>
-
-                <p className={fieldHelp()}>
-                  Choose the closest category so reporting and setup stay consistent.
-                </p>
               </div>
 
               <div>
@@ -1125,50 +1257,10 @@ export default function SettingsGeneral() {
       </section>
 
       <section className={cx(pageCard(), "p-5 sm:p-6")}>
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="max-w-3xl">
-            <SectionHeading
-              eyebrow="Receipt"
-              title="Receipt copy"
-              subtitle="Header and footer text used in your receipt experience."
-            />
-          </div>
-
-          <Badge tone="strong">Receipt experience</Badge>
-        </div>
-
-        <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          <div className={cx(softPanel(), "p-4")}>
-            <TextareaField
-              label="Receipt header"
-              value={form.receiptHeader}
-              disabled={isReadOnly}
-              onChange={(e) => updateField("receiptHeader", e.target.value)}
-              placeholder="Example: Thank you for shopping with us."
-              help="Shown near the top of the printed receipt."
-              rows={4}
-            />
-          </div>
-
-          <div className={cx(softPanel(), "p-4")}>
-            <TextareaField
-              label="Receipt footer"
-              value={form.receiptFooter}
-              disabled={isReadOnly}
-              onChange={(e) => updateField("receiptFooter", e.target.value)}
-              placeholder="Example: Goods sold are not returnable without receipt."
-              help="Used for policy notes, return rules, or store reminders."
-              rows={4}
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className={cx(pageCard(), "p-5 sm:p-6")}>
         <SectionHeader
-          eyebrow="Branding"
-          title="Document branding"
-          text="Owner-controlled theme colors applied across invoices, receipts, delivery notes, proformas, and warranties."
+          eyebrow="Documents"
+          title="Documents and receipts"
+          text="Control how receipts, invoices, delivery notes, proformas, and warranties look when customers receive them."
           action={
             <AsyncButton
               type="button"
@@ -1197,11 +1289,175 @@ export default function SettingsGeneral() {
           />
         </div>
 
-        <p className={fieldHelp()}>
-          Use one strong owner color and one soft accent. This keeps every document consistent and premium.
-        </p>
+        <div className="mt-8">
+          <SectionHeading
+            eyebrow="Header"
+            title="Header style"
+            subtitle="Choose how the business identity appears on printed documents."
+          />
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            {HEADER_OPTIONS.map((option) => (
+              <ChoiceCard
+                key={option.value}
+                title={option.title}
+                text={option.text}
+                active={docForm.documentHeaderDisplay === option.value}
+                disabled={isReadOnly}
+                onClick={() => updateDocField("documentHeaderDisplay", option.value)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <SectionHeading
+            eyebrow="Print"
+            title="A4 print behavior"
+            subtitle="Keep simple receipts compact while allowing longer documents to breathe."
+          />
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            {SIZE_OPTIONS.map((option) => (
+              <ChoiceCard
+                key={option.value}
+                title={option.title}
+                text={option.text}
+                active={docForm.documentSizeMode === option.value}
+                disabled={isReadOnly}
+                onClick={() => updateDocField("documentSizeMode", option.value)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <SectionHeading
+            eyebrow="Tax"
+            title="Tax behavior"
+            subtitle="Configure tax safely. Customer-facing tax should only be enabled when the business is legally allowed or required to show it."
+          />
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {TAX_MODE_OPTIONS.map((option) => (
+              <ChoiceCard
+                key={option.value}
+                title={option.title}
+                text={option.text}
+                active={docForm.taxMode === option.value}
+                disabled={isReadOnly}
+                onClick={() => selectTaxMode(option.value)}
+                badge={option.rate === null ? "Custom" : `${option.rate / 100}%`}
+              />
+            ))}
+          </div>
+
+          <div className="mt-5 grid gap-4 xl:grid-cols-3">
+            <div>
+              <label className={fieldLabel()}>Tax name</label>
+              <input
+                className={cx(inputClass(), readOnlyInputState(isReadOnly || docForm.taxMode === "NONE"))}
+                value={docForm.taxName}
+                disabled={isReadOnly || docForm.taxMode === "NONE"}
+                onChange={(e) => updateDocField("taxName", e.target.value)}
+                placeholder={taxNameForMode(docForm.taxMode)}
+              />
+            </div>
+
+            <div>
+              <label className={fieldLabel()}>Tax rate percent</label>
+              <input
+                className={cx(inputClass(), readOnlyInputState(isReadOnly || docForm.taxMode !== "CUSTOM"))}
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={toPercentFromBps(docForm.taxRateBps)}
+                disabled={isReadOnly || docForm.taxMode !== "CUSTOM"}
+                onChange={(e) => updateDocField("taxRateBps", toBpsFromPercent(e.target.value))}
+              />
+              <p className={fieldHelp()}>
+                Custom rates are saved safely between 0% and 100%.
+              </p>
+            </div>
+
+            <div>
+              <label className={fieldLabel()}>Current tax profile</label>
+              <div className={cx(softPanel(), "min-h-[48px] px-4 py-3")}>
+                <div className="text-sm font-black text-[var(--color-text)]">
+                  {taxOption.title}
+                </div>
+                <div className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">
+                  {toPercentFromBps(docForm.taxRateBps)}%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            {TAX_DISPLAY_OPTIONS.map((option) => (
+              <ChoiceCard
+                key={option.value}
+                title={option.title}
+                text={option.text}
+                active={docForm.taxDisplayMode === option.value}
+                disabled={isReadOnly || docForm.taxMode === "NONE"}
+                onClick={() =>
+                  setDocForm((curr) => ({
+                    ...curr,
+                    taxDisplayMode: option.value,
+                    showTaxOnCustomerDocuments:
+                      option.value === "CUSTOMER_FACING"
+                        ? curr.showTaxOnCustomerDocuments
+                        : false,
+                  }))
+                }
+              />
+            ))}
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            <SwitchRow
+              title="Prices include tax"
+              text="Use this when shelf prices already include the tax amount."
+              checked={docForm.pricesIncludeTax}
+              disabled={isReadOnly || docForm.taxMode === "NONE"}
+              onChange={(value) => updateDocField("pricesIncludeTax", value)}
+            />
+
+            <SwitchRow
+              title="Show tax on customer documents"
+              text="Only enable this when the tax should legally appear on customer receipts and invoices."
+              checked={docForm.showTaxOnCustomerDocuments}
+              disabled={
+                isReadOnly ||
+                docForm.taxMode === "NONE" ||
+                docForm.taxDisplayMode !== "CUSTOMER_FACING"
+              }
+              onChange={(value) => updateDocField("showTaxOnCustomerDocuments", value)}
+              tone="warning"
+            />
+          </div>
+
+          <div
+            className={cx(
+              "mt-5 rounded-[26px] border p-4",
+              taxIsCustomerFacing
+                ? "border-amber-500/30 bg-amber-500/10"
+                : "border-[var(--color-border)] bg-[var(--color-surface-2)]",
+            )}
+          >
+            <div className="text-sm font-black text-[var(--color-text)]">
+              {taxSummary?.label || "Tax behavior preview"}
+            </div>
+            <div className="mt-2 text-xs font-semibold leading-5 text-[var(--color-text-muted)]">
+              {taxSummary?.warning ||
+                "Tax is currently not shown on customer documents."}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <label className={fieldLabel()}>Receipt prefix</label>
             <input
@@ -1280,6 +1536,9 @@ export default function SettingsGeneral() {
             terms={form.receiptFooter}
             primaryColor={docForm.documentPrimaryColor}
             accentColor={docForm.documentAccentColor}
+            headerMode={docForm.documentHeaderDisplay}
+            sizeMode={docForm.documentSizeMode}
+            taxLabel={taxIsCustomerFacing ? docForm.taxName || "Tax shown" : ""}
           />
 
           <PreviewDocument
@@ -1290,6 +1549,9 @@ export default function SettingsGeneral() {
             terms={docForm.invoiceTerms}
             primaryColor={docForm.documentPrimaryColor}
             accentColor={docForm.documentAccentColor}
+            headerMode={docForm.documentHeaderDisplay}
+            sizeMode={docForm.documentSizeMode}
+            taxLabel={taxIsCustomerFacing ? docForm.taxName || "Tax shown" : ""}
           />
 
           <PreviewDocument
@@ -1298,6 +1560,8 @@ export default function SettingsGeneral() {
             terms={docForm.deliveryNoteTerms}
             primaryColor={docForm.documentPrimaryColor}
             accentColor={docForm.documentAccentColor}
+            headerMode={docForm.documentHeaderDisplay}
+            sizeMode={docForm.documentSizeMode}
             previewLabel="Document preview"
             previewFallback="Delivery note theme preview"
           />
@@ -1310,6 +1574,8 @@ export default function SettingsGeneral() {
             terms={docForm.warrantyTerms}
             primaryColor={docForm.documentPrimaryColor}
             accentColor={docForm.documentAccentColor}
+            headerMode={docForm.documentHeaderDisplay}
+            sizeMode={docForm.documentSizeMode}
           />
 
           <PreviewDocument
@@ -1320,6 +1586,9 @@ export default function SettingsGeneral() {
             terms={docForm.proformaTerms}
             primaryColor={docForm.documentPrimaryColor}
             accentColor={docForm.documentAccentColor}
+            headerMode={docForm.documentHeaderDisplay}
+            sizeMode={docForm.documentSizeMode}
+            taxLabel={taxIsCustomerFacing ? docForm.taxName || "Tax shown" : ""}
           />
         </div>
 
@@ -1368,6 +1637,44 @@ export default function SettingsGeneral() {
               onChange={(e) => updateDocField("deliveryNoteTerms", e.target.value)}
               placeholder="Example: Please verify all items before signing."
               help="Printed on delivery note documents."
+              rows={4}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className={cx(pageCard(), "p-5 sm:p-6")}>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <SectionHeading
+            eyebrow="Receipt copy"
+            title="Receipt header and footer"
+            subtitle="Small text that helps customers understand your policies and keep proof for support."
+          />
+
+          <Badge tone="strong">Receipt experience</Badge>
+        </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-2">
+          <div className={cx(softPanel(), "p-4")}>
+            <TextareaField
+              label="Receipt header"
+              value={form.receiptHeader}
+              disabled={isReadOnly}
+              onChange={(e) => updateField("receiptHeader", e.target.value)}
+              placeholder="Example: Thank you for shopping with us."
+              help="Shown near the top of the printed receipt."
+              rows={4}
+            />
+          </div>
+
+          <div className={cx(softPanel(), "p-4")}>
+            <TextareaField
+              label="Receipt footer"
+              value={form.receiptFooter}
+              disabled={isReadOnly}
+              onChange={(e) => updateField("receiptFooter", e.target.value)}
+              placeholder="Example: Keep this receipt for support and warranty."
+              help="Used for support notes, return rules, or store reminders."
               rows={4}
             />
           </div>

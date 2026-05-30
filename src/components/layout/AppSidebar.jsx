@@ -1,4 +1,3 @@
-// frontend-stores/src/components/layout/AppSidebar.jsx
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { useEffect, useMemo, useState } from "react";
@@ -20,6 +19,7 @@ function normalizeCompare(value) {
   return String(value || "")
     .trim()
     .toLowerCase()
+    .replace(/[#,|,]/g, " ")
     .replace(/\s+/g, " ");
 }
 
@@ -260,6 +260,23 @@ function Icon({ type }) {
         </svg>
       );
 
+      case "support":
+        return (
+          <svg
+            viewBox="0 0 24 24"
+            className={common}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.9"
+          >
+            <path d="M4 12a8 8 0 0 1 16 0v4a3 3 0 0 1-3 3h-2" />
+            <path d="M7 13v-2a5 5 0 0 1 10 0v2" />
+            <path d="M7 13h2v5H7a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2Z" />
+            <path d="M17 13h-2v5h2a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2Z" />
+            <path d="M13 19h2" strokeLinecap="round" />
+          </svg>
+        );
+
     default:
       return null;
   }
@@ -280,36 +297,36 @@ const NAV_ITEMS = [
       },
       {
         to: "/app/pos",
-        label: "POS",
+        label: "Sales desk",
         icon: "pos",
         roles: ["OWNER", "MANAGER", "CASHIER", "SELLER"],
       },
       {
         to: "/app/interstore",
-        label: "Inter-Store",
+        label: "Store transfers",
         icon: "transfer",
         roles: ["OWNER", "MANAGER", "CASHIER"],
       },
     ],
   },
   {
-    section: "Stock",
+    section: "Stock control",
     items: [
       {
         to: "/app/inventory",
-        label: "Inventory",
+        label: "Stock overview",
         icon: "inventory",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
       },
       {
         to: "/app/inventory/reorder",
-        label: "Reorder list",
+        label: "Restock list",
         icon: "reorder",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
       },
       {
         to: "/app/inventory/stock-history",
-        label: "Stock history",
+        label: "Stock activity",
         icon: "stock-history",
         roles: ["OWNER", "MANAGER", "STOREKEEPER"],
       },
@@ -332,7 +349,7 @@ const NAV_ITEMS = [
       },
       {
         to: "/app/whatsapp",
-        label: "WhatsApp",
+        label: "WhatsApp sales",
         icon: "whatsapp",
         roles: WHATSAPP_ROLES,
       },
@@ -343,27 +360,33 @@ const NAV_ITEMS = [
     items: [
       {
         to: "/app/documents",
-        label: "Documents",
+        label: "Document center",
         icon: "documents",
         roles: ["OWNER", "MANAGER", "STOREKEEPER", "SELLER", "CASHIER", "TECHNICIAN"],
       },
       {
         to: "/app/repairs",
-        label: "Repairs",
+        label: "Repair jobs",
         icon: "repairs",
         roles: ["OWNER", "CASHIER", "TECHNICIAN"],
       },
       {
         to: "/app/reports",
-        label: "Reports",
+        label: "Business reports",
         icon: "reports",
         roles: ["OWNER", "MANAGER"],
       },
       {
         to: "/app/expenses",
-        label: "Expenses",
+        label: "Business expenses",
         icon: "expenses",
         roles: ["OWNER"],
+      },
+      { 
+        to: "/app/support",
+        label: "Support",
+        icon: "support",
+        roles: ["OWNER","MANAGER","CASHIER","SELLER","STOREKEEPER","TECHNICIAN"],
       },
     ],
   },
@@ -372,7 +395,7 @@ const NAV_ITEMS = [
     items: [
       {
         to: "/app/employees",
-        label: "Employees",
+        label: "Team",
         icon: "employees",
         roles: ["OWNER", "MANAGER"],
       },
@@ -380,7 +403,7 @@ const NAV_ITEMS = [
    
       {
         to: "/app/settings",
-        label: "Settings",
+        label: "Business settings",
         icon: "settings",
         roles: ["OWNER", "MANAGER"],
       },
@@ -456,15 +479,12 @@ function getActiveBranchLabel(workspaceName) {
     cleanString(localStorage.getItem("activeBranchName")) ||
     "";
 
-  const branchCode =
-    cleanString(activeBranch?.code) ||
-    cleanString(localStorage.getItem("activeBranchCode")) ||
-    "";
-
   const normalizedWorkspaceName = normalizeCompare(workspaceName);
   const normalizedBranchName = normalizeCompare(branchName);
 
-  if (!branchName && !branchCode) return "Active branch";
+  if (!branchName) {
+    return activeBranch?.isMain ? "Main selling location" : "Current selling location";
+  }
 
   const branchAlreadyRepeatsStore =
     normalizedWorkspaceName &&
@@ -473,17 +493,10 @@ function getActiveBranchLabel(workspaceName) {
       normalizedBranchName.includes(normalizedWorkspaceName));
 
   if (branchAlreadyRepeatsStore) {
-    if (branchCode) return branchCode;
-    return activeBranch?.isMain ? "Main branch" : "Active branch";
+    return activeBranch?.isMain ? "Main selling location" : "Current selling location";
   }
 
-  if (branchCode && normalizedBranchName.includes(normalizeCompare(branchCode))) {
-    return branchName;
-  }
-
-  if (branchCode && branchName) return `${branchCode} • ${branchName}`;
-  if (branchName) return branchName;
-  return branchCode;
+  return branchName;
 }
 
 function clearAuthStorage() {
@@ -566,7 +579,7 @@ function WorkspaceCard({ collapsed, primaryRole }) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-              Workspace
+              Business workspace
             </div>
 
             <div className="mt-1 truncate text-[14px] font-black tracking-[-0.01em] text-[var(--color-text)]">
@@ -579,13 +592,13 @@ function WorkspaceCard({ collapsed, primaryRole }) {
           </div>
 
           <div className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--color-text)]">
-            Active
+            Current
           </div>
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3 rounded-[18px] bg-[var(--color-surface-2)] px-3 py-2">
           <span className="text-[11px] font-bold text-[var(--color-text-muted)]">
-            Signed in as
+            Access level
           </span>
           <span className="truncate text-[12px] font-black text-[var(--color-text)]">
             {roleLabel(primaryRole)}
